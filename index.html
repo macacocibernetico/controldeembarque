@@ -183,6 +183,7 @@ tbody tr.sel td{background:var(--solbg)}
 .cod{font-family:var(--mono);font-size:12px}
 .vacia{color:var(--tinta3)}
 .mala{background:var(--pendbg);color:var(--pend);padding:2px 7px;border-radius:4px;font-weight:500}
+.asumida{border-bottom:1px dotted var(--tinta3);cursor:help}
 
 /* Panel ------------------------------------------------------------------ */
 .velo{position:fixed;inset:0;background:rgba(23,23,20,.2);z-index:9}
@@ -459,6 +460,18 @@ function normFecha(v) {
     var f = new Date(Date.UTC(a, mes - 1, d));
     return isNaN(f) ? { invalida: true, crudo: s } : f;
   }
+  // "28/09" sin año. Es un dato incompleto, no una fecha imposible: se asume el
+  // año en curso y después se ajusta contra el ETD si hiciera falta.
+  var m2 = s.match(/^(\d{1,2})[\/\-.](\d{1,2})$/);
+  if (m2) {
+    var d2 = +m2[1], mes2 = +m2[2];
+    if (d2 >= 1 && d2 <= 31 && mes2 >= 1 && mes2 <= 12) {
+      var f3 = new Date(Date.UTC(new Date().getUTCFullYear(), mes2 - 1, d2));
+      if (!isNaN(f3)) { f3.anioAsumido = true; f3.crudo = s; return f3; }
+    }
+    return { invalida: true, crudo: s };
+  }
+
   var f2 = new Date(s);
   return isNaN(f2) ? { invalida: true, crudo: s } : f2;
 }
@@ -638,13 +651,27 @@ var REGLAS = [
   function (e, c) {
     var malas = [], lim = c.hoy.getUTCFullYear() + 1;
     if (e.eta && e.eta.invalida) malas.push('ETA');
-    else if (esFecha(e.eta) && e.eta.getUTCFullYear() > lim) malas.push('ETA');
+    else if (esFecha(e.eta) && !e.eta.anioAsumido && e.eta.getUTCFullYear() > lim) malas.push('ETA');
     if (e.etd && e.etd.invalida) malas.push('ETD');
-    else if (esFecha(e.etd) && e.etd.getUTCFullYear() > lim) malas.push('ETD');
-    if (esFecha(e.etd) && esFecha(e.eta) && e.eta < e.etd) malas.push('ETA anterior al ETD');
+    else if (esFecha(e.etd) && !e.etd.anioAsumido && e.etd.getUTCFullYear() > lim) malas.push('ETD');
+    if (esFecha(e.etd) && esFecha(e.eta) && e.eta < e.etd &&
+        !e.eta.anioAsumido && !e.etd.anioAsumido) malas.push('ETA anterior al ETD');
     if (!malas.length) return null;
     return { id:'fecha_corrupta', nivel:'alto', titulo:'Fecha imposible',
       detalle:'Revisar ' + malas.join(', ') + '. Probable error de tipeo.', accion:'Corregir' };
+  },
+
+  // Fecha cargada sin año: la app asume uno, pero conviene completarla.
+  function (e, c) {
+    var sinAnio = [];
+    if (esFecha(e.etd) && e.etd.anioAsumido) sinAnio.push('ETD');
+    if (esFecha(e.eta) && e.eta.anioAsumido) sinAnio.push('ETA');
+    if (!sinAnio.length) return null;
+    return { id:'fecha_sin_anio', nivel:'medio', titulo:'Fecha cargada sin año',
+      detalle: sinAnio.join(' y ') + ' sin año en la planilla. Se asume ' +
+        (esFecha(e.eta) && e.eta.anioAsumido ? e.eta : e.etd).getUTCFullYear() +
+        '; conviene completarla.',
+      accion:'Completar fecha' };
   },
 
   function (e, c) {
@@ -709,19 +736,32 @@ var REGLAS = [
       detalle:'No se puede seguir la cobranza sin la factura.', accion:'Cargar factura' };
   },
 
-  // T.R. solicitado y todavía sin recibir. La naviera no lo manda sola.
+  // T.R. solicitado y todavía sin recibir. Lo que importa no es hace cuánto
+  // embarcó sino cuánto falta para que llegue: el telex tiene que estar antes.
   function (e, c) {
     if (e.tr !== 'atencion' || c.noAplica.tr) return null;
-    var ref = esFecha(e.eta) && e.eta < c.hoy ? e.eta : (esFecha(e.etd) ? e.etd : null);
-    if (!ref) return null;
-    var d = dias(c.hoy, ref);
-    if (d < 3) return null;
-    return { id:'tr_solicitado', nivel: d > 14 ? 'alto' : 'medio',
-      titulo:'Telex release solicitado, sin recibir',
-      detalle:'Pedido y todavía no llegó. Van ' + d + ' días desde ' +
-        (esFecha(e.eta) && e.eta < c.hoy ? 'la llegada' : 'el embarque') +
-        (e.trModo ? '. Modalidad: ' + e.trModo : '') + '.',
-      accion:'Reclamar a la naviera' };
+    if (!esFecha(e.eta)) return null;
+
+    var d = dias(e.eta, c.hoy);
+    var det, nivel;
+
+    if (d > 0) {
+      det = 'Pedido y todavía no llegó. Faltan ' + d + ' días para la ETA (' +
+            fmtFecha(e.eta) + ').';
+      nivel = d <= 7 ? 'alto' : 'medio';
+    } else if (d === 0) {
+      det = 'Pedido y todavía no llegó. El buque llega hoy.';
+      nivel = 'critico';
+    } else {
+      det = 'Pedido y todavía no llegó. El buque llegó hace ' + (-d) + ' días.';
+      nivel = 'critico';
+    }
+    if (e.trModo) det += ' Modalidad: ' + e.trModo + '.';
+
+    return { id:'tr_solicitado', nivel: nivel,
+      titulo: d > 0 ? 'Telex release solicitado, sin recibir'
+                    : 'Telex release sin recibir y el buque ya llegó',
+      detalle: det, accion:'Reclamar a la naviera' };
   },
 
   // Naranja en Pago estimado: pagaron pero no mandaron el comprobante.
@@ -1002,6 +1042,14 @@ async function cargarTodo() {
             ? colorASem(f.colores[idx])
             : convertir(f.celdas[idx], CAMPOS[campo].tipo);
         });
+        // Si la ETA vino sin año y quedó antes del ETD, es del año siguiente.
+        if (o.eta && o.eta.anioAsumido && esFecha(o.etd) && esFecha(o.eta) && o.eta < o.etd) {
+          var ajust = new Date(Date.UTC(o.eta.getUTCFullYear() + 1,
+                                        o.eta.getUTCMonth(), o.eta.getUTCDate()));
+          ajust.anioAsumido = true; ajust.crudo = o.eta.crudo;
+          o.eta = ajust;
+        }
+
         // En las columnas semáforo el color es el estado y el texto es otra cosa:
         // en Docs. son anotaciones operativas ("recibir factura y enviar gas
         // free"), en T.R. la modalidad. Se guardan aparte para no perderlas.
@@ -1185,6 +1233,10 @@ function pintarCelda(v) {
   if (v === null || v === undefined || v === '') return '<span class="vacia">—</span>';
   if (typeof v === 'object' && v.invalida) return '<span class="mala">' + esc(v.crudo) + '</span>';
   if (v instanceof Date) {
+    if (v.anioAsumido) {
+      return '<span class="asumida" title="Sin año en la planilla, se asume ' +
+        v.getUTCFullYear() + '">' + fmtFecha(v) + '</span>';
+    }
     var mala = v.getUTCFullYear() > new Date().getFullYear() + 1;
     return mala ? '<span class="mala">' + fmtFecha(v) + '</span>' : fmtFecha(v);
   }
@@ -1394,13 +1446,17 @@ function barraRuta(emb) {
   }
   var destino = emb.port || '—';
   return '<div class="ruta">' +
-    '<span class="f">' + (esFecha(emb.etd) ? fmtFecha(emb.etd) : '··') + '</span>' +
+    '<span class="f' + (emb.etd && emb.etd.anioAsumido ? ' asumida' : '') + '">' +
+      (esFecha(emb.etd) ? fmtFecha(emb.etd) : '··') + '</span>' +
     '<span class="via">' +
       (pct !== null ? '<i style="width:' + Math.round(pct * 100) + '%"></i>' +
         '<b style="left:' + Math.round(pct * 100) + '%"></b>' : '') +
     '</span>' +
     '<span class="pto">' + esc(destino) + '</span>' +
-    '<span class="f">' + (esFecha(emb.eta) ? fmtFecha(emb.eta) : '··') + '</span>' +
+    '<span class="f' + (emb.eta && emb.eta.anioAsumido ? ' asumida' : '') + '" ' +
+      (emb.eta && emb.eta.anioAsumido
+        ? 'title="Sin año en la planilla, se asume ' + emb.eta.getUTCFullYear() + '"' : '') + '>' +
+      (esFecha(emb.eta) ? fmtFecha(emb.eta) : '··') + '</span>' +
     '</div>';
 }
 
