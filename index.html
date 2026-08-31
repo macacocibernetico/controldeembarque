@@ -166,7 +166,7 @@ var S = {
   cargando: false,
   guardando: 0,
   pantalla: 'setup',
-  setup: { paso: 'clientId', entrada: '', tabEmb: '', tabCtr: '', buscando: false }
+  setup: { entrada: '', tabEmb: '', tabCtr: '', buscando: false, entrando: false }
 };
 
 try { S.cfg = JSON.parse(localStorage.getItem(LS)) || null; } catch (e) {}
@@ -592,26 +592,82 @@ function pedirToken(interactivo) {
     if (!window.google || !google.accounts || !google.accounts.oauth2) {
       return reject(new Error('No cargó la librería de Google. Revisá la conexión y recargá.'));
     }
+
+    var listo = false;
+    function fallar(msg) { if (!listo) { listo = true; reject(new Error(msg)); } }
+
     if (!tokenClient) {
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: S.cfg.clientId,
-        scope: SCOPE,
-        callback: function () {}
-      });
-    }
-    tokenClient.callback = function (resp) {
-      if (resp.error) {
-        return reject(new Error(
-          resp.error === 'access_denied'
-            ? 'No diste permiso a la app.'
-            : 'Error de autenticación: ' + resp.error));
+      try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: S.cfg.clientId,
+          scope: SCOPE,
+          callback: function () {},
+          // Sin esto, un popup bloqueado o cerrado deja la promesa colgada
+          // para siempre y la app se queda "pensando" sin decir nada.
+          error_callback: function (err) {
+            var t = err && err.type;
+            if (t === 'popup_failed_to_open') {
+              return fallar('El navegador bloqueó la ventana de Google. Permití las ventanas emergentes para este sitio y probá de nuevo.');
+            }
+            if (t === 'popup_closed') {
+              return fallar('Cerraste la ventana de Google antes de terminar.');
+            }
+            fallar('No se pudo abrir el login de Google' + (t ? ' (' + t + ')' : '') + '.');
+          }
+        });
+      } catch (e) {
+        return fallar('El Client ID no es válido: ' + e.message);
       }
+    }
+
+    tokenClient.callback = function (resp) {
+      if (listo) return;
+      if (resp.error) {
+        return fallar(resp.error === 'access_denied'
+          ? 'No diste permiso a la app.'
+          : 'Error de autenticación: ' + resp.error);
+      }
+      listo = true;
       S.token = resp.access_token;
       S.tokenExp = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3500000) - 60000;
       resolve(S.token);
     };
-    tokenClient.requestAccessToken({ prompt: interactivo ? 'consent' : '' });
+
+    // Red de seguridad: si en 2 minutos no pasó nada, cortamos con un mensaje
+    // en vez de quedarnos tildados.
+    setTimeout(function () {
+      fallar('El login de Google no respondió. Puede estar bloqueado el popup, o el origen ' +
+             location.origin + ' no está autorizado en el Client ID.');
+    }, 120000);
+
+    try {
+      tokenClient.requestAccessToken({ prompt: interactivo ? 'consent' : '' });
+    } catch (e) {
+      fallar('No se pudo abrir el login: ' + e.message);
+    }
   });
+}
+
+// El popup solo se abre confiable si sale de un clic directo, sin ningún await
+// en el medio. Por eso el login es un paso propio y no algo que pasa de rebote
+// cuando la app necesita leer la planilla.
+async function entrar() {
+  S.error = null; S.setup.entrando = true; pintar();
+  try {
+    await pedirToken(false);
+    S.setup.entrando = false;
+    // Si ya estaba todo elegido de una sesión anterior, no volvemos a preguntar.
+    if (S.cfg.sheetId && S.cfg.tabEmb) {
+      S.pantalla = 'app';
+      pintar();
+      return cargarTodo();
+    }
+    pintar();
+  } catch (e) {
+    S.setup.entrando = false;
+    S.error = e.message;
+    pintar();
+  }
 }
 
 async function conToken() {
@@ -636,8 +692,12 @@ async function api(url, opciones) {
   try { cuerpo = await r.json(); } catch (e) {}
   if (!r.ok) {
     var msg = (cuerpo && cuerpo.error && cuerpo.error.message) || ('Error ' + r.status);
-    if (r.status === 403) msg = 'Tu cuenta no tiene permiso sobre esta planilla. ' + msg;
-    if (r.status === 404) msg = 'No existe una planilla con ese id, o no tenés acceso.';
+    if (r.status === 403) {
+      msg = /has not been used|is disabled/i.test(msg)
+        ? 'Falta habilitar la Google Sheets API en tu proyecto de Google Cloud. Abrí Biblioteca, buscá "Google Sheets API" y dale Habilitar. Puede tardar un minuto en tomar efecto.'
+        : 'Tu cuenta no tiene permiso sobre esta planilla. ' + msg;
+    }
+    if (r.status === 404) msg = 'No existe una planilla con ese id, o tu cuenta no tiene acceso.';
     throw new Error(msg);
   }
   return cuerpo;
@@ -847,6 +907,24 @@ function vistaSetup() {
       '</div></div>';
   }
 
+  // Paso propio de login: el popup de Google solo se abre confiable si sale de
+  // un clic directo del usuario.
+  if (!S.token) {
+    return '<div class="setup">' +
+      '<h1>Entrar con Google</h1>' +
+      '<p class="sub">Vas a usar los permisos que ya tenés sobre la planilla.</p>' +
+      (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
+      '<div class="caja">' +
+        '<button class="primario" data-act="entrar"' + (st.entrando ? ' disabled' : '') + '>' +
+          (st.entrando ? 'Esperando a Google…' : 'Entrar con Google') + '</button>' +
+        ' <button data-act="reset-cid">Cambiar Client ID</button>' +
+        '<p class="ayuda" style="margin-top:14px">Se abre una ventana de Google. Si no aparece, ' +
+          'revisá que el navegador no esté bloqueando ventanas emergentes.</p>' +
+        '<p class="ayuda">Origen de este sitio: <code>' + esc(location.origin) + '</code><br>' +
+          'Tiene que estar igual en los orígenes autorizados del Client ID.</p>' +
+      '</div></div>';
+  }
+
   if (!S.pestanas) {
     return '<div class="setup">' +
       '<h1>Elegir la planilla</h1>' +
@@ -856,11 +934,9 @@ function vistaSetup() {
         '<div class="campo">' +
           '<label for="url">URL o id de la planilla</label>' +
           '<input id="url" placeholder="https://docs.google.com/spreadsheets/d/…" value="' + esc(st.entrada) + '">' +
-          '<p class="ayuda">Vas a entrar con tu cuenta de Google. Usa los permisos que ya tenés sobre la hoja.</p>' +
         '</div>' +
         '<button class="primario" data-act="buscar" ' + (st.buscando ? 'disabled' : '') + '>' +
-          (st.buscando ? 'Conectando…' : 'Conectar con Google') + '</button>' +
-        ' <button data-act="reset-cid">Cambiar Client ID</button>' +
+          (st.buscando ? 'Buscando pestañas…' : 'Buscar pestañas') + '</button>' +
       '</div></div>';
   }
 
@@ -1131,6 +1207,8 @@ document.addEventListener('click', function (ev) {
     return pintar();
   }
 
+  if (act === 'entrar') return entrar();
+
   if (act === 'buscar') return buscarPlanilla();
 
   if (act === 'usar') {
@@ -1148,7 +1226,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'salir') {
     S.cfg = { clientId: S.cfg.clientId };   // conserva el Client ID
     S.pestanas = null; S.datos = null; S.pantalla = 'setup'; S.error = null;
-    S.setup = { paso: 'sheet', entrada: '', tabEmb: '', tabCtr: '', buscando: false };
+    S.setup = { entrada: '', tabEmb: '', tabCtr: '', buscando: false, entrando: false };
     guardarCfg(); return pintar();
   }
 
@@ -1219,14 +1297,20 @@ async function buscarPlanilla() {
 /* --- Arranque -------------------------------------------------------------- */
 
 function arrancar() {
-  if (S.cfg && S.cfg.clientId && S.cfg.sheetId && S.cfg.tabEmb) {
-    S.pantalla = 'app';
-    pintar();
-    cargarTodo();
-  } else {
-    S.pantalla = 'setup';
-    pintar();
+  // OAuth necesita un origen http(s). Abierto con doble clic (file://) no anda,
+  // y el error de Google en ese caso no explica nada.
+  if (location.protocol === 'file:') {
+    document.getElementById('root').innerHTML =
+      '<div class="setup"><div class="error">Estás abriendo el archivo directo desde el disco ' +
+      '(<code>file://</code>). Google no permite el login así. Subilo a Netlify o GitHub Pages, ' +
+      'o levantá un servidor local con <code>npx serve</code>.</div></div>';
+    return;
   }
+
+  // Nunca pedimos el token solo: el popup de Google se bloquea si no sale de un
+  // clic. Al recargar mostramos el paso de login y desde ahí sigue solo.
+  S.pantalla = 'setup';
+  pintar();
 }
 
 // Esperar a que cargue la librería de Google antes de dibujar.
