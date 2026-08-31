@@ -1,0 +1,1245 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control de embarques</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* El vocabulario de color de la planilla (verde/rojo/celeste) ya existe en la
+   cabeza del equipo: es el sistema semántico. Todo lo demás va neutro para que
+   esos tres lean fuerte. Los tonos puros de Sheets son ilegibles en pantalla,
+   así que se muestran en versiones con contraste. */
+:root{
+  --papel:#f7f8f8; --sup:#fff; --linea:#e3e6e8; --linea2:#cdd3d7;
+  --tinta:#16191c; --tinta2:#5b656d; --tinta3:#8b959c;
+  --ok:#157347; --okbg:#e8f4ed; --pend:#b4231b; --pendbg:#fdeceb;
+  --aten:#0d6d84; --atenbg:#e5f4f7; --amar:#d98b0a;
+  --r:6px; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:14px;line-height:1.5;
+  color:var(--tinta);background:var(--papel);-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;border:1px solid var(--linea2);background:var(--sup);
+  color:var(--tinta);padding:6px 12px;border-radius:var(--r)}
+button:hover{background:#f0f2f3}
+button:focus-visible{outline:2px solid var(--aten);outline-offset:1px}
+button:disabled{opacity:.5;cursor:default}
+.primario{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+.primario:hover{background:#2b3138}
+input,select{font:inherit;padding:6px 9px;border:1px solid var(--linea2);border-radius:var(--r);
+  background:var(--sup);color:var(--tinta);width:100%}
+input:focus,select:focus{outline:2px solid var(--aten);outline-offset:-1px;border-color:transparent}
+a{color:var(--aten)}
+h1,h2,h3{font-weight:600}
+
+.app{max-width:1280px;margin:0 auto;padding:20px 24px 64px}
+.cab{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.cab h1{font-size:19px;margin:0;letter-spacing:-.01em}
+.sello{font-size:12px;color:var(--tinta3);font-family:var(--mono)}
+.cab-acc{margin-left:auto;display:flex;gap:6px}
+
+.tabs{display:flex;gap:4px;margin:18px 0 22px;border-bottom:1px solid var(--linea)}
+.tabs button{border:none;background:none;border-radius:0;padding:8px 14px;color:var(--tinta2);
+  border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected=true]{color:var(--tinta);border-bottom-color:var(--tinta);font-weight:500}
+.tabs button:hover{background:none;color:var(--tinta)}
+
+.tira{display:flex;gap:1px;background:var(--linea);border:1px solid var(--linea);
+  border-radius:var(--r);overflow:hidden;margin-bottom:22px}
+.tira>div{flex:1;background:var(--sup);padding:10px 12px;min-width:0}
+.tira .n{font-size:21px;font-weight:500;font-variant-numeric:tabular-nums}
+.tira .l{font-size:12px;color:var(--tinta2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tira .crit .n{color:var(--pend)}
+
+.gt{font-size:13px;color:var(--tinta2);margin:22px 0 8px;font-weight:400}
+.alerta{background:var(--sup);border:1px solid var(--linea);border-left:3px solid var(--linea2);
+  border-radius:var(--r);padding:12px 14px;margin-bottom:8px}
+.alerta.critico{border-left-color:var(--pend)}
+.alerta.alto{border-left-color:var(--amar)}
+.alerta .f1{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.alerta .quien{font-weight:500}
+.alerta .ctr{font-family:var(--mono);font-size:12px;color:var(--tinta2)}
+.alerta .tit{margin:6px 0 2px;font-weight:500}
+.alerta.critico .tit{color:var(--pend)}
+.alerta .det{color:var(--tinta2);font-size:13px;margin:0}
+.alerta .acc{display:flex;gap:6px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.alerta .acc button{font-size:13px;padding:4px 10px}
+
+.chip{font-size:12px;padding:2px 8px;border-radius:10px;white-space:nowrap;display:inline-block}
+.chip.ok{background:var(--okbg);color:var(--ok)}
+.chip.pend{background:var(--pendbg);color:var(--pend)}
+.chip.aten{background:var(--atenbg);color:var(--aten)}
+.chip.gris{background:#eef0f1;color:var(--tinta2)}
+
+.barra{display:flex;gap:8px;margin-bottom:12px}
+.barra input{max-width:360px}
+.marco{border:1px solid var(--linea);border-radius:var(--r);overflow:auto;background:var(--sup);max-height:70vh}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:500;font-size:12px;color:var(--tinta2);padding:8px 10px;
+  border-bottom:1px solid var(--linea);white-space:nowrap;position:sticky;top:0;background:var(--sup);z-index:1}
+td{padding:7px 10px;border-bottom:1px solid var(--linea);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:#fafbfb}
+tbody tr.sel td{background:#f2f6f8}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.cod{font-family:var(--mono);font-size:12px}
+.vacia{color:var(--tinta3)}
+.mala{background:var(--pendbg);color:var(--pend);padding:1px 5px;border-radius:3px}
+
+.sem{width:22px;height:22px;border-radius:4px;border:1px solid var(--linea2);padding:0;display:block}
+.sem[data-e=ok]{background:var(--ok);border-color:var(--ok)}
+.sem[data-e=pendiente]{background:var(--pend);border-color:var(--pend)}
+.sem[data-e=atencion]{background:var(--aten);border-color:var(--aten)}
+.sem[data-e=vacio]{background:repeating-linear-gradient(45deg,#fff,#fff 3px,#eceff0 3px,#eceff0 6px)}
+
+.panel{position:fixed;inset:0 0 0 auto;width:min(470px,100%);background:var(--sup);
+  border-left:1px solid var(--linea);box-shadow:-8px 0 24px rgba(0,0,0,.06);overflow-y:auto;
+  padding:20px 22px 48px;z-index:10}
+.panel h2{font-size:16px;margin:0 0 2px}
+.panel .cerrar{position:absolute;top:14px;right:16px}
+.campo{margin-bottom:13px}
+.campo label{display:block;font-size:12px;color:var(--tinta2);margin-bottom:3px}
+.campo.falta input{border-color:var(--pend);background:var(--pendbg)}
+
+.setup{max-width:540px;margin:7vh auto;padding:0 20px}
+.setup h1{font-size:20px;margin:0 0 6px}
+.setup .sub{color:var(--tinta2);margin:0 0 24px}
+.caja{background:var(--sup);border:1px solid var(--linea);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.caja h2{font-size:14px;margin:0 0 12px}
+.ayuda{font-size:12px;color:var(--tinta2);margin:5px 0 0}
+.paso{display:flex;gap:9px;margin-bottom:7px;font-size:13px;color:var(--tinta2)}
+.paso b{color:var(--tinta);font-weight:500;flex:none}
+code{font-family:var(--mono);font-size:12px;background:#eef0f1;padding:1px 5px;border-radius:3px;
+  word-break:break-all}
+.error{background:var(--pendbg);border:1px solid #f2c4c1;color:#8c1a14;padding:10px 14px;
+  border-radius:var(--r);font-size:13px;margin-bottom:14px}
+.aviso{background:var(--atenbg);border:1px solid #bfe0e8;color:#0b5566;padding:10px 14px;
+  border-radius:var(--r);font-size:13px;margin:14px 0}
+.diag{font-size:12px;color:var(--tinta2);margin:12px 0 0}
+.centro{text-align:center;padding:48px 20px;color:var(--tinta2)}
+details summary{cursor:pointer;font-size:13px;color:var(--tinta2)}
+
+@media(max-width:640px){
+  .app{padding:16px 14px 48px}
+  .tira{flex-wrap:wrap}.tira>div{flex:1 1 40%}
+  .panel{width:100%}
+  .cab-acc{margin-left:0;width:100%}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="root"><p class="centro">Cargando…</p></div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+'use strict';
+/* ===========================================================================
+   Control de embarques — todo en un archivo.
+
+   Entra con tu cuenta de Google (OAuth) y habla directo con la API de Sheets
+   desde el navegador. No hay backend, no hay service account, no hay que
+   compartir la planilla con nadie: usás los permisos que ya tenés.
+
+   El id de la planilla y el Client ID se cargan desde la app y quedan en el
+   navegador. En el código no hay nada hardcodeado.
+   =========================================================================== */
+
+var SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+var LS = 'embarques:cfg';
+var MAX_COLS = 60, MAX_FILAS = 3000;
+
+/* --- Estado --------------------------------------------------------------- */
+var S = {
+  cfg: null,          // {clientId, sheetId, titulo, tabEmb, tabCtr}
+  token: null,
+  tokenExp: 0,
+  pestanas: null,
+  datos: null,        // {filas, mapa, extras, encabezados}
+  contratos: new Map(),
+  vista: 'control',
+  sel: null,
+  busca: '',
+  error: null,
+  cargando: false,
+  guardando: 0,
+  pantalla: 'setup',
+  setup: { paso: 'clientId', entrada: '', tabEmb: '', tabCtr: '', buscando: false }
+};
+
+try { S.cfg = JSON.parse(localStorage.getItem(LS)) || null; } catch (e) {}
+
+function guardarCfg() { try { localStorage.setItem(LS, JSON.stringify(S.cfg)); } catch (e) {} }
+
+/* ===========================================================================
+   Campos: se detectan por el TEXTO del encabezado, no por letra de columna.
+   Si mueven o insertan una columna, la app la sigue encontrando.
+   =========================================================================== */
+
+var CAMPOS = {
+  exporter:     {label:'Exportador',   tipo:'texto',   alias:['exporter','exportador']},
+  importer:     {label:'Importador',   tipo:'texto',   alias:['importer','importador','cliente']},
+  contract:     {label:'Contrato',     tipo:'texto',   alias:['contract','contrato']},
+  product:      {label:'Producto',     tipo:'texto',   alias:['product','producto']},
+  price:        {label:'Precio',       tipo:'numero',  alias:['price','precio']},
+  tns:          {label:'Tns',          tipo:'numero',  alias:['tns','tons','toneladas','tn']},
+  total:        {label:'Total',        tipo:'numero',  alias:['total']},
+  etd:          {label:'ETD',          tipo:'fecha',   alias:['etd']},
+  eta:          {label:'ETA',          tipo:'fecha',   alias:['eta']},
+  port:         {label:'Puerto',       tipo:'texto',   alias:['port','puerto','destino']},
+  vessel:       {label:'Buque',        tipo:'texto',   alias:['vessel','buque','barco']},
+  shippingLine: {label:'Naviera',      tipo:'texto',   alias:['shipping line','naviera','linea']},
+  lots:         {label:'Lotes',        tipo:'texto',   alias:['lots','lotes','lote']},
+  containers:   {label:'Contenedores', tipo:'texto',   alias:['containers','contenedores','ctns']},
+  bl:           {label:'BL',           tipo:'texto',   alias:['bl','b/l','bill of lading']},
+  booking:      {label:'Booking',      tipo:'texto',   alias:['booking']},
+  invoice:      {label:'Factura',      tipo:'texto',   alias:['invoice','factura']},
+  docs:         {label:'Docs',         tipo:'semaforo',alias:['docs','docs.','documentos']},
+  pics:         {label:'Fotos',        tipo:'semaforo',alias:['pics','fotos','pictures']},
+  tr:           {label:'T.R.',         tipo:'semaforo',alias:['t. r.','t.r.','tr','telex release']},
+  tracking:     {label:'Tracking',     tipo:'texto',   alias:['tracking n°','tracking','tracking no']},
+  pagoEstimado: {label:'Pago estimado',tipo:'fecha',   alias:['pago estimado','estimated payment']},
+  commission:   {label:'Comisión',     tipo:'numero',  alias:['commission','comision']},
+  invCommission:{label:'Fact. comisión',tipo:'texto',  alias:['inv commission','factura comision']},
+  status:       {label:'Estado',       tipo:'texto',   alias:['status','estado']},
+  etdOriginal:  {label:'ETD original', tipo:'fecha',   alias:['etd original']},
+  etdFinal:     {label:'ETD final',    tipo:'fecha',   alias:['etd final']},
+  etdMaximo:    {label:'ETD máximo',   tipo:'fecha',   alias:['etd maximo permitido','etd maximo']},
+  reclamo:      {label:'Reclamo',      tipo:'texto',   alias:['reclamo','claim']},
+  incoterm:     {label:'Incoterm',     tipo:'texto',   alias:['incoterm']},
+  paymentCond:  {label:'Cond. pago',   tipo:'texto',   alias:['payment condition','condicion de pago']},
+  nota:         {label:'Nota',         tipo:'texto',   alias:['nota','notas','observaciones']}
+};
+
+var CAMPOS_CTR = {
+  contrato:  {alias:['contract','contrato','nro contrato']},
+  importador:{alias:['importer','importador','cliente','buyer']},
+  tns:       {alias:['tns','toneladas','tons','cantidad']},
+  formaPago: {alias:['forma de pago','payment','payment condition','condicion de pago']},
+  saldo:     {alias:['saldo','saldo del contrato','balance']}
+};
+
+function clave(s) {
+  return String(s == null ? '' : s).trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+}
+
+// Exacto primero, para que "etd" no se robe "etd final". Después, parcial.
+function detectar(encabezados, catalogo) {
+  var mapa = {}, usados = {};
+  Object.keys(catalogo).forEach(function (campo) {
+    for (var i = 0; i < encabezados.length; i++) {
+      if (usados[i]) continue;
+      if (catalogo[campo].alias.indexOf(clave(encabezados[i])) >= 0) {
+        mapa[campo] = i; usados[i] = 1; return;
+      }
+    }
+  });
+  Object.keys(catalogo).forEach(function (campo) {
+    if (mapa[campo] !== undefined) return;
+    for (var i = 0; i < encabezados.length; i++) {
+      if (usados[i]) continue;
+      var k = clave(encabezados[i]);
+      if (!k) continue;
+      var hit = catalogo[campo].alias.some(function (a) { return k === a || k.indexOf(a + ' ') === 0; });
+      if (hit) { mapa[campo] = i; usados[i] = 1; return; }
+    }
+  });
+  var extras = [];
+  encabezados.forEach(function (h, i) { if (h && !usados[i]) extras.push({ h: h, i: i }); });
+  return { mapa: mapa, extras: extras };
+}
+
+function letraCol(i) {
+  var s = ''; i += 1;
+  while (i > 0) { s = String.fromCharCode(65 + (i - 1) % 26) + s; i = Math.floor((i - 1) / 26); }
+  return s;
+}
+
+function extraerId(entrada) {
+  var s = String(entrada || '').trim();
+  var m = s.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (m) return m[1];
+  if (/^[a-zA-Z0-9-_]{20,}$/.test(s)) return s;
+  return null;
+}
+
+/* --- Semáforos: el color de la celda ES el dato --------------------------- */
+
+var SEMAFOROS = ['docs', 'pics', 'tr'];
+var CICLO = ['vacio', 'ok', 'pendiente', 'atencion'];
+var COLORES = {
+  ok:        { red: 0, green: 1, blue: 0 },
+  pendiente: { red: 1, green: 0, blue: 0 },
+  atencion:  { red: 0, green: 1, blue: 1 },
+  vacio:     { red: 1, green: 1, blue: 1 }
+};
+
+function colorASem(bg) {
+  if (!bg) return 'vacio';
+  var r = bg.red || 0, g = bg.green || 0, b = bg.blue || 0;
+  if (r > .85 && g > .85 && b > .85) return 'vacio';
+  if (g > .5 && r < .5 && b < .5) return 'ok';
+  if (r > .5 && g < .5 && b < .5) return 'pendiente';
+  if (g > .5 && b > .5 && r < .5) return 'atencion';
+  return 'vacio';
+}
+
+/* --- Normalización: la hoja sigue abierta, va a entrar de todo ------------- */
+
+var EPOCH = Date.UTC(1899, 11, 30);
+
+function normFecha(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (v instanceof Date) return isNaN(v) ? null : v;
+  if (typeof v === 'number') {
+    if (v < 25569 || v > 80000) return { invalida: true, crudo: v };
+    return new Date(EPOCH + v * 86400000);
+  }
+  var s = String(v).trim(); if (!s) return null;
+  var m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (m) {
+    var d = +m[1], mes = +m[2], a = +m[3]; if (a < 100) a += 2000;
+    var f = new Date(Date.UTC(a, mes - 1, d));
+    return isNaN(f) ? { invalida: true, crudo: s } : f;
+  }
+  var f2 = new Date(s);
+  return isNaN(f2) ? { invalida: true, crudo: s } : f2;
+}
+function esFecha(f) { return f instanceof Date && !isNaN(f); }
+
+function normNum(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number') return v;
+  var s = String(v).replace(/[^\d,.\-]/g, '');
+  if (s.indexOf(',') >= 0 && s.indexOf('.') >= 0) {
+    s = s.lastIndexOf(',') > s.lastIndexOf('.')
+      ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  } else if (s.indexOf(',') >= 0) s = s.replace(',', '.');
+  var n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// "Comisión Cobrada" / "comisión cobrada" / "Comisión cobrada" -> un valor.
+function estadoComision(v) {
+  var k = clave(v);
+  if (!k) return 'sin_facturar';
+  if (k.indexOf('cobrad') >= 0) return 'cobrada';
+  if (k.indexOf('facturad') >= 0 || k.indexOf('enviad') >= 0) return 'facturada';
+  return 'otro';
+}
+
+function convertir(v, tipo) {
+  if (tipo === 'fecha') return normFecha(v);
+  if (tipo === 'numero') return normNum(v);
+  return v == null ? '' : String(v).trim();
+}
+
+/* ===========================================================================
+   Formas de pago descompuestas. El texto libre del contrato no se interpreta
+   en vivo: se mapea acá una vez y se revisa a mano. Adivinar la política de
+   liberación a partir de una frase es donde no queremos que la app se
+   equivoque sola.
+   =========================================================================== */
+
+var DISPARADORES = {
+  carga:              { label: 'Carga (ETD)',           estimable: true },
+  eta:                { label: 'Llegada (ETA)',         estimable: true },
+  despacho_ue:        { label: 'Despacho UE',           estimable: false },
+  port_health:        { label: 'Port health',           estimable: false },
+  recepcion_deposito: { label: 'Recepción en depósito', estimable: false },
+  presentacion_docs:  { label: 'Presentación de docs',  estimable: false },
+  ninguno:            { label: '—',                     estimable: true }
+};
+
+var LIBERACION = {
+  contra_pago:      { label: 'Contra pago',      antes: false },
+  trust:            { label: 'Docs in trust',    antes: true },
+  contra_tramite:   { label: 'Contra despacho',  antes: true },
+  contra_recepcion: { label: 'Contra recepción', antes: true }
+};
+
+var MAPEO_PAGO = [
+  { p:/anticipado|100%\s*prepa/i, momento:'anticipado', disp:'ninguno', dias:0, lib:'contra_pago', medio:'swift' },
+  { p:/^cad\s*bank$/i, momento:'contra_documentos', disp:'presentacion_docs', dias:0, lib:'contra_pago', medio:'swift' },
+  { p:/cad against scan/i, momento:'contra_documentos', disp:'presentacion_docs', dias:0, lib:'contra_pago', medio:'swift' },
+  { p:/documents?\s*in\s*trust/i, momento:'contra_documentos', disp:'presentacion_docs', dias:0, lib:'trust', medio:'swift' },
+  { p:/lc at sight/i, momento:'contra_documentos', disp:'presentacion_docs', dias:0, lib:'contra_pago', medio:'lc' },
+  { p:/cad.*7\s*d[ií]as?\s*(previo|antes)|cad\s*7\s*days?\s*before|100%\s*cad\s*7/i,
+    momento:'contra_documentos', disp:'eta', dias:-7, lib:'contra_pago', medio:'swift' },
+  { p:/10%.*carga.*90%.*7\s*d[ií]as/i, momento:'mixto', disp:'eta', dias:-7, lib:'contra_pago', medio:'swift',
+    split:[{pct:10,disp:'carga',dias:0},{pct:90,disp:'eta',dias:-7}] },
+  { p:/10%\s*adelanta|20%\s*prepayment/i, momento:'mixto', disp:'eta', dias:-7, lib:'contra_pago', medio:'swift', revisar:true },
+  { p:/freight cost in advance/i, momento:'mixto', disp:'eta', dias:-7, lib:'contra_pago', medio:'swift', revisar:true },
+  { p:/35%\s*cad/i, momento:'mixto', disp:'eta', dias:30, lib:'contra_pago', medio:'swift', revisar:true },
+  { p:/after eu clear|after eu customs|payment after arrival after eu/i,
+    momento:'al_arribo', disp:'despacho_ue', dias:0, lib:'contra_tramite', medio:'swift' },
+  { p:/port health|ph clearance|spanish port check|port check/i,
+    momento:'al_arribo', disp:'port_health', dias:0, lib:'contra_tramite', medio:'swift' },
+  { p:/100%\s*upon arrival|100%\s*al arribo/i, momento:'al_arribo', disp:'eta', dias:0, lib:'contra_pago', medio:'swift' },
+  { p:/(\d+)\s*days? after receipt in warehouse/i, momento:'a_plazo', disp:'recepcion_deposito', dias:7,
+    lib:'contra_recepcion', medio:'swift' },
+  // Plazos contados desde la carga (ETD). El echeq es solo para cargas locales.
+  { p:/45\s*d[ií]as.*echeq.*carga/i, momento:'a_plazo', disp:'carga', dias:45, lib:'contra_pago', medio:'echeq' },
+  { p:/45\s*-\s*60\s*d[ií]as.*echeq/i, momento:'a_plazo', disp:'carga', dias:60, lib:'contra_pago', medio:'echeq', revisar:true },
+  { p:/^30\s*d[ií]as$/i, momento:'a_plazo', disp:'carga', dias:30, lib:'contra_pago', medio:'swift' }
+];
+
+function interpretarPago(texto) {
+  var s = String(texto || '').trim();
+  if (!s) return { desconocida: true, texto: s };
+  for (var i = 0; i < MAPEO_PAGO.length; i++) {
+    if (MAPEO_PAGO[i].p.test(s)) {
+      var r = MAPEO_PAGO[i];
+      return { momento:r.momento, disp:r.disp, dias:r.dias, lib:r.lib, medio:r.medio,
+               split:r.split, revisar:r.revisar, texto:s };
+    }
+  }
+  return { desconocida: true, texto: s, revisar: true };
+}
+
+// null cuando el disparador no es estimable: mejor "esperando despacho" que
+// inventar una fecha.
+function fechaCobro(cond, emb) {
+  if (!cond || cond.desconocida) return null;
+  var d = DISPARADORES[cond.disp];
+  if (!d || !d.estimable) return null;
+  var base = cond.disp === 'eta' ? emb.eta : emb.etd;
+  if (!esFecha(base)) return null;
+  var f = new Date(base.getTime());
+  f.setUTCDate(f.getUTCDate() + (cond.dias || 0));
+  return f;
+}
+
+/* ===========================================================================
+   Etapas y alertas.
+   "Que no se me pase algo de una carga" se resuelve con checklist por etapa,
+   no con avisos sueltos que hay que acordarse de mirar.
+   =========================================================================== */
+
+var ETAPAS = [
+  { id:'creado',       label:'Creado',       req:['exporter','importer','contract','product','tns','price','etd','port'] },
+  { id:'pre_embarque', label:'Pre-embarque', req:['booking','containers','shippingLine','vessel'] },
+  { id:'embarcado',    label:'Embarcado',    req:['bl','invoice','eta'] },
+  { id:'en_transito',  label:'En tránsito',  req:['docs'] },
+  { id:'arribado',     label:'Arribado',     req:['tr'] },
+  { id:'cobrado',      label:'Cobrado',      req:['invCommission'] }
+];
+
+var DIA = 86400000;
+function dias(a, b) { return Math.round((a - b) / DIA); }
+
+function lleno(emb, c) {
+  var v = emb[c];
+  if (v === null || v === undefined || v === '') return false;
+  if (typeof v === 'object' && v.invalida) return false;
+  if (SEMAFOROS.indexOf(c) >= 0) return v !== 'vacio';
+  return true;
+}
+
+function etapaDe(emb, hoy) {
+  if (estadoComision(emb.invCommission) === 'cobrada') return 'cobrado';
+  if (esFecha(emb.eta) && emb.eta < hoy) return 'arribado';
+  if (lleno(emb, 'bl')) return (esFecha(emb.eta) && emb.eta > hoy) ? 'en_transito' : 'embarcado';
+  if (esFecha(emb.etd) && emb.etd < hoy) return 'embarcado';
+  return (esFecha(emb.etd) && dias(emb.etd, hoy) <= 21) ? 'pre_embarque' : 'creado';
+}
+
+function faltantes(emb, hoy, mapa) {
+  var hasta = ETAPAS.map(function (e) { return e.id; }).indexOf(etapaDe(emb, hoy));
+  var out = [];
+  ETAPAS.slice(0, hasta + 1).forEach(function (et) {
+    et.req.forEach(function (c) {
+      // Si la columna no existe en la planilla, no se puede exigir.
+      if (mapa[c] === undefined) return;
+      if (!lleno(emb, c)) out.push(c);
+    });
+  });
+  return out;
+}
+
+var NIVEL = { critico: 3, alto: 2, medio: 1 };
+
+var REGLAS = [
+  // La cara: mercadería liberada sin cobrar cuando la condición exige cobrar
+  // antes. No es un dato viejo, es plata en la calle.
+  function (e, c) {
+    if (e.tr !== 'ok') return null;
+    var pol = LIBERACION[c.cond && c.cond.lib];
+    if (!pol || pol.antes) return null;
+    if (estadoComision(e.invCommission) === 'cobrada') return null;
+    var atraso = c.cobro && c.cobro < c.hoy ? dias(c.hoy, c.cobro) : null;
+    return { id:'liberado_sin_cobrar', nivel:'critico', titulo:'Liberado sin registro de cobro',
+      detalle: atraso
+        ? 'T.R. liberado con condición "' + c.cond.texto + '". Vencía hace ' + atraso + ' días y no hay cobro cargado.'
+        : 'T.R. liberado con condición "' + c.cond.texto + '", que se cobra antes de liberar. No hay cobro cargado.',
+      accion:'Registrar cobro' };
+  },
+
+  // Fechas imposibles: hoy nadie las ve.
+  function (e, c) {
+    var malas = [], lim = c.hoy.getUTCFullYear() + 1;
+    if (e.eta && e.eta.invalida) malas.push('ETA');
+    else if (esFecha(e.eta) && e.eta.getUTCFullYear() > lim) malas.push('ETA');
+    if (e.etd && e.etd.invalida) malas.push('ETD');
+    else if (esFecha(e.etd) && e.etd.getUTCFullYear() > lim) malas.push('ETD');
+    if (esFecha(e.etd) && esFecha(e.eta) && e.eta < e.etd) malas.push('ETA anterior al ETD');
+    if (!malas.length) return null;
+    return { id:'fecha_corrupta', nivel:'alto', titulo:'Fecha imposible',
+      detalle:'Revisar ' + malas.join(', ') + '. Probable error de tipeo.', accion:'Corregir' };
+  },
+
+  function (e, c) {
+    if (!esFecha(e.etd) || e.etd >= c.hoy || lleno(e, 'bl')) return null;
+    var d = dias(c.hoy, e.etd); if (d < 5) return null;
+    return { id:'zarpo_sin_bl', nivel: d > 20 ? 'critico' : 'alto',
+      titulo:'Zarpó hace ' + d + ' días y no hay BL',
+      detalle:'Sin BL no se puede avanzar con documentos ni liberación.', accion:'Cargar BL' };
+  },
+
+  function (e, c) {
+    if (!esFecha(e.etd) || e.etd < c.hoy) return null;
+    var d = dias(e.etd, c.hoy); if (d > 14) return null;
+    var falta = ['booking', 'containers'].filter(function (k) {
+      return c.mapa[k] !== undefined && !lleno(e, k);
+    });
+    if (!falta.length) return null;
+    return { id:'embarca_sin_booking', nivel: d <= 5 ? 'alto' : 'medio',
+      titulo:'Embarca en ' + d + ' días',
+      detalle:'Sin ' + falta.map(function (f) { return CAMPOS[f].label.toLowerCase(); }).join(' ni ') + '.',
+      accion:'Completar' };
+  },
+
+  function (e, c) {
+    if (!c.cobro || c.cobro >= c.hoy) return null;
+    if (estadoComision(e.invCommission) === 'cobrada') return null;
+    var d = dias(c.hoy, c.cobro); if (d < 3) return null;
+    return { id:'cobro_vencido', nivel: d > 30 ? 'critico' : 'alto',
+      titulo:'Cobro vencido hace ' + d + ' días',
+      detalle:'Vencía el ' + fmtFecha(c.cobro) + ' según "' + c.cond.texto + '".', accion:'Reclamar pago' };
+  },
+
+  // Trámite de terceros: no hay fecha estimable, pero sí se nota si pasó mucho.
+  function (e, c) {
+    var d0 = DISPARADORES[c.cond && c.cond.disp];
+    if (!d0 || d0.estimable) return null;
+    if (!esFecha(e.eta) || e.eta >= c.hoy) return null;
+    if (estadoComision(e.invCommission) === 'cobrada') return null;
+    var d = dias(c.hoy, e.eta); if (d < 15) return null;
+    return { id:'tramite_trabado', nivel: d > 45 ? 'alto' : 'medio',
+      titulo:'Esperando ' + d0.label.toLowerCase() + ' hace ' + d + ' días',
+      detalle:'El pago depende de un trámite de terceros. Confirmar si ya salió.',
+      accion:'Cargar fecha' };
+  },
+
+  function (e, c) {
+    if (!esFecha(e.etdFinal) || !esFecha(e.etdMaximo)) return null;
+    if (e.etdFinal <= e.etdMaximo || lleno(e, 'reclamo')) return null;
+    return { id:'roleo', nivel:'alto',
+      titulo:'Roleo de ' + dias(e.etdFinal, e.etdMaximo) + ' días sobre el máximo',
+      detalle:'El ETD final supera el máximo del contrato y no hay reclamo cargado.',
+      accion:'Iniciar reclamo' };
+  },
+
+  function (e, c) {
+    if (!esFecha(e.eta) || e.eta >= c.hoy || lleno(e, 'invoice')) return null;
+    if (c.mapa.invoice === undefined) return null;
+    var d = dias(c.hoy, e.eta); if (d < 7) return null;
+    return { id:'arribo_sin_factura', nivel:'alto',
+      titulo:'Llegó hace ' + d + ' días sin factura cargada',
+      detalle:'No se puede seguir la cobranza sin la factura.', accion:'Cargar factura' };
+  },
+
+  // El celeste dice "mirá esto" pero no dice qué. A los tres días nadie se acuerda.
+  function (e, c) {
+    var m = SEMAFOROS.filter(function (k) { return e[k] === 'atencion'; });
+    if (!m.length || lleno(e, 'nota')) return null;
+    return { id:'atencion_sin_nota', nivel:'medio', titulo:'Marcado para atención sin explicación',
+      detalle:'Está en celeste ' + m.map(function (k) { return CAMPOS[k].label; }).join(', ') +
+              '. Sin nota, en tres días nadie se acuerda por qué.', accion:'Agregar nota' };
+  }
+];
+
+function evaluar(emb, contrato, hoy, mapa) {
+  var cond = contrato ? contrato.cond : null;
+  var ctx = { hoy: hoy, cond: cond, mapa: mapa, cobro: fechaCobro(cond, emb) };
+  var alertas = [];
+  REGLAS.forEach(function (r) {
+    try { var a = r(emb, ctx); if (a) alertas.push(a); } catch (err) {}
+  });
+  var falta = faltantes(emb, hoy, mapa);
+  if (falta.length) {
+    alertas.push({ id:'checklist', nivel: falta.length > 4 ? 'alto' : 'medio',
+      titulo: falta.length + (falta.length > 1 ? ' campos sin cargar' : ' campo sin cargar'),
+      detalle: falta.map(function (f) { return CAMPOS[f].label; }).join(', '),
+      accion:'Completar', campos: falta });
+  }
+  alertas.sort(function (a, b) { return NIVEL[b.nivel] - NIVEL[a.nivel]; });
+  return { etapa: etapaDe(emb, hoy), cobro: ctx.cobro, alertas: alertas,
+           nivelMax: alertas.length ? alertas[0].nivel : null };
+}
+
+/* ===========================================================================
+   Google OAuth + API de Sheets, directo desde el navegador.
+   =========================================================================== */
+
+var tokenClient = null;
+
+function pedirToken(interactivo) {
+  return new Promise(function (resolve, reject) {
+    if (!window.google || !google.accounts || !google.accounts.oauth2) {
+      return reject(new Error('No cargó la librería de Google. Revisá la conexión y recargá.'));
+    }
+    if (!tokenClient) {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: S.cfg.clientId,
+        scope: SCOPE,
+        callback: function () {}
+      });
+    }
+    tokenClient.callback = function (resp) {
+      if (resp.error) {
+        return reject(new Error(
+          resp.error === 'access_denied'
+            ? 'No diste permiso a la app.'
+            : 'Error de autenticación: ' + resp.error));
+      }
+      S.token = resp.access_token;
+      S.tokenExp = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3500000) - 60000;
+      resolve(S.token);
+    };
+    tokenClient.requestAccessToken({ prompt: interactivo ? 'consent' : '' });
+  });
+}
+
+async function conToken() {
+  if (S.token && Date.now() < S.tokenExp) return S.token;
+  return pedirToken(false);
+}
+
+async function api(url, opciones) {
+  var token = await conToken();
+  var o = opciones || {};
+  o.headers = Object.assign({ Authorization: 'Bearer ' + token }, o.headers || {});
+  var r = await fetch(url, o);
+
+  if (r.status === 401) {           // token vencido: pedir de nuevo y reintentar
+    S.token = null;
+    token = await pedirToken(false);
+    o.headers.Authorization = 'Bearer ' + token;
+    r = await fetch(url, o);
+  }
+
+  var cuerpo = null;
+  try { cuerpo = await r.json(); } catch (e) {}
+  if (!r.ok) {
+    var msg = (cuerpo && cuerpo.error && cuerpo.error.message) || ('Error ' + r.status);
+    if (r.status === 403) msg = 'Tu cuenta no tiene permiso sobre esta planilla. ' + msg;
+    if (r.status === 404) msg = 'No existe una planilla con ese id, o no tenés acceso.';
+    throw new Error(msg);
+  }
+  return cuerpo;
+}
+
+var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/';
+
+function listarPestanas(id) {
+  return api(BASE + id + '?fields=' + encodeURIComponent('properties(title),sheets(properties(sheetId,title))'));
+}
+
+async function leerHoja(id, nombre) {
+  var rango = "'" + nombre.replace(/'/g, "''") + "'!A1:" + letraCol(MAX_COLS - 1) + MAX_FILAS;
+  var campos = 'sheets(properties(sheetId,title),data(rowData(values(effectiveValue,effectiveFormat/backgroundColor))))';
+  var d = await api(BASE + id + '?includeGridData=true&ranges=' + encodeURIComponent(rango) +
+                    '&fields=' + encodeURIComponent(campos));
+  var hoja = d.sheets && d.sheets[0];
+  if (!hoja) throw new Error('No existe la pestaña "' + nombre + '"');
+  var grid = (hoja.data && hoja.data[0] && hoja.data[0].rowData) || [];
+
+  function celda(c) {
+    if (!c) return { v: null, bg: null };
+    var ev = c.effectiveValue || {}, v = null;
+    if (ev.numberValue !== undefined) v = ev.numberValue;
+    else if (ev.stringValue !== undefined) v = ev.stringValue;
+    else if (ev.boolValue !== undefined) v = ev.boolValue;
+    return { v: v, bg: (c.effectiveFormat && c.effectiveFormat.backgroundColor) || null };
+  }
+
+  var encabezados = ((grid[0] && grid[0].values) || []).map(function (c) { return celda(c).v; });
+  var primeraClave = clave(encabezados[0]);
+  var filas = [];
+  for (var i = 1; i < grid.length; i++) {
+    var vals = (grid[i] && grid[i].values) || [];
+    var p = celda(vals[0]).v;
+    if (p === null || p === '') continue;
+    // Encabezado repetido en el medio: pasa cuando se pegan bloques de filas.
+    if (clave(p) === primeraClave) continue;
+    var celdas = [], colores = [];
+    for (var j = 0; j < MAX_COLS; j++) { var c2 = celda(vals[j]); celdas[j] = c2.v; colores[j] = c2.bg; }
+    filas.push({ fila: i + 1, celdas: celdas, colores: colores });
+  }
+  return { sheetId: hoja.properties.sheetId, encabezados: encabezados, filas: filas };
+}
+
+function aValorSheets(v) {
+  if (v === null || v === undefined || v === '') return { stringValue: '' };
+  if (typeof v === 'number') return { numberValue: v };
+  if (v instanceof Date) return { numberValue: Math.floor((v - EPOCH) / DIA) };
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) {
+    var d = new Date(String(v) + 'T00:00:00Z');
+    if (!isNaN(d)) return { numberValue: Math.floor((d - EPOCH) / DIA) };
+  }
+  return { stringValue: String(v) };
+}
+
+function escribirCeldas(id, sheetId, fila, valores, colores) {
+  var reqs = [];
+  Object.keys(valores || {}).forEach(function (idx) {
+    var c = +idx;
+    reqs.push({ updateCells: {
+      range: { sheetId: sheetId, startRowIndex: fila - 1, endRowIndex: fila, startColumnIndex: c, endColumnIndex: c + 1 },
+      rows: [{ values: [{ userEnteredValue: aValorSheets(valores[idx]) }] }],
+      fields: 'userEnteredValue' } });
+  });
+  Object.keys(colores || {}).forEach(function (idx) {
+    var c = +idx;
+    reqs.push({ repeatCell: {
+      range: { sheetId: sheetId, startRowIndex: fila - 1, endRowIndex: fila, startColumnIndex: c, endColumnIndex: c + 1 },
+      cell: { userEnteredFormat: { backgroundColor: COLORES[colores[idx]] || COLORES.vacio } },
+      fields: 'userEnteredFormat.backgroundColor' } });
+  });
+  if (!reqs.length) return Promise.resolve();
+  return api(BASE + id + ':batchUpdate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requests: reqs })
+  });
+}
+
+/* --- Carga de datos -------------------------------------------------------- */
+
+async function cargarTodo() {
+  S.cargando = true; S.error = null; pintar();
+  try {
+    var emb = await leerHoja(S.cfg.sheetId, S.cfg.tabEmb);
+    var det = detectar(emb.encabezados, CAMPOS);
+    S.sheetIdEmb = emb.sheetId;
+    S.datos = {
+      encabezados: emb.encabezados, mapa: det.mapa, extras: det.extras,
+      filas: emb.filas.map(function (f) {
+        var o = { _fila: f.fila };
+        Object.keys(det.mapa).forEach(function (campo) {
+          var i = det.mapa[campo];
+          o[campo] = CAMPOS[campo].tipo === 'semaforo'
+            ? colorASem(f.colores[i])
+            : convertir(f.celdas[i], CAMPOS[campo].tipo);
+        });
+        return o;
+      })
+    };
+
+    S.contratos = new Map();
+    if (S.cfg.tabCtr) {
+      var ctr = await leerHoja(S.cfg.sheetId, S.cfg.tabCtr);
+      var dc = detectar(ctr.encabezados, CAMPOS_CTR);
+      if (dc.mapa.contrato !== undefined) {
+        ctr.filas.forEach(function (f) {
+          var nombre = f.celdas[dc.mapa.contrato];
+          if (!nombre) return;
+          var k = String(nombre).trim();
+          if (S.contratos.has(k)) return;
+          S.contratos.set(k, {
+            contrato: k,
+            tns: normNum(f.celdas[dc.mapa.tns]),
+            formaPago: f.celdas[dc.mapa.formaPago],
+            cond: interpretarPago(f.celdas[dc.mapa.formaPago])
+          });
+        });
+      }
+    }
+  } catch (e) {
+    S.error = e.message;
+  } finally {
+    S.cargando = false; pintar();
+  }
+}
+
+async function aplicarCambio(fila, campo, valor) {
+  var f = S.datos.filas.filter(function (x) { return x._fila === fila; })[0];
+  if (!f) return;
+  var idx = S.datos.mapa[campo];
+  if (idx === undefined) { S.error = 'La columna ' + CAMPOS[campo].label + ' no existe en la planilla.'; return pintar(); }
+
+  var antes = f[campo];
+  f[campo] = CAMPOS[campo].tipo === 'semaforo' ? valor : convertir(valor, CAMPOS[campo].tipo);
+  S.guardando++; pintar();
+
+  var valores = {}, colores = {};
+  if (SEMAFOROS.indexOf(campo) >= 0) colores[idx] = valor; else valores[idx] = valor;
+
+  try {
+    await escribirCeldas(S.cfg.sheetId, S.sheetIdEmb, fila, valores, colores);
+  } catch (e) {
+    f[campo] = antes;                       // revertir si la escritura falló
+    S.error = 'No se pudo guardar: ' + e.message;
+  } finally {
+    S.guardando--; pintar();
+  }
+}
+
+function ciclarSemaforo(fila, campo) {
+  var f = S.datos.filas.filter(function (x) { return x._fila === fila; })[0];
+  var actual = (f && f[campo]) || 'vacio';
+  aplicarCambio(fila, campo, CICLO[(CICLO.indexOf(actual) + 1) % CICLO.length]);
+}
+
+/* ===========================================================================
+   Vistas
+   =========================================================================== */
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function fmtFecha(f) {
+  return esFecha(f) ? f.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit' }) : '';
+}
+
+function pintarCelda(v) {
+  if (v === null || v === undefined || v === '') return '<span class="vacia">—</span>';
+  if (typeof v === 'object' && v.invalida) return '<span class="mala">' + esc(v.crudo) + '</span>';
+  if (v instanceof Date) {
+    var mala = v.getUTCFullYear() > new Date().getFullYear() + 1;
+    return mala ? '<span class="mala">' + fmtFecha(v) + '</span>' : fmtFecha(v);
+  }
+  if (typeof v === 'number') return v.toLocaleString('es-AR');
+  return esc(v);
+}
+
+/* --- Alta: Client ID y planilla ------------------------------------------- */
+
+function vistaSetup() {
+  var origen = location.origin;
+  var cfg = S.cfg || {};
+  var st = S.setup;
+
+  if (!cfg.clientId) {
+    return '<div class="setup">' +
+      '<h1>Conectar con Google</h1>' +
+      '<p class="sub">Una sola vez: creá un Client ID para que la app pueda pedirte permiso.</p>' +
+      (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
+      '<div class="caja">' +
+        '<div class="paso"><b>1.</b><span>Entrá a <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">console.cloud.google.com/apis/credentials</a> y creá un proyecto si no tenés.</span></div>' +
+        '<div class="paso"><b>2.</b><span>Habilitá la <b>Google Sheets API</b> en Biblioteca.</span></div>' +
+        '<div class="paso"><b>3.</b><span>Crear credenciales → <b>ID de cliente de OAuth</b> → Aplicación web.</span></div>' +
+        '<div class="paso"><b>4.</b><span>En <b>Orígenes autorizados de JavaScript</b> agregá exactamente:<br><code>' + esc(origen) + '</code></span></div>' +
+        '<div class="paso"><b>5.</b><span>Copiá el Client ID y pegalo acá abajo.</span></div>' +
+        '<div class="campo" style="margin-top:16px">' +
+          '<label for="cid">Client ID</label>' +
+          '<input id="cid" placeholder="123456-abc.apps.googleusercontent.com" value="' + esc(st.entrada) + '">' +
+          '<p class="ayuda">Queda guardado en este navegador. No es un secreto: solo funciona desde este dominio.</p>' +
+        '</div>' +
+        '<button class="primario" data-act="set-cid">Guardar y continuar</button>' +
+      '</div></div>';
+  }
+
+  if (!S.pestanas) {
+    return '<div class="setup">' +
+      '<h1>Elegir la planilla</h1>' +
+      '<p class="sub">Pegá la URL de la hoja donde cargás los embarques.</p>' +
+      (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
+      '<div class="caja">' +
+        '<div class="campo">' +
+          '<label for="url">URL o id de la planilla</label>' +
+          '<input id="url" placeholder="https://docs.google.com/spreadsheets/d/…" value="' + esc(st.entrada) + '">' +
+          '<p class="ayuda">Vas a entrar con tu cuenta de Google. Usa los permisos que ya tenés sobre la hoja.</p>' +
+        '</div>' +
+        '<button class="primario" data-act="buscar" ' + (st.buscando ? 'disabled' : '') + '>' +
+          (st.buscando ? 'Conectando…' : 'Conectar con Google') + '</button>' +
+        ' <button data-act="reset-cid">Cambiar Client ID</button>' +
+      '</div></div>';
+  }
+
+  var ops = function (sel) {
+    return S.pestanas.pestanas.map(function (p) {
+      return '<option value="' + esc(p.nombre) + '"' + (p.nombre === sel ? ' selected' : '') + '>' + esc(p.nombre) + '</option>';
+    }).join('');
+  };
+
+  return '<div class="setup">' +
+    '<h1>' + esc(S.pestanas.titulo) + '</h1>' +
+    '<p class="sub">' + S.pestanas.pestanas.length + ' pestañas encontradas. Decime cuál es cuál.</p>' +
+    (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
+    '<div class="caja">' +
+      '<div class="campo"><label for="te">Pestaña de embarques</label>' +
+        '<select id="te"><option value="">Elegir…</option>' + ops(st.tabEmb) + '</select></div>' +
+      '<div class="campo"><label for="tc">Pestaña de contratos</label>' +
+        '<select id="tc"><option value="">Ninguna</option>' + ops(st.tabCtr) + '</select>' +
+        '<p class="ayuda">De acá sale la condición de pago. Sin esto no hay alertas de cobro.</p></div>' +
+      '<button class="primario" data-act="usar">Usar esta planilla</button>' +
+    '</div></div>';
+}
+
+/* --- Tablero --------------------------------------------------------------- */
+
+function evaluarTodo() {
+  var hoy = new Date();
+  return S.datos.filas.map(function (emb) {
+    var ctr = S.contratos.get(String(emb.contract || '').trim()) || null;
+    return { emb: emb, contrato: ctr, ev: evaluar(emb, ctr, hoy, S.datos.mapa) };
+  });
+}
+
+function vistaApp() {
+  if (!S.datos) {
+    return '<div class="app">' + cabecera() +
+      (S.error ? '<div class="error" style="margin-top:14px">' + esc(S.error) + '</div>' : '') +
+      '<p class="centro">' + (S.cargando ? 'Leyendo la planilla…' : 'Sin datos.') + '</p></div>';
+  }
+
+  var evs = evaluarTodo();
+  var cuenta = { critico: 0, alto: 0, medio: 0, ok: 0 };
+  evs.forEach(function (x) { x.ev.nivelMax ? cuenta[x.ev.nivelMax]++ : cuenta.ok++; });
+
+  var cuerpo = S.vista === 'control' ? vistaControl(evs, cuenta) : vistaGrilla(evs);
+  var panel = '';
+  if (S.sel !== null) {
+    var item = evs.filter(function (x) { return x.emb._fila === S.sel; })[0];
+    if (item) panel = vistaPanel(item);
+  }
+
+  return '<div class="app">' + cabecera() +
+    (S.error ? '<div class="error" style="margin-top:14px">' + esc(S.error) + '</div>' : '') +
+    diagnostico() +
+    '<div class="tabs" role="tablist">' +
+      '<button role="tab" aria-selected="' + (S.vista === 'control') + '" data-act="tab" data-v="control">Control</button>' +
+      '<button role="tab" aria-selected="' + (S.vista === 'carga') + '" data-act="tab" data-v="carga">Carga</button>' +
+    '</div>' + cuerpo + '</div>' + panel;
+}
+
+function cabecera() {
+  return '<div class="cab"><h1>Control de embarques</h1>' +
+    '<span class="sello">' + esc(S.cfg.titulo || '') + ' · ' + esc(S.cfg.tabEmb) +
+      (S.guardando > 0 ? ' · guardando…' : '') + '</span>' +
+    '<span class="cab-acc">' +
+      '<button data-act="recargar"' + (S.cargando ? ' disabled' : '') + '>' +
+        (S.cargando ? 'Actualizando…' : 'Actualizar') + '</button>' +
+      '<button data-act="salir">Cambiar planilla</button>' +
+    '</span></div>';
+}
+
+function diagnostico() {
+  var criticas = ['contract', 'importer', 'etd', 'eta', 'docs', 'tr'];
+  var faltan = criticas.filter(function (c) { return S.datos.mapa[c] === undefined; });
+  var reconocidas = Object.keys(S.datos.mapa).length;
+  var total = S.datos.encabezados.filter(Boolean).length;
+
+  var aviso = '';
+  if (faltan.length) {
+    aviso = '<div class="aviso">No encontré estas columnas: <b>' +
+      faltan.map(function (c) { return CAMPOS[c].label; }).join(', ') +
+      '</b>. Las alertas que dependen de ellas quedan apagadas.</div>';
+  }
+  if (S.cfg.tabCtr && S.contratos.size === 0) {
+    aviso += '<div class="aviso">La pestaña <b>' + esc(S.cfg.tabCtr) +
+      '</b> no devolvió contratos, así que no hay condiciones de pago y las alertas de cobro están apagadas.</div>';
+  }
+
+  return aviso + '<details class="diag"><summary>' + reconocidas + ' de ' + total +
+    ' columnas reconocidas</summary><p style="margin:8px 0 0">Usa: ' +
+    Object.keys(S.datos.mapa).map(function (c) { return esc(CAMPOS[c].label); }).join(', ') + '.' +
+    (S.datos.extras.length ? ' Ignora: ' + S.datos.extras.map(function (e) { return esc(e.h); }).join(', ') + '.' : '') +
+    '</p></details>';
+}
+
+function vistaControl(evs, cuenta) {
+  var orden = { critico: 3, alto: 2, medio: 1 };
+  var con = evs.filter(function (x) { return x.ev.alertas.length; })
+    .sort(function (a, b) { return (orden[b.ev.nivelMax] || 0) - (orden[a.ev.nivelMax] || 0); });
+
+  var h = '<div class="tira">' +
+    '<div class="crit"><div class="n">' + cuenta.critico + '</div><div class="l">Acción ahora</div></div>' +
+    '<div><div class="n">' + cuenta.alto + '</div><div class="l">Esta semana</div></div>' +
+    '<div><div class="n">' + cuenta.medio + '</div><div class="l">Incompletos</div></div>' +
+    '<div><div class="n">' + cuenta.ok + '</div><div class="l">Al día</div></div></div>';
+
+  if (!evs.length) return h + '<p class="centro">La pestaña no tiene filas con datos.</p>';
+  if (!con.length) return h + '<p class="centro">No hay nada pendiente. Todos los embarques están al día.</p>';
+
+  [['critico', 'Requieren acción ahora'], ['alto', 'Para esta semana'], ['medio', 'Datos incompletos']]
+    .forEach(function (g) {
+      var items = con.filter(function (x) { return x.ev.nivelMax === g[0]; });
+      if (!items.length) return;
+      h += '<h2 class="gt">' + g[1] + ' · ' + items.length + '</h2>';
+      items.forEach(function (x) {
+        var a = x.ev.alertas[0], resto = x.ev.alertas.length - 1;
+        var et = ETAPAS.filter(function (e) { return e.id === x.ev.etapa; })[0];
+        h += '<article class="alerta ' + a.nivel + '">' +
+          '<div class="f1"><span class="quien">' + esc(x.emb.importer || '(sin importador)') + '</span>' +
+          '<span class="ctr">' + esc(x.emb.contract) + '</span></div>' +
+          '<p class="tit">' + esc(a.titulo) + '</p>' +
+          '<p class="det">' + esc(a.detalle) + '</p>' +
+          '<div class="acc"><button data-act="abrir" data-f="' + x.emb._fila + '">' + esc(a.accion) + '</button>' +
+          '<span class="chip gris">' + (et ? et.label : '') + '</span>' +
+          (resto > 0 ? '<span class="chip gris">+' + resto + ' más</span>' : '') +
+          '</div></article>';
+      });
+    });
+  return h;
+}
+
+var COLS = ['contract', 'importer', 'product', 'tns', 'etd', 'eta', 'port', 'bl'];
+
+function vistaGrilla(evs) {
+  var q = S.busca.trim().toLowerCase();
+  var filas = q ? evs.filter(function (x) {
+    return [x.emb.contract, x.emb.importer, x.emb.bl, x.emb.vessel, x.emb.port]
+      .some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
+  }) : evs;
+
+  var cols = COLS.filter(function (c) { return S.datos.mapa[c] !== undefined; });
+
+  var h = '<div class="barra"><input id="busca" placeholder="Buscar contrato, importador, BL, buque" value="' +
+    esc(S.busca) + '" aria-label="Buscar"></div><div class="marco"><table><thead><tr>' +
+    cols.map(function (c) { return '<th>' + CAMPOS[c].label + '</th>'; }).join('') +
+    SEMAFOROS.filter(function (c) { return S.datos.mapa[c] !== undefined; })
+      .map(function (c) { return '<th>' + CAMPOS[c].label + '</th>'; }).join('') +
+    '</tr></thead><tbody>';
+
+  filas.forEach(function (x) {
+    h += '<tr' + (x.emb._fila === S.sel ? ' class="sel"' : '') + ' data-act="abrir" data-f="' + x.emb._fila + '">' +
+      cols.map(function (c) {
+        var cls = c === 'tns' ? ' class="num"' : (c === 'contract' || c === 'bl') ? ' class="cod"' : '';
+        return '<td' + cls + '>' + pintarCelda(x.emb[c]) + '</td>';
+      }).join('') +
+      SEMAFOROS.filter(function (c) { return S.datos.mapa[c] !== undefined; }).map(function (c) {
+        return '<td><button class="sem" data-e="' + (x.emb[c] || 'vacio') + '" data-act="sem" ' +
+          'data-f="' + x.emb._fila + '" data-c="' + c + '" title="Clic para cambiar" ' +
+          'aria-label="' + CAMPOS[c].label + ': ' + (x.emb[c] || 'sin marcar') + '"></button></td>';
+      }).join('') + '</tr>';
+  });
+
+  return h + '</tbody></table></div>' +
+    '<p style="font-size:13px;color:var(--tinta2);margin-top:10px">' +
+    'El color de ' + SEMAFOROS.map(function (c) { return CAMPOS[c].label; }).join(', ') +
+    ' es el mismo dato que hay en la planilla. Se pinta acá y se pinta allá.</p>';
+}
+
+var EDITABLES = ['vessel', 'shippingLine', 'booking', 'containers', 'bl', 'invoice', 'tracking', 'nota'];
+
+function vistaPanel(x) {
+  var emb = x.emb, ev = x.ev, cond = x.contrato ? x.contrato.cond : null;
+  var falta = {};
+  ev.alertas.forEach(function (a) {
+    if (a.campos) a.campos.forEach(function (c) { falta[c] = 1; });
+  });
+
+  var h = '<aside class="panel" role="dialog" aria-label="Embarque ' + esc(emb.contract) + '">' +
+    '<button class="cerrar" data-act="cerrar">Cerrar</button>' +
+    '<h2>' + esc(emb.importer || '(sin importador)') + '</h2>' +
+    '<p class="ctr" style="margin-top:0;font-family:var(--mono);font-size:12px;color:var(--tinta2)">' +
+      esc(emb.contract) + '</p>';
+
+  ev.alertas.forEach(function (a) {
+    h += '<div class="alerta ' + a.nivel + '" style="margin-top:12px">' +
+      '<p class="tit" style="margin-top:0">' + esc(a.titulo) + '</p>' +
+      '<p class="det">' + esc(a.detalle) + '</p></div>';
+  });
+
+  h += '<h3 class="gt">Condición de pago</h3>';
+  if (!x.contrato) {
+    h += '<p class="det">El contrato no aparece en la pestaña de contratos. Sin eso no hay alertas de cobro.</p>';
+  } else if (cond.desconocida) {
+    h += '<p class="det">Sin mapear: <em>' + esc(cond.texto || 'vacía en el contrato') +
+         '</em>. Las alertas de cobro quedan apagadas para este embarque.</p>';
+  } else {
+    h += '<p style="margin:0 0 6px">' + esc(cond.texto) + '</p><div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      '<span class="chip gris">' + esc(String(cond.momento).replace(/_/g, ' ')) + '</span>' +
+      '<span class="chip gris">' + esc(cond.medio) + '</span>' +
+      '<span class="chip ' + (LIBERACION[cond.lib].antes ? 'aten' : 'ok') + '">' +
+        LIBERACION[cond.lib].label + '</span>' +
+      (cond.revisar ? '<span class="chip pend">revisar mapeo</span>' : '') + '</div>';
+    if (ev.cobro) h += '<p class="det" style="margin-top:8px">Cobro esperado: ' + fmtFecha(ev.cobro) + '</p>';
+  }
+
+  var sems = SEMAFOROS.filter(function (c) { return S.datos.mapa[c] !== undefined; });
+  if (sems.length) {
+    h += '<h3 class="gt">Estado</h3><div style="display:flex;gap:18px;margin-bottom:18px">';
+    sems.forEach(function (c) {
+      h += '<div><label style="font-size:12px;color:var(--tinta2);display:block;margin-bottom:4px">' +
+        CAMPOS[c].label + '</label><button class="sem" data-e="' + (emb[c] || 'vacio') +
+        '" data-act="sem" data-f="' + emb._fila + '" data-c="' + c + '" ' +
+        'aria-label="' + CAMPOS[c].label + '"></button></div>';
+    });
+    h += '</div>';
+  }
+
+  h += '<h3 class="gt">Datos</h3>';
+  EDITABLES.filter(function (c) { return S.datos.mapa[c] !== undefined; }).forEach(function (c) {
+    var v = emb[c];
+    h += '<div class="campo' + (falta[c] ? ' falta' : '') + '">' +
+      '<label for="e-' + c + '">' + CAMPOS[c].label + '</label>' +
+      '<input id="e-' + c + '" data-edit="' + c + '" data-f="' + emb._fila + '" value="' +
+      esc(v instanceof Date ? fmtFecha(v) : (v || '')) + '"></div>';
+  });
+
+  return h + '</aside>';
+}
+
+/* --- Render + eventos ------------------------------------------------------ */
+
+function pintar() {
+  var foco = document.activeElement;
+  var id = foco && foco.id, pos = foco && foco.selectionStart;
+
+  document.getElementById('root').innerHTML =
+    S.pantalla === 'app' ? vistaApp() : vistaSetup();
+
+  if (id) {
+    var nuevo = document.getElementById(id);
+    if (nuevo) {
+      nuevo.focus();
+      try { nuevo.setSelectionRange(pos, pos); } catch (e) {}
+    }
+  }
+}
+
+document.addEventListener('click', function (ev) {
+  var el = ev.target.closest('[data-act]');
+  if (!el) return;
+  var act = el.getAttribute('data-act');
+
+  if (act === 'set-cid') {
+    var v = (document.getElementById('cid').value || '').trim();
+    if (!v) { S.error = 'Pegá el Client ID.'; return pintar(); }
+    if (v.indexOf('.apps.googleusercontent.com') < 0) {
+      S.error = 'Eso no parece un Client ID. Termina en .apps.googleusercontent.com';
+      return pintar();
+    }
+    S.cfg = Object.assign({}, S.cfg, { clientId: v });
+    S.error = null; S.setup.entrada = ''; guardarCfg(); tokenClient = null; return pintar();
+  }
+
+  if (act === 'reset-cid') {
+    S.cfg = null; S.pestanas = null; S.error = null; S.setup.entrada = '';
+    tokenClient = null; S.token = null;
+    try { localStorage.removeItem(LS); } catch (e) {}
+    return pintar();
+  }
+
+  if (act === 'buscar') return buscarPlanilla();
+
+  if (act === 'usar') {
+    var te = document.getElementById('te').value, tc = document.getElementById('tc').value;
+    if (!te) { S.error = 'Elegí la pestaña de embarques.'; return pintar(); }
+    S.cfg.tabEmb = te; S.cfg.tabCtr = tc; S.cfg.titulo = S.pestanas.titulo;
+    guardarCfg(); S.pantalla = 'app'; S.error = null;
+    return cargarTodo();
+  }
+
+  if (act === 'tab') { S.vista = el.getAttribute('data-v'); return pintar(); }
+  if (act === 'recargar') return cargarTodo();
+  if (act === 'cerrar') { S.sel = null; return pintar(); }
+
+  if (act === 'salir') {
+    S.cfg = { clientId: S.cfg.clientId };   // conserva el Client ID
+    S.pestanas = null; S.datos = null; S.pantalla = 'setup'; S.error = null;
+    S.setup = { paso: 'sheet', entrada: '', tabEmb: '', tabCtr: '', buscando: false };
+    guardarCfg(); return pintar();
+  }
+
+  if (act === 'sem') {
+    ev.stopPropagation();
+    return ciclarSemaforo(+el.getAttribute('data-f'), el.getAttribute('data-c'));
+  }
+
+  if (act === 'abrir') {
+    S.sel = +el.getAttribute('data-f');
+    return pintar();
+  }
+});
+
+document.addEventListener('input', function (e) {
+  if (e.target.id === 'busca') { S.busca = e.target.value; pintar(); }
+  if (e.target.id === 'cid' || e.target.id === 'url') S.setup.entrada = e.target.value;
+});
+
+document.addEventListener('change', function (e) {
+  if (e.target.id === 'te') S.setup.tabEmb = e.target.value;
+  if (e.target.id === 'tc') S.setup.tabCtr = e.target.value;
+});
+
+document.addEventListener('blur', function (e) {
+  var campo = e.target.getAttribute && e.target.getAttribute('data-edit');
+  if (!campo) return;
+  var fila = +e.target.getAttribute('data-f');
+  var f = S.datos.filas.filter(function (x) { return x._fila === fila; })[0];
+  var actual = f ? f[campo] : '';
+  var actualTxt = actual instanceof Date ? fmtFecha(actual) : (actual || '');
+  if (e.target.value !== actualTxt) aplicarCambio(fila, campo, e.target.value);
+}, true);
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && S.sel !== null) { S.sel = null; pintar(); }
+  if (e.key === 'Enter' && (e.target.id === 'cid' || e.target.id === 'url')) {
+    var b = document.querySelector('[data-act="' + (e.target.id === 'cid' ? 'set-cid' : 'buscar') + '"]');
+    if (b) b.click();
+  }
+});
+
+async function buscarPlanilla() {
+  var id = extraerId(document.getElementById('url').value);
+  if (!id) { S.error = 'No reconozco eso como un id ni una URL de Google Sheets.'; return pintar(); }
+  S.error = null; S.setup.buscando = true; pintar();
+  try {
+    S.cfg.sheetId = id;
+    var d = await listarPestanas(id);
+    S.pestanas = d;
+    // Adivina cuál es cuál para no hacer elegir a mano si es obvio.
+    var buscar = function () {
+      var t = Array.prototype.slice.call(arguments);
+      var p = d.pestanas.filter(function (x) {
+        return t.some(function (k) { return clave(x.nombre).indexOf(k) >= 0; });
+      })[0];
+      return p ? p.nombre : '';
+    };
+    S.setup.tabEmb = buscar('embarque mari', 'embarques', 'embarque');
+    S.setup.tabCtr = buscar('contratos abiertos', 'contrato');
+  } catch (e) {
+    S.error = e.message;
+  } finally {
+    S.setup.buscando = false; pintar();
+  }
+}
+
+/* --- Arranque -------------------------------------------------------------- */
+
+function arrancar() {
+  if (S.cfg && S.cfg.clientId && S.cfg.sheetId && S.cfg.tabEmb) {
+    S.pantalla = 'app';
+    pintar();
+    cargarTodo();
+  } else {
+    S.pantalla = 'setup';
+    pintar();
+  }
+}
+
+// Esperar a que cargue la librería de Google antes de dibujar.
+(function esperar(intentos) {
+  if (window.google && google.accounts && google.accounts.oauth2) return arrancar();
+  if (intentos <= 0) {
+    document.getElementById('root').innerHTML =
+      '<div class="setup"><div class="error">No cargó la librería de Google. ' +
+      'Revisá la conexión o si hay un bloqueador de scripts, y recargá.</div></div>';
+    return;
+  }
+  setTimeout(function () { esperar(intentos - 1); }, 100);
+})(60);
+</script>
+</body>
+</html>
