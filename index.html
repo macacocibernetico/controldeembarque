@@ -281,11 +281,18 @@ function extraerId(entrada) {
 var SEMAFOROS = ['docs', 'pics', 'tr'];
 var CICLO = ['vacio', 'ok', 'pendiente', 'atencion'];
 var COLORES = {
-  ok:        { red: 0, green: 1, blue: 0 },
-  pendiente: { red: 1, green: 0, blue: 0 },
-  atencion:  { red: 0, green: 1, blue: 1 },
-  vacio:     { red: 1, green: 1, blue: 1 }
+  ok:        { red: 0,   green: 1,   blue: 0 },
+  pendiente: { red: 1,   green: 0,   blue: 0 },
+  atencion:  { red: 0,   green: 1,   blue: 1 },
+  falta_cbte:{ red: 1,   green: 0.6, blue: 0 },
+  vacio:     { red: 1,   green: 1,   blue: 1 }
 };
+
+// El naranja de "Pago estimado" en terrestres significa que falta el
+// comprobante de pago. Ojo: el mismo naranja aparece en Contenedores, BL y
+// Booking en las mismas 28 filas, pero ahí es sombreado de columnas que en
+// camión no aplican, no un estado. Por eso solo se interpreta en pagoEstimado.
+var COL_COMPROBANTE = 'pagoEstimado';
 
 function colorASem(bg) {
   if (!bg) return 'vacio';
@@ -295,6 +302,13 @@ function colorASem(bg) {
   if (r > .5 && g < .5 && b < .5) return 'pendiente';
   if (g > .5 && b > .5 && r < .5) return 'atencion';
   return 'vacio';
+}
+
+// Naranja (1, ~0.6, 0), distinto del rojo puro.
+function esNaranja(bg) {
+  if (!bg) return false;
+  var r = bg.red || 0, g = bg.green || 0, b = bg.blue || 0;
+  return r > .8 && g > .35 && g < .8 && b < .35;
 }
 
 /* --- Normalización: la hoja sigue abierta, va a entrar de todo ------------- */
@@ -565,6 +579,18 @@ var REGLAS = [
       detalle:'No se puede seguir la cobranza sin la factura.', accion:'Cargar factura' };
   },
 
+  // Naranja en Pago estimado: pagaron pero no mandaron el comprobante.
+  function (e, c) {
+    if (!e._faltaComprobante) return null;
+    var ref = esFecha(e.etd) ? dias(c.hoy, e.etd) : null;
+    return { id:'falta_comprobante', nivel: (ref !== null && ref > 30) ? 'alto' : 'medio',
+      titulo:'Falta el comprobante de pago',
+      detalle: ref !== null
+        ? 'Marcado en naranja en la planilla. Embarcó hace ' + ref + ' días.'
+        : 'Marcado en naranja en la planilla.',
+      accion:'Reclamar comprobante' };
+  },
+
   // El celeste dice "mirá esto" pero no dice qué. A los tres días nadie se acuerda.
   function (e, c) {
     var m = SEMAFOROS.filter(function (k) { return e[k] === 'atencion'; });
@@ -830,6 +856,9 @@ async function cargarTodo() {
             ? colorASem(f.colores[idx])
             : convertir(f.celdas[idx], CAMPOS[campo].tipo);
         });
+        // Naranja en "Pago estimado" = falta que manden el comprobante.
+        var ip = det.mapa[COL_COMPROBANTE];
+        o._faltaComprobante = ip !== undefined && esNaranja(f.colores[ip]);
         return o;
       });
 
@@ -911,18 +940,21 @@ async function aplicarCambio(id, campo, valor) {
   var f = filaPorId(id);
   if (!f) return;
   var src = fuenteDe(f);
-  var idx = src.mapa[campo];
+  var idx = campo === '_faltaComprobante' ? src.mapa[COL_COMPROBANTE] : src.mapa[campo];
   if (idx === undefined) {
-    S.error = 'La columna ' + CAMPOS[campo].label + ' no existe en "' + f._tab + '".';
+    S.error = 'Esa columna no existe en "' + f._tab + '".';
     return pintar();
   }
 
   var antes = f[campo];
-  f[campo] = CAMPOS[campo].tipo === 'semaforo' ? valor : convertir(valor, CAMPOS[campo].tipo);
+  f[campo] = (campo === '_faltaComprobante' || CAMPOS[campo].tipo === 'semaforo')
+    ? valor : convertir(valor, CAMPOS[campo].tipo);
   S.guardando++; pintar();
 
   var valores = {}, colores = {};
-  if (SEMAFOROS.indexOf(campo) >= 0) colores[idx] = valor; else valores[idx] = valor;
+  if (campo === '_faltaComprobante') colores[idx] = valor ? 'falta_cbte' : 'vacio';
+  else if (SEMAFOROS.indexOf(campo) >= 0) colores[idx] = valor;
+  else valores[idx] = valor;
 
   try {
     await escribirCeldas(S.cfg.sheetId, f._sheetId, f._fila, valores, colores);
@@ -1288,6 +1320,16 @@ function vistaPanel(x) {
     h += '</div>';
   }
 
+  if (src.mapa[COL_COMPROBANTE] !== undefined) {
+    h += '<h3 class="gt">Comprobante de pago</h3>' +
+      '<label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-bottom:6px">' +
+      '<input type="checkbox" style="width:auto;margin:0" data-cbte="' + esc(emb._id) + '"' +
+      (emb._faltaComprobante ? ' checked' : '') + '>' +
+      '<span>Falta que manden el comprobante</span></label>' +
+      '<p class="ayuda" style="margin:0 0 4px">Pinta la celda de Pago estimado en naranja, ' +
+      'igual que en la planilla.</p>';
+  }
+
   h += '<h3 class="gt">Datos</h3>';
   EDITABLES.filter(function (c) { return src.mapa[c] !== undefined && !src.noAplica[c]; }).forEach(function (c) {
     var v = emb[c];
@@ -1394,6 +1436,8 @@ document.addEventListener('input', function (e) {
 
 document.addEventListener('change', function (e) {
   if (e.target.id === 'ftab') { S.filtroTab = e.target.value; return pintar(); }
+  var cbte = e.target.getAttribute && e.target.getAttribute('data-cbte');
+  if (cbte) return aplicarCambio(cbte, '_faltaComprobante', e.target.checked);
   var g = e.target.getAttribute && e.target.getAttribute('data-grupo');
   if (!g) return;
   var lista = g === 'emb' ? S.setup.tabsEmb : S.setup.tabsCtr;
