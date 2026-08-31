@@ -705,8 +705,19 @@ async function api(url, opciones) {
 
 var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/';
 
-function listarPestanas(id) {
-  return api(BASE + id + '?fields=' + encodeURIComponent('properties(title),sheets(properties(sheetId,title))'));
+// La API devuelve {properties:{title}, sheets:[{properties:{...}}]}.
+// Lo traducimos acá para que el resto de la app no dependa de esa forma.
+async function listarPestanas(id) {
+  var d = await api(BASE + id + '?fields=' +
+    encodeURIComponent('properties(title),sheets(properties(sheetId,title))'));
+  var hojas = (d && d.sheets) || [];
+  if (!hojas.length) throw new Error('La planilla no tiene pestañas visibles.');
+  return {
+    titulo: (d.properties && d.properties.title) || '(sin nombre)',
+    pestanas: hojas.map(function (h) {
+      return { id: h.properties.sheetId, nombre: h.properties.title };
+    })
+  };
 }
 
 async function leerHoja(id, nombre) {
@@ -1172,14 +1183,25 @@ function pintar() {
   var foco = document.activeElement;
   var id = foco && foco.id, pos = foco && foco.selectionStart;
 
-  document.getElementById('root').innerHTML =
-    S.pantalla === 'app' ? vistaApp() : vistaSetup();
+  var html;
+  try {
+    html = S.pantalla === 'app' ? vistaApp() : vistaSetup();
+  } catch (e) {
+    // Sin esto, un error acá deja la pantalla clavada en el estado anterior y
+    // parece que la app se colgó.
+    html = '<div class="setup"><div class="error"><b>Error al dibujar la pantalla</b><br>' +
+      esc(e.message) + '</div>' +
+      '<div class="caja"><button data-act="reset-cid">Empezar de nuevo</button></div></div>';
+    if (window.console) console.error(e);
+  }
+
+  document.getElementById('root').innerHTML = html;
 
   if (id) {
     var nuevo = document.getElementById(id);
     if (nuevo) {
       nuevo.focus();
-      try { nuevo.setSelectionRange(pos, pos); } catch (e) {}
+      try { nuevo.setSelectionRange(pos, pos); } catch (e2) {}
     }
   }
 }
@@ -1288,9 +1310,11 @@ async function buscarPlanilla() {
     S.setup.tabEmb = buscar('embarque mari', 'embarques', 'embarque');
     S.setup.tabCtr = buscar('contratos abiertos', 'contrato');
   } catch (e) {
+    S.pestanas = null;
     S.error = e.message;
   } finally {
-    S.setup.buscando = false; pintar();
+    S.setup.buscando = false;
+    pintar();
   }
 }
 
