@@ -123,16 +123,19 @@ h1,h2,h3{font-weight:600;letter-spacing:-.011em}
 .lista{display:flex;flex-direction:column;gap:7px}
 
 .emb{background:var(--sup);border:1px solid var(--linea);border-radius:var(--r);
-  padding:13px 15px;cursor:pointer;display:grid;gap:10px;
-  grid-template-columns:minmax(0,1.5fr) minmax(0,1.6fr) minmax(0,1fr);align-items:center}
+  padding:13px 15px;cursor:pointer}
 .emb:hover{border-color:var(--linea3)}
 .emb.sel{border-color:var(--tinta);box-shadow:inset 0 0 0 1px var(--tinta)}
 .emb.tiene-critico{border-left:3px solid var(--pend);padding-left:12px}
 
-.emb .quien{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.emb .sub{font-size:12px;color:var(--tinta2);margin-top:1px;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap}
-.emb .ctr{font-family:var(--mono);font-size:11px;color:var(--tinta3)}
+.fila-top{display:grid;gap:10px;align-items:start;
+  grid-template-columns:minmax(0,1.45fr) minmax(0,1.4fr) minmax(0,1.1fr)}
+
+.partes{font-size:14px;font-weight:600;display:flex;flex-wrap:wrap;align-items:baseline;gap:5px}
+.partes .exp{font-weight:450;color:var(--tinta2)}
+.partes .fl{color:var(--tinta3);font-weight:400}
+.emb .sub{font-size:12px;color:var(--tinta2);margin-top:2px}
+.emb .ctr{font-family:var(--mono);font-size:11px;color:var(--tinta3);margin-top:2px}
 
 /* Ruta: origen -> destino con las fechas */
 .ruta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tinta2);min-width:0}
@@ -144,6 +147,25 @@ h1,h2,h3{font-weight:600;letter-spacing:-.011em}
 .ruta .f{font-family:var(--mono);font-size:11px;color:var(--tinta3);white-space:nowrap}
 
 .estados{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+
+/* Referencias: los números que se buscan y se copian */
+.refs{display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;padding-top:10px;
+  border-top:1px solid var(--linea)}
+.ref{font-size:12px;display:flex;gap:6px;align-items:baseline;min-width:0}
+.ref em{font-style:normal;color:var(--tinta3);font-size:11px;text-transform:uppercase;
+  letter-spacing:.04em;flex:none}
+.ref b{font-family:var(--mono);font-size:12px;font-weight:500;overflow-wrap:anywhere}
+.ref u{text-decoration:none;color:var(--tinta3);font-style:italic;font-size:11.5px}
+
+/* Anotaciones que el equipo escribe dentro de las celdas de estado */
+.notas{margin-top:9px;display:flex;flex-direction:column;gap:5px}
+.nota{margin:0;font-size:12.5px;line-height:1.45;padding:7px 10px;border-radius:var(--r2);
+  border-left:2px solid var(--linea3);background:var(--sup2);color:var(--tinta)}
+.nota em{font-style:normal;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--tinta3);display:block;margin-bottom:2px}
+.nota.ok  {background:var(--okbg);  border-left-color:var(--ok)}
+.nota.pend{background:var(--pendbg);border-left-color:var(--pend)}
+.nota.sol {background:var(--solbg); border-left-color:var(--sol)}
 
 /* Etapa */
 .etapa{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tinta2)}
@@ -216,8 +238,9 @@ code{font-family:var(--mono);font-size:12px;background:var(--sup2);padding:2px 6
 .chk input{width:auto;margin:0}
 
 @media(max-width:820px){
-  .emb{grid-template-columns:1fr;gap:9px}
+  .fila-top{grid-template-columns:1fr;gap:9px}
   .estados{justify-content:flex-start}
+  .refs{gap:10px}
 }
 @media(max-width:640px){
   .app{padding:16px 14px 60px}
@@ -985,6 +1008,17 @@ async function cargarTodo() {
             ? colorASem(f.colores[idx])
             : convertir(f.celdas[idx], CAMPOS[campo].tipo);
         });
+        // En las columnas semáforo el color es el estado y el texto es otra cosa:
+        // en Docs. son anotaciones operativas ("recibir factura y enviar gas
+        // free"), en T.R. la modalidad. Se guardan aparte para no perderlas.
+        o._notas = {};
+        SEMAFOROS.forEach(function (c) {
+          var ic = det.mapa[c];
+          if (ic === undefined) return;
+          var tx = f.celdas[ic];
+          o._notas[c] = tx == null ? '' : String(tx).trim();
+        });
+
         // En T.R. el texto es la MODALIDAD de liberación (BL Original / telex),
         // no el estado. El estado es el color. Se guardan por separado.
         // Ojo: la columna mezcla modalidad ("BL Original", "telex") con
@@ -1103,6 +1137,31 @@ async function aplicarCambio(id, campo, valor) {
   } catch (e) {
     f[campo] = antes;
     S.error = 'No se pudo guardar: ' + e.message;
+  } finally {
+    S.guardando--; pintar();
+  }
+}
+
+// Escribe el texto de una columna semáforo sin tocar su color.
+async function aplicarNota(id, campo, texto) {
+  var f = filaPorId(id);
+  if (!f) return;
+  var src = fuenteDe(f);
+  var idx = src.mapa[campo];
+  if (idx === undefined) return;
+
+  var antes = (f._notas && f._notas[campo]) || '';
+  f._notas = f._notas || {};
+  f._notas[campo] = texto;
+  S.guardando++; pintar();
+
+  var valores = {};
+  valores[idx] = texto;
+  try {
+    await escribirCeldas(S.cfg.sheetId, f._sheetId, f._fila, valores, {});
+  } catch (e) {
+    f._notas[campo] = antes;
+    S.error = 'No se pudo guardar la anotación: ' + e.message;
   } finally {
     S.guardando--; pintar();
   }
@@ -1411,34 +1470,73 @@ function filaEmbarque(x) {
     return src.mapa[c] !== undefined && !src.noAplica[c];
   });
 
+  // Exportador → Importador: quién vende y quién compra, no solo el cliente.
+  var partes = '';
+  if (emb.exporter && emb.importer) {
+    partes = '<span class="exp">' + esc(emb.exporter) + '</span>' +
+      '<span class="fl">→</span><span>' + esc(emb.importer) + '</span>';
+  } else {
+    partes = '<span>' + esc(emb.importer || emb.exporter || '(sin cargar)') + '</span>';
+  }
+
   var tns = emb.tns !== null && emb.tns !== undefined && emb.tns !== ''
     ? Number(emb.tns).toLocaleString('es-AR') + ' tn' : '';
-  var sub = [emb.product, tns].filter(Boolean).join(' · ');
+  var sub = [emb.product, emb.tipo, tns].filter(Boolean).join(' · ');
+
+  // Referencias: los números que se buscan y se copian.
+  var refs = [['invoice', 'Factura'], ['bl', 'BL'], ['booking', 'Booking'],
+              ['containers', 'Cont.']]
+    .filter(function (r) { return src.mapa[r[0]] !== undefined && !src.noAplica[r[0]]; })
+    .map(function (r) {
+      var v = emb[r[0]];
+      return '<span class="ref"><em>' + r[1] + '</em>' +
+        (v ? '<b>' + esc(v) + '</b>' : '<u>falta</u>') + '</span>';
+    }).join('');
+
+  // Anotaciones dentro de las columnas semáforo: instrucciones reales.
+  var notas = sems.filter(function (c) { return emb._notas && emb._notas[c]; })
+    .map(function (c) {
+      var cls = { ok:'ok', pendiente:'pend', atencion:'sol' }[emb[c]] || 'gris';
+      return '<p class="nota ' + cls + '"><em>' + CAMPOS[c].label + '</em>' +
+        esc(emb._notas[c]) + '</p>';
+    }).join('');
 
   return '<article class="emb' + (emb._id === S.sel ? ' sel' : '') +
     (x.ev.nivelMax === 'critico' ? ' tiene-critico' : '') +
     '" data-act="abrir" data-f="' + esc(emb._id) + '" tabindex="0">' +
-    '<div><div class="quien">' + esc(emb.importer || '(sin importador)') + '</div>' +
-      '<div class="sub">' + esc(sub) + '</div>' +
-      '<div class="ctr">' + esc(emb.contract) +
-        (S.fuentes.length > 1 ? ' · ' + esc(emb._tab) : '') + '</div></div>' +
-    '<div>' + barraRuta(emb) +
-      '<div style="margin-top:7px">' + pasosEtapa(x.ev.etapa) + '</div></div>' +
-    '<div class="estados">' +
-      sems.map(function (c) { return pill(c, emb[c]); }).join('') +
-      (emb._faltaComprobante
-        ? '<span class="pill nar"><span class="pt"></span>Falta comprobante</span>' : '') +
-      (x.ev.nivelMax === 'critico'
-        ? '<span class="pill pend"><span class="pt"></span>' + esc(x.ev.alertas[0].titulo) + '</span>' : '') +
-    '</div></article>';
+
+    '<div class="fila-top">' +
+      '<div class="ident">' +
+        '<div class="partes">' + partes + '</div>' +
+        '<div class="sub">' + esc(sub) + '</div>' +
+        '<div class="ctr">' + esc(emb.contract) +
+          (S.fuentes.length > 1 ? ' · ' + esc(emb._tab) : '') + '</div>' +
+      '</div>' +
+      '<div class="medio">' + barraRuta(emb) +
+        '<div style="margin-top:7px">' + pasosEtapa(x.ev.etapa) + '</div></div>' +
+      '<div class="estados">' +
+        sems.map(function (c) { return pill(c, emb[c]); }).join('') +
+        (emb._faltaComprobante
+          ? '<span class="pill nar"><span class="pt"></span>Falta comprobante</span>' : '') +
+        (x.ev.nivelMax === 'critico'
+          ? '<span class="pill pend"><span class="pt"></span>' +
+            esc(x.ev.alertas[0].titulo) + '</span>' : '') +
+      '</div>' +
+    '</div>' +
+
+    (refs ? '<div class="refs">' + refs + '</div>' : '') +
+    (notas ? '<div class="notas">' + notas + '</div>' : '') +
+    '</article>';
 }
 
 
 function vistaGrilla(evs) {
   var q = S.busca.trim().toLowerCase();
   var filas = q ? evs.filter(function (x) {
-    return [x.emb.contract, x.emb.importer, x.emb.bl, x.emb.vessel, x.emb.port, x.emb._tab]
-      .some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
+    var campos = [x.emb.contract, x.emb.importer, x.emb.exporter, x.emb.bl, x.emb.booking,
+                  x.emb.invoice, x.emb.vessel, x.emb.port, x.emb.product, x.emb._tab];
+    if (x.emb._notas) SEMAFOROS.forEach(function (c) { campos.push(x.emb._notas[c]); });
+    return campos.some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
   }) : evs.slice();
 
   if (S.filtroTab) filas = filas.filter(function (x) { return x.emb._tab === S.filtroTab; });
@@ -1452,7 +1550,7 @@ function vistaGrilla(evs) {
   });
 
   var h = '<div class="filtros">' +
-    '<input id="busca" placeholder="Buscar cliente, contrato, BL, buque" value="' +
+    '<input id="busca" placeholder="Buscar cliente, contrato, BL, factura, anotaciones" value="' +
       esc(S.busca) + '" aria-label="Buscar">';
   if (S.fuentes.length > 1) {
     h += '<select id="ftab" aria-label="Filtrar por pestaña"><option value="">Todas las pestañas</option>' +
@@ -1539,13 +1637,31 @@ function vistaPanel(x) {
 
   // Ficha: los datos que se miran, no se editan.
   h += '<div class="bloque"><h3 class="gt">Embarque</h3><dl style="margin:0">' +
+    kv('Exportador', emb.exporter) +
     kv('Producto', emb.product) +
+    kv('Tipo', emb.tipo) +
     kv('Toneladas', emb.tns !== null && emb.tns !== '' ? Number(emb.tns).toLocaleString('es-AR') : '') +
     kv('Destino', emb.port) +
     kv('ETD', esFecha(emb.etd) ? fmtFecha(emb.etd) : '') +
     kv('ETA', esFecha(emb.eta) ? fmtFecha(emb.eta) : '') +
     kv('Buque', emb.vessel) +
+    kv('Naviera', emb.shippingLine) +
     '</dl></div>';
+
+  // Referencias, en mono para poder copiarlas de un vistazo.
+  var refs = [['invoice', 'Factura'], ['bl', 'BL'], ['booking', 'Booking'],
+              ['containers', 'Contenedores'], ['lots', 'Lotes'], ['tracking', 'Tracking']]
+    .filter(function (r) { return src.mapa[r[0]] !== undefined && !src.noAplica[r[0]]; });
+  if (refs.length) {
+    h += '<div class="bloque"><h3 class="gt">Referencias</h3><dl style="margin:0">' +
+      refs.map(function (r) {
+        var v = emb[r[0]];
+        return '<div class="kv"><dt>' + r[1] + '</dt><dd>' +
+          (v ? '<span style="font-family:var(--mono);font-size:12px">' + esc(v) + '</span>'
+             : '<span style="color:var(--tinta3);font-style:italic">falta</span>') +
+          '</dd></div>';
+      }).join('') + '</dl></div>';
+  }
 
   // Estados: botón grande con la palabra, no un cuadradito de color.
   var sems = SEMAFOROS.filter(function (c) {
@@ -1564,6 +1680,14 @@ function vistaPanel(x) {
       h += '<p class="ayuda" style="margin-top:8px">Modalidad de liberación: <b>' +
         esc(emb.trModo) + '</b></p>';
     }
+    // El texto de estas columnas son anotaciones operativas, no adorno.
+    sems.forEach(function (c) {
+      h += '<div class="campo" style="margin-top:12px">' +
+        '<label for="n-' + c + '">Anotación en ' + CAMPOS[c].label + '</label>' +
+        '<input id="n-' + c + '" data-nota="' + c + '" data-f="' + esc(emb._id) + '" ' +
+        'placeholder="Ej: recibir factura y enviar gas free cuando recibamos" value="' +
+        esc((emb._notas && emb._notas[c]) || '') + '"></div>';
+    });
     h += '</div>';
   }
 
@@ -1738,6 +1862,15 @@ document.addEventListener('change', function (e) {
 });
 
 document.addEventListener('blur', function (e) {
+  var nota = e.target.getAttribute && e.target.getAttribute('data-nota');
+  if (nota) {
+    var idn = e.target.getAttribute('data-f');
+    var fn = filaPorId(idn);
+    if (fn && e.target.value !== ((fn._notas && fn._notas[nota]) || '')) {
+      aplicarNota(idn, nota, e.target.value);
+    }
+    return;
+  }
   var campo = e.target.getAttribute && e.target.getAttribute('data-edit');
   if (!campo) return;
   var id = e.target.getAttribute('data-f');
