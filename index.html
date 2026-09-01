@@ -16,7 +16,7 @@
    El color acompaña, no grita. Todo lo demás es papel y tinta. */
 
 :root{
-  --papel:#fcfcfb; --sup:#fff; --sup2:#f6f6f4; --sup3:#f0f0ed;
+  --papel:#f0f2ef; --sup:#fff; --sup2:#f5f6f3; --sup3:#eaece7;
   --linea:rgba(23,23,20,.07); --linea2:rgba(23,23,20,.13); --linea3:rgba(23,23,20,.26);
   --tinta:#191917; --tinta2:#6b6862; --tinta3:#9c988f;
 
@@ -52,10 +52,27 @@ input:focus,select:focus{outline:none;border-color:var(--acento);box-shadow:0 0 
 a{color:var(--sol)}
 h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 
-.app{max-width:1120px;margin:0 auto;padding:26px 26px 96px}
+.app{max-width:1120px;margin:0 auto;padding:24px 26px 96px}
+
+/* Barra superior --------------------------------------------------------- */
+.topbar{background:var(--acento);color:#fff;position:sticky;top:0;z-index:8;
+  box-shadow:0 1px 0 rgba(0,0,0,.08)}
+.topbar-in{max-width:1120px;margin:0 auto;padding:13px 26px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.marca{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:30px;height:30px;flex:none;color:#a9dcc4}
+.topbar h1{font-size:16.5px;margin:0;color:#fff;letter-spacing:-.02em;line-height:1.25}
+.topbar .sello{font-size:12px;margin:1px 0 0;color:rgba(255,255,255,.62)}
+.topbar-acc{margin-left:auto;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.topbar-acc button{font-size:13px;padding:6px 13px;background:rgba(255,255,255,.1);
+  border-color:rgba(255,255,255,.22);color:#fff}
+.topbar-acc button:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.34)}
+.topbar-acc button:disabled{opacity:.45}
+.quien-soy{font-size:12.5px;color:rgba(255,255,255,.72);padding-right:5px}
 
 /* Segmentado marítimo / terrestre --------------------------------------- */
-.segmento{display:inline-flex;gap:4px;background:var(--sup3);padding:4px;border-radius:11px;
+.segmento{display:inline-flex;gap:4px;background:var(--sup);padding:4px;border-radius:11px;
+  border:1px solid var(--linea);
   margin-bottom:22px;flex-wrap:wrap}
 .segmento button{border:none;background:none;border-radius:8px;padding:9px 18px;
   color:var(--tinta2);font-size:14px;display:inline-flex;align-items:center;gap:8px}
@@ -72,17 +89,10 @@ h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 .segmento button[aria-pressed=true] .cnt{color:var(--acento)}
 
 /* Cabecera --------------------------------------------------------------- */
-.cab{display:flex;align-items:center;gap:13px;flex-wrap:wrap;padding-bottom:18px;
-  border-bottom:1px solid var(--linea);margin-bottom:2px}
-.cab h1{font-size:20px;letter-spacing:-.025em}
-.cab h1::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;
-  background:var(--acento);margin-right:9px;vertical-align:middle}
 .sello{font-size:12.5px;color:var(--tinta3)}
-.cab-acc{margin-left:auto;display:flex;gap:6px}
-.cab-acc button{font-size:13px;padding:6px 12px}
 
 /* Tabs ------------------------------------------------------------------- */
-.tabs{display:flex;gap:22px;margin:24px 0 22px;border-bottom:1px solid var(--linea)}
+.tabs{display:flex;gap:22px;margin:0 0 22px;border-bottom:1px solid var(--linea2)}
 .tabs button{border:none;background:none;border-radius:0;padding:0 0 11px;color:var(--tinta3);
   font-size:14px;border-bottom:1.5px solid transparent;margin-bottom:-1px}
 .tabs button[aria-selected=true]{color:var(--tinta);border-bottom-color:var(--acento);font-weight:500}
@@ -92,7 +102,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 /* Resumen ---------------------------------------------------------------- */
 .tira{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:10px;margin-bottom:26px}
 .tira button{display:block;text-align:left;padding:14px 16px;border-radius:var(--r);
-  border:1px solid var(--linea);background:var(--sup);width:100%;box-shadow:var(--sombra)}
+  border:1px solid transparent;background:var(--sup);width:100%;box-shadow:var(--sombra)}
 .tira button[aria-pressed=true]{border-color:var(--acento);box-shadow:inset 0 0 0 1px var(--acento)}
 .tira .n{font-size:26px;font-weight:600;line-height:1.05;letter-spacing:-.03em;display:block}
 .tira .l{font-size:12.5px;color:var(--tinta2);margin-top:3px;display:block}
@@ -109,7 +119,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 /* Tarjeta de embarque ---------------------------------------------------- */
 .lista{display:flex;flex-direction:column;gap:9px}
 
-.emb{background:var(--sup);border:1px solid var(--linea);border-radius:var(--r);
+.emb{background:var(--sup);border:1px solid transparent;border-radius:var(--r);
   padding:16px 18px;cursor:pointer;box-shadow:var(--sombra);
   transition:border-color .12s,box-shadow .12s}
 .emb:hover{border-color:var(--linea2);box-shadow:0 2px 8px rgba(23,23,20,.06)}
@@ -261,7 +271,8 @@ tbody tr.sel td{background:var(--solbg)}
 .mala{background:var(--pendbg);color:var(--pend);padding:2px 7px;border-radius:4px;font-weight:500}
 
 /* Modos de vista */
-.modos{display:inline-flex;gap:2px;background:var(--sup3);padding:3px;border-radius:8px}
+.modos{display:inline-flex;gap:2px;background:var(--sup);padding:3px;border-radius:8px;
+  border:1px solid var(--linea)}
 .modos button{border:none;background:none;border-radius:6px;padding:5px 12px;font-size:13px;
   color:var(--tinta2)}
 .modos button:hover{background:rgba(255,255,255,.7)}
@@ -341,6 +352,11 @@ tbody tr.sel td{background:var(--solbg)}
 .campo{margin-bottom:14px}
 .campo label{display:block;font-size:12.5px;color:var(--tinta2);margin-bottom:5px}
 .campo.falta input{border-color:rgba(189,49,37,.4);background:var(--pendbg)}
+.fechas{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.fechas .campo{margin-bottom:0}
+.campo .av{color:var(--nar);font-size:11px}
+.campo .mal{color:var(--pend);font-size:11px}
+input[type=date]{font-variant-numeric:tabular-nums}
 .sems{display:flex;gap:9px;flex-wrap:wrap}
 .sembtn{flex:1;min-width:100px;text-align:left;padding:11px 13px;border-radius:var(--r2);
   border-color:var(--linea2)}
@@ -695,7 +711,15 @@ function estadoComision(v) {
 }
 
 function convertir(v, tipo) {
-  if (tipo === 'fecha') return normFecha(v);
+  if (tipo === 'fecha') {
+    // El input type=date devuelve yyyy-mm-dd; sin la Z lo toma como local y
+    // puede correrse un día según el huso.
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      var d = new Date(v + 'T00:00:00Z');
+      return isNaN(d) ? null : d;
+    }
+    return normFecha(v);
+  }
   if (tipo === 'numero') return normNum(v);
   return v == null ? '' : String(v).trim();
 }
@@ -1791,7 +1815,7 @@ function evaluarTodo() {
 
 function vistaApp() {
   if (!S.datos) {
-    return '<div class="app">' + cabecera() +
+    return cabecera() + '<div class="app">' +
       (S.error ? '<div class="error" style="margin-top:14px">' + esc(S.error) + '</div>' : '') +
       '<p class="centro">' + (S.cargando ? 'Leyendo la planilla…' : 'Sin datos.') + '</p></div>';
   }
@@ -1813,7 +1837,7 @@ function vistaApp() {
     if (item) panel = vistaPanel(item);
   }
 
-  return '<div class="app">' + cabecera() +
+  return cabecera() + '<div class="app">' +
     (S.error ? '<div class="error" style="margin-top:14px">' + esc(S.error) + '</div>' : '') +
     diagnostico() +
     '<div class="tabs" role="tablist">' +
@@ -1867,15 +1891,29 @@ function nombreCorto(tab) {
 }
 
 function cabecera() {
-  return '<div class="cab"><h1>Control de embarques</h1>' +
-    '<span class="sello">' + esc(S.cfg.titulo || '') + ' · ' + esc(S.cfg.tabsEmb.join(' + ')) +
-      (S.guardando > 0 ? ' · guardando…' : '') + '</span>' +
-    '<span class="cab-acc">' +
+  return '<header class="topbar"><div class="topbar-in">' +
+    '<div class="marca">' +
+      '<svg viewBox="0 0 64 64" class="logo" aria-hidden="true">' +
+        '<g fill="currentColor">' +
+        '<rect x="20" y="19" width="10" height="9" rx="1.5"/>' +
+        '<rect x="32" y="19" width="10" height="9" rx="1.5"/>' +
+        '<rect x="26" y="9" width="10" height="9" rx="1.5"/>' +
+        '<rect x="44" y="14" width="6" height="14" rx="1.5"/>' +
+        '<path d="M11 32h42l-6 13a5 5 0 0 1-4.5 3H21.5a5 5 0 0 1-4.5-3z"/>' +
+        '</g></svg>' +
+      '<div><h1>Control de embarques</h1>' +
+        '<p class="sello">' + esc(S.cfg.titulo || '') +
+          (S.guardando > 0 ? ' · guardando…' : '') + '</p></div>' +
+    '</div>' +
+    '<div class="topbar-acc">' +
+      (S.usuario ? '<span class="quien-soy">' +
+        esc(nombreCortoAutor(S.usuario.email)) + '</span>' : '') +
       '<button data-act="recargar"' + (S.cargando ? ' disabled' : '') + '>' +
         (S.cargando ? 'Actualizando…' : 'Actualizar') + '</button>' +
       '<button data-act="pestanas">Pestañas</button>' +
       '<button data-act="salir">Cambiar planilla</button>' +
-    '</span></div>';
+    '</div>' +
+  '</div></header>';
 }
 
 function diagnostico() {
@@ -2832,6 +2870,36 @@ function vistaPanel(x) {
       '</span>' +
     '</div></div>';
 
+  // Fechas: input nativo, que además valida solo y evita el 28/09 sin año.
+  var fechas = ['etd', 'eta', 'pagoEstimado'].filter(function (c) {
+    return src.mapa[c] !== undefined && !src.noAplica[c];
+  });
+  if (fechas.length) {
+    h += '<div class="bloque"><h3 class="gt">Fechas</h3><div class="fechas">' +
+      fechas.map(function (c) {
+        var v = emb[c];
+        var iso = esFecha(v)
+          ? v.getUTCFullYear() + '-' +
+            String(v.getUTCMonth() + 1).padStart(2, '0') + '-' +
+            String(v.getUTCDate()).padStart(2, '0')
+          : '';
+        return '<div class="campo' + (falta[c] ? ' falta' : '') + '">' +
+          '<label for="d-' + c + '">' + CAMPOS[c].label +
+          (v && v.anioAsumido ? ' <span class="av">año asumido</span>' : '') +
+          (v && v.invalida ? ' <span class="mal">dato inválido: ' + esc(v.crudo) + '</span>' : '') +
+          '</label>' +
+          '<input type="date" id="d-' + c + '" data-fecha="' + c + '" ' +
+          'data-f="' + esc(emb._id) + '" value="' + iso + '"></div>';
+      }).join('') + '</div>';
+
+    if (esFecha(emb.etd) && esFecha(emb.eta)) {
+      var tt = Math.round((emb.eta - emb.etd) / 86400000);
+      h += '<p class="ayuda">Tránsito: ' + tt + ' días' +
+        (tt < 0 ? ' — la ETA quedó antes del ETD' : '') + '.</p>';
+    }
+    h += '</div>';
+  }
+
   // Campos editables.
   var eds = EDITABLES.filter(function (c) {
     return src.mapa[c] !== undefined && !src.noAplica[c];
@@ -3136,6 +3204,20 @@ document.addEventListener('change', function (e) {
   if (e.target.checked && i < 0) lista.push(e.target.value);
   if (!e.target.checked && i >= 0) lista.splice(i, 1);
 });
+
+document.addEventListener('change', function (e) {
+  var cf = e.target.getAttribute && e.target.getAttribute('data-fecha');
+  if (!cf) return;
+  var idf = e.target.getAttribute('data-f');
+  var ff = filaPorId(idf);
+  if (!ff) return;
+  var actualISO = esFecha(ff[cf])
+    ? ff[cf].getUTCFullYear() + '-' +
+      String(ff[cf].getUTCMonth() + 1).padStart(2, '0') + '-' +
+      String(ff[cf].getUTCDate()).padStart(2, '0')
+    : '';
+  if (e.target.value !== actualISO) aplicarCambio(idf, cf, e.target.value);
+}, true);
 
 document.addEventListener('blur', function (e) {
   var nota = e.target.getAttribute && e.target.getAttribute('data-nota');
