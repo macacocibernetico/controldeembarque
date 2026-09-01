@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Control de embarques</title>
+<meta name="theme-color" content="#1f4d3d">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZjRkM2QiLz48ZyBmaWxsPSIjZmZmZmZmIj48cmVjdCB4PSIyMCIgeT0iMTkiIHdpZHRoPSIxMCIgaGVpZ2h0PSI5IiByeD0iMS41Ii8+PHJlY3QgeD0iMzIiIHk9IjE5IiB3aWR0aD0iMTAiIGhlaWdodD0iOSIgcng9IjEuNSIvPjxyZWN0IHg9IjI2IiB5PSI5IiB3aWR0aD0iMTAiIGhlaWdodD0iOSIgcng9IjEuNSIvPjxyZWN0IHg9IjQ0IiB5PSIxNCIgd2lkdGg9IjYiIGhlaWdodD0iMTQiIHJ4PSIxLjUiLz48cGF0aCBkPSJNMTEgMzJoNDJsLTYgMTNhNSA1IDAgMCAxLTQuNSAzSDIxLjVhNSA1IDAgMCAxLTQuNS0zeiIvPjwvZz48cGF0aCBkPSJNOCA1NGM0IDAgNC0zIDgtM3M0IDMgOCAzIDQtMyA4LTMgNCAzIDggMyA0LTMgOC0zIDQgMyA4IDMiCiAgICAgICAgc3Ryb2tlPSIjOGZkM2I2IiBzdHJva2Utd2lkdGg9IjMuMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZjRkM2QiLz48ZyBmaWxsPSIjZmZmZmZmIj48cmVjdCB4PSIyMCIgeT0iMTkiIHdpZHRoPSIxMCIgaGVpZ2h0PSI5IiByeD0iMS41Ii8+PHJlY3QgeD0iMzIiIHk9IjE5IiB3aWR0aD0iMTAiIGhlaWdodD0iOSIgcng9IjEuNSIvPjxyZWN0IHg9IjI2IiB5PSI5IiB3aWR0aD0iMTAiIGhlaWdodD0iOSIgcng9IjEuNSIvPjxyZWN0IHg9IjQ0IiB5PSIxNCIgd2lkdGg9IjYiIGhlaWdodD0iMTQiIHJ4PSIxLjUiLz48cGF0aCBkPSJNMTEgMzJoNDJsLTYgMTNhNSA1IDAgMCAxLTQuNSAzSDIxLjVhNSA1IDAgMCAxLTQuNS0zeiIvPjwvZz48cGF0aCBkPSJNOCA1NGM0IDAgNC0zIDgtM3M0IDMgOCAzIDQtMyA4LTMgNCAzIDggMyA0LTMgOC0zIDQgMyA4IDMiCiAgICAgICAgc3Ryb2tlPSIjOGZkM2I2IiBzdHJva2Utd2lkdGg9IjMuMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -256,6 +259,41 @@ tbody tr.sel td{background:var(--solbg)}
 .cod{font-family:var(--mono);font-size:12px}
 .vacia{color:var(--tinta3)}
 .mala{background:var(--pendbg);color:var(--pend);padding:2px 7px;border-radius:4px;font-weight:500}
+
+/* Modos de vista */
+.modos{display:inline-flex;gap:2px;background:var(--sup3);padding:3px;border-radius:8px}
+.modos button{border:none;background:none;border-radius:6px;padding:5px 12px;font-size:13px;
+  color:var(--tinta2)}
+.modos button:hover{background:rgba(255,255,255,.7)}
+.modos button[aria-pressed=true]{background:var(--sup);color:var(--tinta);font-weight:500;
+  box-shadow:0 1px 2px rgba(23,23,20,.09)}
+
+/* Vista planilla: réplica del Sheets --------------------------------------- */
+.hoja{border:1px solid var(--linea2);border-radius:var(--r3);overflow:auto;background:#fff;
+  max-height:76vh}
+.tbl-hoja{border-collapse:separate;border-spacing:0;font-size:12px;
+  font-family:'Instrument Sans',system-ui,sans-serif}
+.tbl-hoja th{position:sticky;top:0;z-index:2;background:#f1f3f4;color:#3c4043;
+  font-weight:600;font-size:11.5px;padding:6px 9px;text-align:left;white-space:nowrap;
+  border-right:1px solid #dadce0;border-bottom:1px solid #b0b6bb;text-transform:none;
+  letter-spacing:0}
+.tbl-hoja th.ord{cursor:pointer}
+.tbl-hoja th.ord:hover{background:#e6e9ea}
+.tbl-hoja td{padding:5px 9px;border-right:1px solid #e4e6e8;border-bottom:1px solid #e4e6e8;
+  white-space:nowrap;max-width:230px;overflow:hidden;text-overflow:ellipsis;color:#202124}
+.tbl-hoja tbody tr:hover td{background:#f8f9fa}
+.tbl-hoja tbody tr.sel td{background:#e8f0ee}
+.tbl-hoja .nrofila{position:sticky;left:0;z-index:1;background:#f1f3f4;color:#5f6368;
+  text-align:center;font-size:11px;min-width:38px;border-right:1px solid #b0b6bb;font-weight:500}
+.tbl-hoja th.nrofila{z-index:3}
+.tbl-hoja tbody tr:hover .nrofila{background:#e6e9ea}
+.tbl-hoja td.na{background:#fafafa}
+
+/* Los colores de la planilla, tal cual los conoce el equipo */
+.cel-ok{background:#b7e1cd}
+.cel-pendiente{background:#f4c7c3}
+.cel-atencion{background:#a8e0ea}
+.cel-naranja{background:#fce8b2}
 .asumida{border-bottom:1px dotted var(--tinta3);cursor:help}
 
 /* Panel ------------------------------------------------------------------ */
@@ -359,7 +397,7 @@ var S = {
   filtroTab: '',
   filtroEtapa: '',
   filtroNivel: '',
-  compacto: false,
+  modo: 'tarjetas',
   orden: 'eta_asc',
   panelFiltros: false,
   f: { docs: '', pics: '', tr: '', cbte: '', falta: '', fact: '' },
@@ -2095,8 +2133,14 @@ function vistaGrilla(evs) {
       }).join('') + '</select>' +
     '<button data-act="pfiltros" aria-pressed="' + S.panelFiltros + '">Filtros' +
       (nf ? ' · ' + nf : '') + '</button>' +
-    '<button data-act="csv" style="margin-left:auto">Exportar CSV</button>' +
-    '<button data-act="densidad">' + (S.compacto ? 'Ver tarjetas' : 'Ver compacto') + '</button>' +
+    '<span class="modos" style="margin-left:auto">' +
+      [['tarjetas', 'Tarjetas'], ['tabla', 'Tabla'], ['planilla', 'Planilla']]
+        .map(function (m) {
+          return '<button data-act="modo" data-m="' + m[0] + '" aria-pressed="' +
+            (S.modo === m[0]) + '">' + m[1] + '</button>';
+        }).join('') +
+    '</span>' +
+    '<button data-act="csv">Exportar CSV</button>' +
     '</div>';
 
   if (S.panelFiltros) h += panelFiltros(evs);
@@ -2121,7 +2165,8 @@ function vistaGrilla(evs) {
       (nf ? ' <button data-act="limpiar">Limpiar filtros</button>' : '') + '</p>';
   }
 
-  if (S.compacto) return h + tablaCompacta(filas);
+  if (S.modo === 'planilla') return h + vistaPlanilla(filas);
+  if (S.modo === 'tabla') return h + tablaCompacta(filas);
   return h + '<div class="lista">' + filas.map(function (x) { return filaEmbarque(x); }).join('') + '</div>';
 }
 
@@ -2409,6 +2454,65 @@ function filaContrato(r) {
       }).join('') + '</div>';
     })() +
     '</article>';
+}
+
+// Vista planilla: para quien está acostumbrado a mirar el Sheets y quiere
+// encontrar lo mismo donde lo espera. Grilla completa, números de fila reales
+// y las celdas de estado pintadas con los colores de siempre.
+function vistaPlanilla(filas) {
+  // Todas las columnas que alguna pestaña tenga, en el orden de la planilla.
+  var orden = ['exporter', 'importer', 'contract', 'product', 'tipo', 'price', 'tns',
+               'total', 'etd', 'eta', 'port', 'vessel', 'shippingLine', 'lots',
+               'containers', 'bl', 'booking', 'invoice', 'docs', 'pics', 'tr',
+               'tracking', 'pagoEstimado', 'commission', 'guia'];
+  var cols = orden.filter(function (c) {
+    return S.fuentes.some(function (f) { return f.mapa[c] !== undefined; });
+  });
+
+  var enc = '<tr><th class="nrofila">#</th>' +
+    cols.map(function (c) {
+      var ord = c === 'etd' ? 'etd' : c === 'eta' ? 'eta' : null;
+      if (!ord) return '<th>' + CAMPOS[c].label + '</th>';
+      var asc = ord + '_asc', desc = ord + '_desc';
+      var f = S.orden === asc ? ' ↑' : S.orden === desc ? ' ↓' : '';
+      return '<th class="ord" data-act="orden" data-o="' +
+        (S.orden === desc ? asc : desc) + '">' + CAMPOS[c].label + f + '</th>';
+    }).join('') + '</tr>';
+
+  var cuerpo = filas.map(function (x) {
+    var emb = x.emb, src = x.src;
+    return '<tr' + (emb._id === S.sel ? ' class="sel"' : '') +
+      ' data-act="abrir" data-f="' + esc(emb._id) + '">' +
+      '<td class="nrofila" title="' + esc(emb._tab) + '">' + emb._fila + '</td>' +
+      cols.map(function (c) {
+        if (src.mapa[c] === undefined) return '<td class="na"></td>';
+
+        // Columnas de estado: se pintan como en la planilla, con el texto que
+        // tengan escrito adentro.
+        if (SEMAFOROS.indexOf(c) >= 0) {
+          if (src.noAplica[c]) return '<td class="na"></td>';
+          var est = emb[c] || 'vacio';
+          var txt = (emb._notas && emb._notas[c]) || '';
+          return '<td class="cel-' + est + '" title="' + esc(etiqueta(c, est)) +
+            (txt ? ' — ' + esc(txt) : '') + '">' + esc(txt) + '</td>';
+        }
+
+        var v = emb[c];
+        var cls = (c === 'tns' || c === 'price' || c === 'total' || c === 'commission')
+          ? ' class="num"' : '';
+        if (c === 'pagoEstimado' && emb._faltaComprobante) {
+          return '<td class="cel-naranja" title="Falta el comprobante de pago">' +
+            pintarCelda(v) + '</td>';
+        }
+        return '<td' + cls + '>' + pintarCelda(v) + '</td>';
+      }).join('') + '</tr>';
+  }).join('');
+
+  return '<div class="hoja"><table class="tbl-hoja"><thead>' + enc +
+    '</thead><tbody>' + cuerpo + '</tbody></table></div>' +
+    '<p class="ayuda" style="margin-top:10px">Los colores son los mismos de la planilla. ' +
+    'El número de la izquierda es la fila real; pasá el mouse para ver de qué pestaña es. ' +
+    'Clic en cualquier fila abre el detalle.</p>';
 }
 
 var EDITABLES = ['vessel', 'shippingLine', 'booking', 'containers', 'bl', 'invoice', 'tracking', 'nota'];
@@ -2721,7 +2825,7 @@ document.addEventListener('click', function (ev) {
     var ta = document.getElementById('nuevo-com');
     return comentar(el.getAttribute('data-f'), ta ? ta.value : '');
   }
-  if (act === 'densidad') { S.compacto = !S.compacto; return pintar(); }
+  if (act === 'modo') { S.modo = el.getAttribute('data-m'); return pintar(); }
   if (act === 'pfiltros') { S.panelFiltros = !S.panelFiltros; return pintar(); }
   if (act === 'orden') { S.orden = el.getAttribute('data-o'); return pintar(); }
   if (act === 'limpiar') {
