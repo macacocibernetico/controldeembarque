@@ -350,6 +350,27 @@ tbody tr.sel td{background:var(--solbg)}
 .sembtn[data-e=pendiente]{background:var(--pendbg)} .sembtn[data-e=pendiente] .vl{color:var(--pend)}
 .sembtn[data-e=atencion]{background:var(--solbg)}   .sembtn[data-e=atencion] .vl{color:var(--sol)}
 .sembtn[data-e=vacio] .vl{color:var(--tinta3);font-weight:400}
+.sembtn{cursor:pointer;position:relative}
+.sembtn .vl{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.sembtn .cv{font-size:10px;opacity:.5;font-weight:400}
+.sembtn[aria-expanded=true]{border-color:var(--acento);box-shadow:0 0 0 2px rgba(31,77,61,.12)}
+
+/* Desplegable de estados */
+.sem-wrap{position:relative;flex:1;min-width:100px}
+.menu-est{position:absolute;top:calc(100% + 5px);left:0;right:0;min-width:150px;z-index:30;
+  background:var(--sup);border:1px solid var(--linea2);border-radius:var(--r2);
+  box-shadow:0 8px 24px rgba(23,23,20,.14);padding:4px;display:flex;flex-direction:column;gap:1px}
+.menu-est button{border:none;background:none;border-radius:var(--r3);padding:8px 10px;
+  display:flex;align-items:center;gap:9px;font-size:13.5px;text-align:left;width:100%}
+.menu-est button:hover{background:var(--sup2)}
+.menu-est button[aria-selected=true]{font-weight:600}
+.menu-est .tick{margin-left:auto;color:var(--acento);font-size:12px}
+.menu-est .punto{width:11px;height:11px;border-radius:50%;flex:none;
+  border:1px solid rgba(0,0,0,.12)}
+.punto.p-ok{background:#b7e1cd}
+.punto.p-pendiente{background:#f4c7c3}
+.punto.p-atencion{background:#a8e0ea}
+.punto.p-vacio{background:repeating-linear-gradient(45deg,#fff,#fff 3px,#e8e8e5 3px,#e8e8e5 6px)}
 
 /* Setup ------------------------------------------------------------------ */
 .setup{max-width:520px;margin:8vh auto;padding:0 20px}
@@ -445,6 +466,7 @@ var S = {
   fContrato: '',
   borrador: '',
   ultimaEval: {},
+  menuSem: null,
   avisos: [],
   error: null,
   cargando: false,
@@ -2640,6 +2662,36 @@ function vistaPlanilla(filas) {
 
 var EDITABLES = ['vessel', 'shippingLine', 'booking', 'containers', 'bl', 'invoice', 'tracking', 'nota'];
 
+// Desplegable con los estados a la vista. Antes había que ir clickeando hasta
+// dar con el que se buscaba, que con cuatro opciones es incómodo y propenso a
+// pasarse de largo (y cada clic escribe en la planilla).
+function selectorEstado(emb, campo) {
+  var actual = emb[campo] || 'vacio';
+  var abierto = S.menuSem && S.menuSem.id === emb._id && S.menuSem.campo === campo;
+
+  var menu = '';
+  if (abierto) {
+    menu = '<div class="menu-est" role="listbox">' +
+      CICLO.map(function (op) {
+        return '<button role="option" aria-selected="' + (op === actual) + '" ' +
+          'data-act="setsem" data-f="' + esc(emb._id) + '" data-c="' + campo + '" ' +
+          'data-v="' + op + '">' +
+          '<span class="punto p-' + op + '"></span>' +
+          '<span>' + etiqueta(campo, op) + '</span>' +
+          (op === actual ? '<span class="tick">✓</span>' : '') +
+          '</button>';
+      }).join('') + '</div>';
+  }
+
+  return '<div class="sem-wrap">' +
+    '<button class="sembtn" data-e="' + actual + '" data-act="menusem" ' +
+      'data-f="' + esc(emb._id) + '" data-c="' + campo + '" ' +
+      'aria-haspopup="listbox" aria-expanded="' + !!abierto + '">' +
+      '<span class="et">' + CAMPOS[campo].label + '</span>' +
+      '<span class="vl">' + etiqueta(campo, actual) + '<span class="cv">▾</span></span>' +
+    '</button>' + menu + '</div>';
+}
+
 function vistaPanel(x) {
   var emb = x.emb, ev = x.ev, src = x.src, cond = x.contrato ? x.contrato.cond : null;
   var falta = {};
@@ -2703,13 +2755,8 @@ function vistaPanel(x) {
   });
   if (sems.length) {
     h += '<div class="bloque"><h3 class="gt">Estado</h3><div class="sems">' +
-      sems.map(function (c) {
-        return '<button class="sembtn" data-e="' + (emb[c] || 'vacio') + '" data-act="sem" ' +
-          'data-f="' + esc(emb._id) + '" data-c="' + c + '">' +
-          '<span class="et">' + CAMPOS[c].label + '</span>' +
-          '<span class="vl">' + etiqueta(c, emb[c]) + '</span></button>';
-      }).join('') + '</div>' +
-      '<p class="ayuda">Clic para cambiar. Se pinta igual en la planilla.</p>';
+      sems.map(function (c) { return selectorEstado(emb, c); }).join('') + '</div>' +
+      '<p class="ayuda">Se pinta igual en la planilla.</p>';
     if (emb.trModo) {
       h += '<p class="ayuda" style="margin-top:8px">Modalidad de liberación: <b>' +
         esc(emb.trModo) + '</b></p>';
@@ -2880,14 +2927,23 @@ function exportarCSV() {
 
 function pintar() {
   var foco = document.activeElement;
-  var id = foco && foco.id, pos = foco && foco.selectionStart;
+  var id = foco && foco.id, pos = null;
+  try { pos = foco && foco.selectionStart; } catch (e) {}
+
+  // Redibujar reemplaza todo el HTML, así que el navegador pierde el scroll.
+  // Lo guardamos y lo devolvemos: si no, cada vez que se cambia un estado la
+  // pantalla salta al principio.
+  var scrollPag = window.scrollY || window.pageYOffset || 0;
+  var scrolls = {};
+  ['.hoja', '.panel', '.marco'].forEach(function (sel) {
+    var el = document.querySelector(sel);
+    if (el) scrolls[sel] = { top: el.scrollTop, left: el.scrollLeft };
+  });
 
   var html;
   try {
     html = S.pantalla === 'app' ? vistaApp() : vistaSetup();
   } catch (e) {
-    // Sin esto, un error acá deja la pantalla clavada en el estado anterior y
-    // parece que la app se colgó.
     html = '<div class="setup"><div class="error"><b>Error al dibujar la pantalla</b><br>' +
       esc(e.message) + '</div>' +
       '<div class="caja"><button data-act="reset-cid">Empezar de nuevo</button></div></div>';
@@ -2895,6 +2951,12 @@ function pintar() {
   }
 
   document.getElementById('root').innerHTML = html;
+
+  Object.keys(scrolls).forEach(function (sel) {
+    var el = document.querySelector(sel);
+    if (el) { el.scrollTop = scrolls[sel].top; el.scrollLeft = scrolls[sel].left; }
+  });
+  if (scrollPag) window.scrollTo(0, scrollPag);
 
   if (id) {
     var nuevo = document.getElementById(id);
@@ -2907,7 +2969,10 @@ function pintar() {
 
 document.addEventListener('click', function (ev) {
   var el = ev.target.closest('[data-act]');
-  if (!el) return;
+  if (!el) {
+    if (S.menuSem) { S.menuSem = null; pintar(); }
+    return;
+  }
   var act = el.getAttribute('data-act');
 
   if (act === 'set-cid') {
@@ -3010,6 +3075,24 @@ document.addEventListener('click', function (ev) {
     guardarCfg(); return pintar();
   }
 
+  if (act === 'menusem') {
+    ev.stopPropagation();
+    var mid = el.getAttribute('data-f'), mc = el.getAttribute('data-c');
+    S.menuSem = (S.menuSem && S.menuSem.id === mid && S.menuSem.campo === mc)
+      ? null : { id: mid, campo: mc };
+    return pintar();
+  }
+
+  if (act === 'setsem') {
+    ev.stopPropagation();
+    var sid = el.getAttribute('data-f'), sc = el.getAttribute('data-c'),
+        sv = el.getAttribute('data-v');
+    S.menuSem = null;
+    var actual = filaPorId(sid);
+    if (actual && (actual[sc] || 'vacio') === sv) return pintar();  // sin cambios
+    return aplicarCambio(sid, sc, sv);
+  }
+
   if (act === 'sem') {
     ev.stopPropagation();
     return ciclarSemaforo(el.getAttribute('data-f'), el.getAttribute('data-c'));
@@ -3084,6 +3167,7 @@ document.addEventListener('keydown', function (e) {
     e.preventDefault();
     return comentar(e.target.getAttribute('data-com'), e.target.value);
   }
+  if (e.key === 'Escape' && S.menuSem) { S.menuSem = null; return pintar(); }
   if (e.key === 'Escape' && S.sel !== null) { S.sel = null; pintar(); }
   if (e.key === 'Enter' && (e.target.id === 'cid' || e.target.id === 'url')) {
     var b = document.querySelector('[data-act="' + (e.target.id === 'cid' ? 'set-cid' : 'buscar') + '"]');
