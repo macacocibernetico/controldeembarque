@@ -265,6 +265,28 @@ textarea:focus{outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba
 .alta-acc{display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap}
 .alta-acc .ayuda{margin:0}
 .req{color:var(--pend)}
+
+/* Autocompletado */
+.combo-wrap{position:relative}
+.combo-wrap.malo input{border-color:rgba(189,49,37,.5);background:var(--pendbg)}
+.combo-wrap .ok-tick{color:var(--ok);margin-left:5px;font-size:12px}
+.combo-lista{position:absolute;top:100%;left:0;right:0;z-index:40;margin-top:3px;
+  background:var(--sup);border:1px solid var(--linea2);border-radius:var(--r3);
+  box-shadow:0 8px 24px rgba(11,11,10,.15);padding:4px;max-height:260px;overflow-y:auto}
+.combo-lista button{display:block;width:100%;text-align:left;border:none;background:none;
+  box-shadow:none;padding:7px 10px;font-size:13px;border-radius:5px;font-weight:400}
+.combo-lista button:hover{background:var(--sup2)}
+.combo-lista button b{font-weight:700;color:var(--acento)}
+.sin-match{margin:0;padding:9px 11px;font-size:12.5px;color:var(--tinta2);line-height:1.45}
+.no-base{margin:5px 0 0;font-size:12px;color:var(--pend);line-height:1.45}
+
+/* Referencia de numeración */
+.ultimo-ctr{display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+  background:var(--sup2);border-radius:var(--r3);padding:10px 13px;margin-bottom:16px;
+  font-size:13px}
+.ultimo-ctr b{font-family:var(--mono);font-size:12.5px}
+.ultimo-ctr .fl{color:var(--tinta3)}
+.ultimo-ctr button{margin-left:auto;font-size:12.5px;padding:5px 12px}
 .ok-aviso{background:var(--okbg);border:1px solid var(--okbd,#a8d4bb);color:var(--ok);
   padding:11px 14px;border-radius:var(--r2);font-size:13.5px;margin:14px 0;
   display:flex;gap:12px;align-items:center}
@@ -526,6 +548,7 @@ var S = {
   menuSem: null,
   listas: null,
   alta: null,
+  combo: null,
   creando: false,
   avisos: [],
   error: null,
@@ -1392,6 +1415,41 @@ async function filaTotalDe(pestana) {
     if (v && String(v).trim().toUpperCase().indexOf('TOTAL') === 0) return i + 1;
   }
   return null;
+}
+
+// Qué contrato quedó justo arriba del TOTAL, para saber por dónde numerar.
+async function ultimoContrato() {
+  var pestana = S.cfg.tabAlta;
+  if (!pestana) return null;
+  var r = await api(BASE + S.cfg.sheetId + '/values/' +
+    encodeURIComponent("'" + pestana.replace(/'/g, "''") + "'!A1:B2000"));
+  var vals = r.values || [];
+
+  var iTotal = -1;
+  for (var i = 0; i < vals.length; i++) {
+    var a0 = vals[i] && vals[i][0];
+    if (a0 && String(a0).trim().toUpperCase().indexOf('TOTAL') === 0) { iTotal = i; break; }
+  }
+  if (iTotal < 1) return null;
+
+  // Hacia arriba hasta encontrar una fila con contrato.
+  for (var j = iTotal - 1; j >= 1; j--) {
+    var b = vals[j] && vals[j][1];
+    if (b && String(b).trim()) {
+      var ctr = String(b).trim();
+      return { contrato: ctr, fila: j + 1, sugerido: siguienteNumero(ctr) };
+    }
+  }
+  return null;
+}
+
+// LT099-2026 -> LT100-2026. Si el formato es otro, no inventa nada.
+function siguienteNumero(ctr) {
+  var m = String(ctr).match(/^(LT)\s*(\d+)\s*-\s*(\d{4})/i);
+  if (!m) return '';
+  var n = String(parseInt(m[2], 10) + 1);
+  while (n.length < m[2].length) n = '0' + n;
+  return m[1].toUpperCase() + n + '-' + m[3];
 }
 
 async function crearContrato(datos) {
@@ -2744,20 +2802,66 @@ function vistaContratos() {
   return h + '<div class="lista">' + lista.map(filaContrato).join('') + '</div>';
 }
 
+// Escribir para ir acotando, en vez de buscar en una lista de 500. Si lo que
+// se escribe no está en la base, no se inventa: hay que darlo de alta en el
+// Peanut Matcher, porque si no el nombre no cruza con nada.
+function combo(campo, label, opciones, a) {
+  var val = a[campo] || '';
+  var abierto = S.combo === campo;
+  var q = clave(val);
+
+  var coincide = opciones.filter(function (o) { return clave(o) === q; }).length > 0;
+  var sugeridas = [];
+  if (abierto) {
+    sugeridas = (q
+      ? opciones.filter(function (o) { return clave(o).indexOf(q) >= 0; })
+          .sort(function (x, y) {
+            // Primero las que empiezan igual: es lo que uno espera al tipear.
+            var a1 = clave(x).indexOf(q) === 0 ? 0 : 1;
+            var b1 = clave(y).indexOf(q) === 0 ? 0 : 1;
+            return a1 - b1 || x.localeCompare(y, 'es');
+          })
+      : opciones).slice(0, 9);
+  }
+
+  var estado = '';
+  if (val && !coincide && !abierto) {
+    estado = '<p class="no-base">«' + esc(val) + '» no está en la base. ' +
+      'Hay que agregarlo desde el <b>Peanut Matcher</b> y volver a abrir el alta.</p>';
+  }
+
+  return '<div class="campo combo-wrap' + (val && !coincide ? ' malo' : '') + '">' +
+    '<label for="a-' + campo + '">' + label + ' <span class="req">·</span>' +
+    (coincide ? '<span class="ok-tick">✓</span>' : '') + '</label>' +
+    '<input id="a-' + campo + '" data-combo="' + campo + '" autocomplete="off" ' +
+      'placeholder="Escribí para buscar" value="' + esc(val) + '">' +
+    (abierto && sugeridas.length
+      ? '<div class="combo-lista">' +
+        sugeridas.map(function (o) {
+          return '<button data-act="combosel" data-c="' + campo + '" ' +
+            'data-v="' + esc(o) + '">' + resaltar(o, q) + '</button>';
+        }).join('') +
+        (q && !sugeridas.length ? '' : '') +
+        '</div>'
+      : '') +
+    (abierto && q && !sugeridas.length
+      ? '<div class="combo-lista"><p class="sin-match">Ninguno coincide con «' + esc(val) + '». ' +
+        'Si es un cliente nuevo, cargalo primero en el <b>Peanut Matcher</b>.</p></div>'
+      : '') +
+    estado + '</div>';
+}
+
+function resaltar(texto, q) {
+  if (!q) return esc(texto);
+  var i = clave(texto).indexOf(q);
+  if (i < 0) return esc(texto);
+  return esc(texto.slice(0, i)) + '<b>' + esc(texto.slice(i, i + q.length)) + '</b>' +
+         esc(texto.slice(i + q.length));
+}
+
 function formAlta() {
   var a = S.alta || {};
   var L = S.listas || { exportadores: [], importadores: [], productos: [], tipos: [] };
-
-  function sel(campo, label, opciones, obligatorio) {
-    return '<div class="campo"><label for="a-' + campo + '">' + label +
-      (obligatorio ? ' <span class="req">·</span>' : '') + '</label>' +
-      '<select id="a-' + campo + '" data-alta="' + campo + '">' +
-      '<option value="">Elegir…</option>' +
-      opciones.map(function (o) {
-        return '<option value="' + esc(o) + '"' + (a[campo] === o ? ' selected' : '') +
-          '>' + esc(o) + '</option>';
-      }).join('') + '</select></div>';
-  }
 
   function txt(campo, label, tipo, ph) {
     return '<div class="campo"><label for="a-' + campo + '">' + label + '</label>' +
@@ -2766,22 +2870,45 @@ function formAlta() {
       (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
   }
 
+  // Validación: los cuatro de lista tienen que existir en la base.
+  var deLista = [['exportador', L.exportadores], ['importador', L.importadores],
+                 ['producto', L.productos], ['tipo', L.tipos]];
+  var fuera = deLista.filter(function (d) {
+    var v = a[d[0]];
+    return v && !d[1].some(function (o) { return clave(o) === clave(v); });
+  }).map(function (d) { return d[0]; });
+
   var faltan = ['contrato', 'exportador', 'importador', 'producto', 'tipo', 'toneladas', 'precio']
     .filter(function (k) { return !a[k]; });
 
   var total = (parseFloat(a.toneladas) || 0) * (parseFloat(a.precio) || 0);
 
+  // Referencia de numeración: el último contrato que quedó arriba del TOTAL.
+  var ref = '';
+  if (a.ultimo) {
+    ref = '<div class="ultimo-ctr">' +
+      '<span>Último cargado: <b>' + esc(a.ultimo.contrato) + '</b>' +
+      (a.ultimo.fila ? ' <span class="fl">(fila ' + a.ultimo.fila + ')</span>' : '') + '</span>' +
+      (a.ultimo.sugerido
+        ? '<button data-act="usarnum" data-v="' + esc(a.ultimo.sugerido) + '">' +
+          'Usar ' + esc(a.ultimo.sugerido) + '</button>'
+        : '') + '</div>';
+  } else if (a.cargandoUltimo) {
+    ref = '<div class="ultimo-ctr"><span class="ayuda">Buscando el último contrato…</span></div>';
+  }
+
   return '<div class="alta">' +
     '<div class="alta-cab"><h3>Nuevo contrato</h3>' +
       '<button data-act="altacerrar">Cancelar</button></div>' +
     (S.altaError ? '<div class="error">' + esc(S.altaError) + '</div>' : '') +
+    ref +
     '<div class="alta-grid">' +
       txt('fecha', 'Fecha', 'date') +
       txt('contrato', 'Contrato', 'text', 'LT100-2026') +
-      sel('exportador', 'Exportador', L.exportadores, true) +
-      sel('importador', 'Importador', L.importadores, true) +
-      sel('producto', 'Producto', L.productos, true) +
-      sel('tipo', 'Tipo', L.tipos, true) +
+      combo('exportador', 'Exportador', L.exportadores, a) +
+      combo('importador', 'Importador', L.importadores, a) +
+      combo('producto', 'Producto', L.productos, a) +
+      combo('tipo', 'Tipo', L.tipos, a) +
       txt('toneladas', 'Toneladas', 'number') +
       txt('precio', 'Precio USD/tn', 'number') +
       txt('packaging', 'Packaging', 'text', 'Big Bags 1250 kgs') +
@@ -2795,12 +2922,14 @@ function formAlta() {
       (total * 0.02).toLocaleString('es-AR', { maximumFractionDigits: 2 }) + '</p>' : '') +
     '<div class="alta-acc">' +
       '<button class="primario" data-act="altaguardar"' +
-        (faltan.length || S.creando ? ' disabled' : '') + '>' +
+        (faltan.length || fuera.length || S.creando ? ' disabled' : '') + '>' +
         (S.creando ? 'Creando…' : 'Crear contrato') + '</button>' +
       '<span class="ayuda">' +
-        (faltan.length
-          ? 'Falta completar: ' + faltan.join(', ')
-          : 'Se inserta en "' + esc(S.cfg.tabAlta || '—') + '", arriba de la fila TOTAL') +
+        (fuera.length
+          ? 'Hay que dar de alta en el Peanut Matcher: ' + fuera.join(', ')
+          : faltan.length
+            ? 'Falta completar: ' + faltan.join(', ')
+            : 'Se inserta en "' + esc(S.cfg.tabAlta || '—') + '", arriba de la fila TOTAL') +
       '</span>' +
     '</div></div>';
 }
@@ -3339,10 +3468,19 @@ function pintar() {
   }
 }
 
+document.addEventListener('focusin', function (e) {
+  var cb = e.target.getAttribute && e.target.getAttribute('data-combo');
+  if (cb && S.combo !== cb) { S.combo = cb; pintar(); }
+});
+
 document.addEventListener('click', function (ev) {
   var el = ev.target.closest('[data-act]');
   if (!el) {
-    if (S.menuSem) { S.menuSem = null; pintar(); }
+    var dentro = ev.target.closest && ev.target.closest('.combo-wrap');
+    var cerrar = false;
+    if (S.menuSem) { S.menuSem = null; cerrar = true; }
+    if (S.combo && !dentro) { S.combo = null; cerrar = true; }
+    if (cerrar) pintar();
     return;
   }
   var act = el.getAttribute('data-act');
@@ -3418,10 +3556,34 @@ document.addEventListener('click', function (ev) {
   if (act === 'cerraviso') { S.avisoOk = null; return pintar(); }
   if (act === 'altaabrir') {
     var hoy = new Date();
-    S.alta = { fecha: hoy.getFullYear() + '-' +
+    S.alta = { cargandoUltimo: true, fecha: hoy.getFullYear() + '-' +
       String(hoy.getMonth() + 1).padStart(2, '0') + '-' +
       String(hoy.getDate()).padStart(2, '0') };
     S.altaError = null;
+    pintar();
+    return ultimoContrato().then(function (u) {
+      if (!S.alta) return;
+      S.alta.cargandoUltimo = false;
+      if (u) {
+        S.alta.ultimo = u;
+        if (!S.alta.contrato && u.sugerido) S.alta.contrato = u.sugerido;
+      }
+      pintar();
+    }).catch(function () {
+      if (S.alta) { S.alta.cargandoUltimo = false; pintar(); }
+    });
+  }
+
+  if (act === 'usarnum') {
+    S.alta = S.alta || {};
+    S.alta.contrato = el.getAttribute('data-v');
+    return pintar();
+  }
+
+  if (act === 'combosel') {
+    S.alta = S.alta || {};
+    S.alta[el.getAttribute('data-c')] = el.getAttribute('data-v');
+    S.combo = null;
     return pintar();
   }
   if (act === 'altacerrar') { S.alta = null; S.altaError = null; return pintar(); }
@@ -3494,6 +3656,13 @@ document.addEventListener('click', function (ev) {
 document.addEventListener('input', function (e) {
   if (e.target.id === 'busca') { S.busca = e.target.value; pintar(); }
   if (e.target.id === 'nuevo-com') S.borrador = e.target.value;   // sin redibujar
+  var cb = e.target.getAttribute && e.target.getAttribute('data-combo');
+  if (cb) {
+    S.alta = S.alta || {};
+    S.alta[cb] = e.target.value;
+    S.combo = cb;
+    return pintar();
+  }
   var al = e.target.getAttribute && e.target.getAttribute('data-alta');
   if (al && e.target.tagName === 'INPUT') { S.alta = S.alta || {}; S.alta[al] = e.target.value; }
   var fc = e.target.getAttribute && e.target.getAttribute('data-fcol');
@@ -3574,6 +3743,7 @@ document.addEventListener('keydown', function (e) {
     e.preventDefault();
     return comentar(e.target.getAttribute('data-com'), e.target.value);
   }
+  if (e.key === 'Escape' && S.combo) { S.combo = null; return pintar(); }
   if (e.key === 'Escape' && S.menuSem) { S.menuSem = null; return pintar(); }
   if (e.key === 'Escape' && S.sel !== null) { S.sel = null; pintar(); }
   if (e.key === 'Enter' && (e.target.id === 'cid' || e.target.id === 'url')) {
