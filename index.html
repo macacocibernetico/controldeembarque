@@ -17,6 +17,7 @@
   --linea:rgba(23,23,20,.07); --linea2:rgba(23,23,20,.13); --linea3:rgba(23,23,20,.26);
   --tinta:#191917; --tinta2:#6b6862; --tinta3:#9c988f;
 
+  --acento:#1f4d3d; --acentobg:#eef4f1;
   --ok:#1d7a4c;   --okbg:#edf7f1;
   --pend:#bd3125; --pendbg:#fdf0ee;
   --sol:#10708a;  --solbg:#ecf5f8;
@@ -38,21 +39,35 @@ button{font:inherit;cursor:pointer;border:1px solid var(--linea2);background:var
 button:hover{background:var(--sup2);border-color:var(--linea3)}
 button:focus-visible{outline:2px solid var(--sol);outline-offset:2px}
 button:disabled{opacity:.4;cursor:default}
-.primario{background:var(--tinta);color:#fff;border-color:var(--tinta)}
-.primario:hover{background:#333330;border-color:#333330}
+.primario{background:var(--acento);color:#fff;border-color:var(--acento)}
+.primario:hover{background:#2a6350;border-color:#2a6350}
 
 input,select{font:inherit;padding:8px 11px;border:1px solid var(--linea2);border-radius:var(--r3);
   background:var(--sup);color:var(--tinta);width:100%}
 input::placeholder{color:var(--tinta3)}
-input:focus,select:focus{outline:none;border-color:var(--tinta3);box-shadow:0 0 0 3px rgba(16,112,138,.1)}
+input:focus,select:focus{outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba(31,77,61,.11)}
 a{color:var(--sol)}
 h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 
 .app{max-width:1120px;margin:0 auto;padding:26px 26px 96px}
 
+/* Segmentado marítimo / terrestre --------------------------------------- */
+.segmento{display:inline-flex;gap:3px;background:var(--sup3);padding:3px;border-radius:10px;
+  margin-bottom:20px;flex-wrap:wrap}
+.segmento button{border:none;background:none;border-radius:7px;padding:7px 15px;
+  color:var(--tinta2);font-size:13.5px;display:inline-flex;align-items:center;gap:7px}
+.segmento button:hover{background:rgba(255,255,255,.7)}
+.segmento button[aria-pressed=true]{background:var(--sup);color:var(--tinta);font-weight:500;
+  box-shadow:0 1px 3px rgba(23,23,20,.09)}
+.segmento .cnt{font-size:11.5px;color:var(--tinta3);font-variant-numeric:tabular-nums}
+.segmento button[aria-pressed=true] .cnt{color:var(--acento)}
+
 /* Cabecera --------------------------------------------------------------- */
-.cab{display:flex;align-items:center;gap:13px;flex-wrap:wrap}
-.cab h1{font-size:19px}
+.cab{display:flex;align-items:center;gap:13px;flex-wrap:wrap;padding-bottom:18px;
+  border-bottom:1px solid var(--linea);margin-bottom:2px}
+.cab h1{font-size:20px;letter-spacing:-.025em}
+.cab h1::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;
+  background:var(--acento);margin-right:9px;vertical-align:middle}
 .sello{font-size:12.5px;color:var(--tinta3)}
 .cab-acc{margin-left:auto;display:flex;gap:6px}
 .cab-acc button{font-size:13px;padding:6px 12px}
@@ -61,15 +76,15 @@ h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 .tabs{display:flex;gap:22px;margin:24px 0 22px;border-bottom:1px solid var(--linea)}
 .tabs button{border:none;background:none;border-radius:0;padding:0 0 11px;color:var(--tinta3);
   font-size:14px;border-bottom:1.5px solid transparent;margin-bottom:-1px}
-.tabs button[aria-selected=true]{color:var(--tinta);border-bottom-color:var(--tinta);font-weight:500}
+.tabs button[aria-selected=true]{color:var(--tinta);border-bottom-color:var(--acento);font-weight:500}
 .tabs button:hover{background:none;color:var(--tinta2);border-color:transparent}
-.tabs button[aria-selected=true]:hover{border-bottom-color:var(--tinta)}
+.tabs button[aria-selected=true]:hover{border-bottom-color:var(--acento)}
 
 /* Resumen ---------------------------------------------------------------- */
 .tira{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:10px;margin-bottom:26px}
 .tira button{display:block;text-align:left;padding:14px 16px;border-radius:var(--r);
   border:1px solid var(--linea);background:var(--sup);width:100%;box-shadow:var(--sombra)}
-.tira button[aria-pressed=true]{border-color:var(--tinta3);background:var(--sup2)}
+.tira button[aria-pressed=true]{border-color:var(--acento);box-shadow:inset 0 0 0 1px var(--acento)}
 .tira .n{font-size:26px;font-weight:600;line-height:1.05;letter-spacing:-.03em;display:block}
 .tira .l{font-size:12.5px;color:var(--tinta2);margin-top:3px;display:block}
 .tira .crit .n{color:var(--pend)}
@@ -89,7 +104,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
   padding:16px 18px;cursor:pointer;box-shadow:var(--sombra);
   transition:border-color .12s,box-shadow .12s}
 .emb:hover{border-color:var(--linea2);box-shadow:0 2px 8px rgba(23,23,20,.06)}
-.emb.sel{border-color:var(--tinta3)}
+.emb.sel{border-color:var(--acento);box-shadow:0 0 0 1px var(--acento)}
 
 .fila-top{display:grid;gap:14px;align-items:start;
   grid-template-columns:minmax(0,1.5fr) minmax(0,1.25fr) minmax(0,1fr)}
@@ -158,7 +173,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 .etapa{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--tinta2)}
 .pasos{display:flex;gap:3px}
 .pasos i{width:13px;height:2.5px;border-radius:2px;background:var(--linea2);display:block}
-.pasos i.on{background:var(--tinta2)}
+.pasos i.on{background:var(--acento)}
 
 /* Filtros ---------------------------------------------------------------- */
 .filtros{display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
@@ -167,8 +182,8 @@ h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
 .chips button{font-size:12.5px;padding:5px 13px;border-radius:20px;color:var(--tinta2);
   border-color:var(--linea)}
-.chips button[aria-pressed=true]{background:var(--tinta);color:#fff;border-color:var(--tinta)}
-.filtros button[aria-pressed=true]{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+.chips button[aria-pressed=true]{background:var(--acento);color:#fff;border-color:var(--acento)}
+.filtros button[aria-pressed=true]{background:var(--acento);color:#fff;border-color:var(--acento)}
 
 /* Panel de filtros */
 .caja-filtros{background:var(--sup);border:1px solid var(--linea);border-radius:var(--r);
@@ -184,7 +199,8 @@ h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 .ctr-cod{font-family:var(--mono);font-size:12.5px;color:var(--tinta);margin-top:3px}
 .barra{height:6px;background:var(--sup3);border-radius:4px;overflow:hidden;margin-bottom:8px}
 .barra i{display:block;height:100%;background:var(--tinta3);border-radius:4px}
-.barra i.full{background:var(--ok)}
+.barra i{background:var(--acento);opacity:.55}
+.barra i.full{background:var(--ok);opacity:1}
 .barra i.exc{background:var(--nar)}
 .tns-linea{font-size:13px;color:var(--tinta)}
 .tns-linea .de{color:var(--tinta2)}
@@ -374,11 +390,19 @@ var CAMPOS = {
 };
 
 var CAMPOS_CTR = {
-  contrato:  {alias:['contract','contrato','nro contrato']},
-  importador:{alias:['importer','importador','cliente','buyer']},
-  tns:       {alias:['tns','toneladas','tons','cantidad']},
-  formaPago: {alias:['forma de pago','payment','payment condition','condicion de pago']},
-  saldo:     {alias:['saldo','saldo del contrato','balance']}
+  contrato:   {alias:['contract','contrato','nro contrato']},
+  exportador: {alias:['exportador','exporter','seller']},
+  importador: {alias:['importer','importador','cliente','buyer']},
+  producto:   {alias:['producto','product']},
+  tns:        {alias:['toneladas','tns','tons','cantidad']},
+  precio:     {alias:['precio','price']},
+  incoterm:   {alias:['incoterm']},
+  formaPago:  {alias:['forma de pago','payment','payment condition','condicion de pago']},
+  comision:   {alias:['comision total','comision','commission']},
+  entregado:  {alias:['ent','entregado','delivered']},
+  saldo:      {alias:['saldo','saldo del contrato','balance']},
+  periodo:    {alias:['periodo de embarque','período de embarque','shipment period','periodo']},
+  fecha:      {alias:['fecha','date']}
 };
 
 function clave(s) {
@@ -1202,11 +1226,23 @@ async function cargarTodo() {
         var k = String(n).trim();
         // Gana la primera pestaña de la lista si el contrato está repetido.
         if (S.contratos.has(k)) return;
+        var g = function (campo) {
+          return dc.mapa[campo] !== undefined ? f.celdas[dc.mapa[campo]] : null;
+        };
         S.contratos.set(k, {
           contrato: k, origen: tc,
-          tns: normNum(f.celdas[dc.mapa.tns]),
-          formaPago: f.celdas[dc.mapa.formaPago],
-          cond: interpretarPago(f.celdas[dc.mapa.formaPago])
+          exportador: g('exportador'),
+          importador: g('importador'),
+          producto: g('producto'),
+          tns: normNum(g('tns')),
+          comision: normNum(g('comision')),
+          // La planilla ya trae su propio entregado y saldo: los guardamos
+          // para poder contrastarlos con los que calcula la app.
+          entregadoHoja: normNum(g('entregado')),
+          saldoHoja: normNum(g('saldo')),
+          periodo: g('periodo'),
+          formaPago: g('formaPago'),
+          cond: interpretarPago(g('formaPago'))
         });
       });
     }
@@ -1477,8 +1513,8 @@ function vistaSetup() {
     '</div>' +
     '<div class="caja">' +
       '<h2>Contratos</h2>' +
-      '<p class="ayuda" style="margin:0 0 8px">Abiertos y cerrados: un embarque puede estar en curso ' +
-        'con el contrato ya cerrado. De acá sale la condición de pago.</p>' +
+      '<p class="ayuda" style="margin:0 0 8px">De acá sale la condición de pago y el saldo. ' +
+        'Si existe una pestaña con todos juntos conviene esa; si no, marcá abiertos y cerrados.</p>' +
       lista('ctr', st.tabsCtr) +
     '</div>' +
     '<button class="primario" data-act="usar">Usar esta planilla</button>' +
@@ -1504,16 +1540,20 @@ function vistaApp() {
       '<p class="centro">' + (S.cargando ? 'Leyendo la planilla…' : 'Sin datos.') + '</p></div>';
   }
 
-  var evs = evaluarTodo();
+  var todosEvs = evaluarTodo();
+  var evs = S.filtroTab
+    ? todosEvs.filter(function (x) { return x.emb._tab === S.filtroTab; })
+    : todosEvs;
   var cuenta = { critico: 0, alto: 0, medio: 0, ok: 0 };
   evs.forEach(function (x) { x.ev.nivelMax ? cuenta[x.ev.nivelMax]++ : cuenta.ok++; });
 
+  var segmentado = segmentoPestanas(todosEvs);
   var cuerpo = S.vista === 'control' ? vistaControl(evs, cuenta)
              : S.vista === 'contratos' ? vistaContratos()
              : vistaGrilla(evs);
   var panel = '';
   if (S.sel !== null) {
-    var item = evs.filter(function (x) { return x.emb._id === S.sel; })[0];
+    var item = todosEvs.filter(function (x) { return x.emb._id === S.sel; })[0];
     if (item) panel = vistaPanel(item);
   }
 
@@ -1524,7 +1564,37 @@ function vistaApp() {
       '<button role="tab" aria-selected="' + (S.vista === 'control') + '" data-act="tab" data-v="control">Control</button>' +
       '<button role="tab" aria-selected="' + (S.vista === 'carga') + '" data-act="tab" data-v="carga">Carga</button>' +
       '<button role="tab" aria-selected="' + (S.vista === 'contratos') + '" data-act="tab" data-v="contratos">Contratos</button>' +
-    '</div>' + cuerpo + '</div>' + panel;
+    '</div>' + segmentado + cuerpo + '</div>' + panel;
+}
+
+// Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
+// primero que se toca, así que va arriba y siempre visible, no escondido en
+// el panel de filtros.
+function segmentoPestanas(evs) {
+  if (S.fuentes.length < 2) return '';
+  var cuenta = {};
+  evs.forEach(function (x) { cuenta[x.emb._tab] = (cuenta[x.emb._tab] || 0) + 1; });
+
+  var op = function (val, label, n) {
+    return '<button data-act="ftab" data-t="' + esc(val) + '" aria-pressed="' +
+      (S.filtroTab === val) + '">' + esc(label) +
+      '<span class="cnt">' + n + '</span></button>';
+  };
+
+  return '<div class="segmento">' +
+    op('', 'Todo', evs.length) +
+    S.fuentes.map(function (f) {
+      return op(f.tab, nombreCorto(f.tab), cuenta[f.tab] || 0);
+    }).join('') +
+    '</div>';
+}
+
+// "Embarques maritimos" -> "Marítimo". Nombres largos rompen el segmentado.
+function nombreCorto(tab) {
+  var k = clave(tab);
+  if (k.indexOf('mariti') >= 0) return 'Marítimo';
+  if (k.indexOf('terrestre') >= 0) return 'Terrestre';
+  return tab.length > 18 ? tab.slice(0, 17) + '…' : tab;
 }
 
 function cabecera() {
@@ -1882,14 +1952,7 @@ function panelFiltros(evs) {
   return '<div class="caja-filtros">' +
     '<div class="fgrid">' +
       SEMAFOROS.map(selEstado).join('') +
-      (S.fuentes.length > 1
-        ? '<div class="fcampo"><label for="ftab">Pestaña</label><select id="ftab">' +
-          '<option value="">Todas</option>' +
-          S.fuentes.map(function (f) {
-            return '<option value="' + esc(f.tab) + '"' + (S.filtroTab === f.tab ? ' selected' : '') +
-              '>' + esc(f.tab) + '</option>';
-          }).join('') + '</select></div>'
-        : '') +
+
       '<div class="fcampo"><label for="ffact">Cobro del cliente</label><select id="ffact">' +
         '<option value="">Cualquiera</option>' +
         '<option value="si"' + (S.f.fact === 'si' ? ' selected' : '') + '>Ya pagó (a facturar)</option>' +
@@ -1980,13 +2043,17 @@ function calcularContratos() {
   S.contratos.forEach(function (c, k) {
     mapa.set(k, {
       contrato: k, origen: c.origen, cond: c.cond,
-      contratado: c.tns, importador: c.importador,
+      contratado: c.tns, importador: c.importador, exportador: c.exportador,
+      producto: c.producto, periodo: c.periodo, comision: c.comision,
+      entregadoHoja: c.entregadoHoja, saldoHoja: c.saldoHoja,
       entregado: 0, embarques: [], aFacturar: 0
     });
   });
 
-  // Embarques activos.
-  S.datos.filas.forEach(function (emb) {
+  // Embarques activos (respetando el filtro marítimo/terrestre).
+  S.datos.filas.filter(function (e) {
+    return !S.filtroTab || e._tab === S.filtroTab;
+  }).forEach(function (emb) {
     var k = String(emb.contract || '').trim();
     if (!k) return;
     var reg = mapa.get(k);
@@ -2002,24 +2069,37 @@ function calcularContratos() {
     if (!reg.exportador) reg.exportador = emb.exporter;
   });
 
-  // Los que ya pasaron a facturar y salieron de las pestañas activas.
+  // Embarques del contrato que ya pasaron a facturar y salieron de las
+  // pestañas activas. Solo para informar, no se suman: la planilla ya los
+  // tiene contados en su propia columna de entregado.
   S.facturar.forEach(function (f, k) {
     var reg = mapa.get(k);
     if (!reg) return;
-    var yaContados = reg.embarques.filter(function (e) { return e._aFacturar; }).length;
-    if (f.filas > yaContados) {
-      // Hay embarques históricos que no están en las pestañas activas.
-      reg.entregado += Math.max(0, f.tns - reg.embarques
-        .filter(function (e) { return e._aFacturar; })
-        .reduce(function (a, e) { return a + (e.tns || 0); }, 0));
-      reg.historicos = f.filas - yaContados;
-    }
+    var activosFacturados = reg.embarques.filter(function (e) { return e._aFacturar; }).length;
+    reg.historicos = Math.max(0, f.filas - activosFacturados);
+    reg.tnsFacturadas = f.tns;
   });
 
   var lista = [];
   mapa.forEach(function (r) {
-    r.saldo = (r.contratado !== null && r.contratado !== undefined)
-      ? r.contratado - r.entregado : null;
+    // La planilla ya calcula entregado y saldo sobre TODO el histórico. Eso es
+    // más completo que sumar solo las pestañas activas, así que manda.
+    // Lo calculado por la app queda como contraste.
+    r.entregadoActivo = r.entregado;
+    var hojaSirve = (r.entregadoHoja !== null && r.entregadoHoja !== undefined);
+
+    if (hojaSirve) {
+      r.entregado = r.entregadoHoja;
+      r.saldo = (r.saldoHoja !== null && r.saldoHoja !== undefined)
+        ? r.saldoHoja
+        : (r.contratado != null ? r.contratado - r.entregado : null);
+      r.fuenteSaldo = 'planilla';
+    } else {
+      r.saldo = (r.contratado !== null && r.contratado !== undefined)
+        ? r.contratado - r.entregado : null;
+      r.fuenteSaldo = 'app';
+    }
+
     r.pct = (r.contratado > 0) ? Math.min(1, r.entregado / r.contratado) : null;
     lista.push(r);
   });
@@ -2099,7 +2179,7 @@ function filaContrato(r) {
       '</div>' +
       '<div>' + barra +
         '<div class="tns-linea">' +
-          '<span>' + (r.entregado || 0).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' tn embarcadas</span>' +
+          '<span>' + (r.entregado || 0).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' tn entregadas</span>' +
           (r.contratado ? '<span class="de"> de ' +
             r.contratado.toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' tn' +
             (pctTxt ? ' · ' + pctTxt : '') + '</span>' : '') +
@@ -2109,14 +2189,29 @@ function filaContrato(r) {
         '<span class="pill ' + cls + '"><span class="pt"></span>' + estado + '</span>' +
         (r.embarques.length
           ? '<span class="pill gris"><span class="pt"></span>' + r.embarques.length +
-            (r.embarques.length === 1 ? ' embarque' : ' embarques') + '</span>' : '') +
+            (r.embarques.length === 1 ? ' embarque activo' : ' embarques activos') + '</span>' : '') +
         (r.aFacturar
           ? '<span class="pill ok"><span class="pt"></span>' + r.aFacturar + ' a facturar</span>' : '') +
       '</div>' +
     '</div>' +
-    (r.cond && !r.cond.desconocida
-      ? '<div class="refs"><span class="ref"><em>Condición de pago</em><b style="font-family:inherit">' +
-        esc(r.cond.texto) + '</b></span></div>' : '') +
+    (function () {
+      var items = [];
+      if (r.periodo) items.push(['Período de embarque', String(r.periodo)]);
+      if (r.cond && !r.cond.desconocida) items.push(['Condición de pago', r.cond.texto]);
+      // Si la planilla trae su propio saldo y no coincide con el calculado,
+      // conviene verlo: alguno de los dos está mirando algo que el otro no.
+      if (r.fuenteSaldo === 'planilla' && r.entregadoActivo > (r.entregado || 0) + 0.5) {
+        items.push(['Atención',
+          'las pestañas activas suman ' +
+          r.entregadoActivo.toLocaleString('es-AR', { maximumFractionDigits: 1 }) +
+          ' tn, más de lo que dice la columna de entregado']);
+      }
+      if (!items.length) return '';
+      return '<div class="refs">' + items.map(function (i) {
+        return '<span class="ref"><em>' + esc(i[0]) + '</em>' +
+          '<b style="font-family:inherit;font-weight:400">' + esc(i[1]) + '</b></span>';
+      }).join('') + '</div>';
+    })() +
     '</article>';
 }
 
@@ -2405,6 +2500,7 @@ document.addEventListener('click', function (ev) {
     S.filtroTab = ''; S.filtroEtapa = ''; S.busca = '';
     return pintar();
   }
+  if (act === 'ftab') { S.filtroTab = el.getAttribute('data-t') || ''; return pintar(); }
   if (act === 'fcontrato') { S.fContrato = el.getAttribute('data-c') || ''; return pintar(); }
   if (act === 'fetapa') {
     S.filtroEtapa = el.getAttribute('data-e') || '';
@@ -2516,7 +2612,10 @@ async function buscarPlanilla() {
       }).map(function (x) { return x.nombre; });
     };
     S.setup.tabsEmb = todas('embarque', 'carga');
-    S.setup.tabsCtr = todas('contratos abiertos', 'contratos cerrados');
+    // "ALL CONTRATOS" tiene abiertos y cerrados juntos, más entregado, saldo y
+    // período de embarque. Si existe, se prefiere sobre las dos por separado.
+    var all = todas('all contratos');
+    S.setup.tabsCtr = all.length ? all : todas('contratos abiertos', 'contratos cerrados');
     S.setup.tabsFact = todas('a facturar', 'facturar');
     // Que "a facturar" no quede también como pestaña de embarques.
     S.setup.tabsEmb = S.setup.tabsEmb.filter(function (n) {
