@@ -294,6 +294,9 @@ textarea:focus{outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba
 
 /* Contratos */
 .ctr-fila{cursor:default}
+.ctr-fila.editable{cursor:pointer}
+.ctr-fila.editable:hover .ed{opacity:1}
+.orig .ed{color:var(--acento);font-weight:500;opacity:0;transition:opacity .12s}
 .ctr-cod{font-family:var(--mono);font-size:12.5px;color:var(--tinta);margin-top:3px}
 .barra{height:6px;background:var(--sup3);border-radius:4px;overflow:hidden;margin-bottom:8px}
 .barra i{display:block;height:100%;background:var(--tinta3);border-radius:4px}
@@ -547,6 +550,10 @@ var S = {
   ultimaEval: {},
   menuSem: null,
   listas: null,
+  ctrEditables: new Map(),
+  formasPago: [],
+  editCtr: null,
+  guardandoCtr: false,
   alta: null,
   combo: null,
   creando: false,
@@ -555,7 +562,7 @@ var S = {
   cargando: false,
   guardando: 0,
   pantalla: 'setup',
-  setup: { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabAlta: '', tabDB: '', buscando: false, entrando: false }
+  setup: { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabsCtrEdit: [], tabAlta: '', tabDB: '', buscando: false, entrando: false }
 };
 
 try { S.cfg = JSON.parse(localStorage.getItem(LS)) || null; } catch (e) {}
@@ -565,6 +572,7 @@ if (S.cfg && S.cfg.tabEmb && !S.cfg.tabsEmb) {
   S.cfg.tabsEmb = [S.cfg.tabEmb];
   S.cfg.tabsCtr = S.cfg.tabCtr ? [S.cfg.tabCtr] : [];
   S.cfg.tabsFact = [];
+  S.cfg.tabsCtrEdit = [];
   delete S.cfg.tabEmb; delete S.cfg.tabCtr;
 }
 
@@ -1829,6 +1837,57 @@ async function cargarTodo() {
       if (it) { it.usado = true; o._aFacturar = true; }
     });
 
+    // ALL CONTRATOS suele ser un IMPORTRANGE: sirve para leer pero no se puede
+    // escribir. Para editar hay que ir a la pestaña real donde vive la fila.
+    S.ctrEditables = new Map();
+    S.formasPago = [];
+    var frecuencia = {};
+    for (var m = 0; m < (S.cfg.tabsCtrEdit || []).length; m++) {
+      var te = S.cfg.tabsCtrEdit[m], he;
+      try {
+        he = await leerHoja(S.cfg.sheetId, te);
+      } catch (e4) {
+        avisos.push('No se pudo leer "' + te + '": ' + e4.message);
+        continue;
+      }
+      var de = detectar(he.encabezados, CAMPOS_CTR);
+      if (de.mapa.contrato === undefined) {
+        avisos.push('En "' + te + '" no encontré la columna de contrato.');
+        continue;
+      }
+      he.filas.forEach(function (f) {
+        var nc = f.celdas[de.mapa.contrato];
+        if (!nc) return;
+        var kc = String(nc).trim();
+        if (!S.ctrEditables.has(kc)) {
+          S.ctrEditables.set(kc, {
+            tab: te, sheetId: he.sheetId, fila: f.fila, mapa: de.mapa,
+            celdas: f.celdas
+          });
+        }
+        if (de.mapa.formaPago !== undefined) {
+          var fp = f.celdas[de.mapa.formaPago];
+          if (fp && String(fp).trim()) {
+            var kk = clave(fp);
+            frecuencia[kk] = frecuencia[kk] || { n: 0, variantes: {} };
+            frecuencia[kk].n++;
+            var tx = String(fp).trim();
+            frecuencia[kk].variantes[tx] = (frecuencia[kk].variantes[tx] || 0) + 1;
+          }
+        }
+      });
+    }
+
+    // "CAD Bank", "CAD BANK" y "Cad Bank" son la misma: se ofrece la más usada
+    // para que la lista deje de multiplicarse.
+    S.formasPago = Object.keys(frecuencia).map(function (k) {
+      var v = frecuencia[k];
+      var mejor = Object.keys(v.variantes).sort(function (a, b) {
+        return v.variantes[b] - v.variantes[a] || a.localeCompare(b, 'es');
+      })[0];
+      return { texto: mejor, usos: v.n };
+    }).sort(function (a, b) { return b.usos - a.usos; });
+
     await cargarListas();
     await cargarComentarios();
 
@@ -2021,6 +2080,13 @@ function vistaSetup() {
       lista('emb', st.tabsEmb) +
     '</div>' +
     '<div class="caja">' +
+      '<h2>Contratos editables</h2>' +
+      '<p class="ayuda" style="margin:0 0 8px">Las pestañas reales donde se pueden ' +
+        'modificar los contratos. Si la de lectura es un IMPORTRANGE no se puede ' +
+        'escribir ahí, por eso van aparte.</p>' +
+      lista('edit', st.tabsCtrEdit) +
+    '</div>' +
+    '<div class="caja">' +
       '<h2>Alta de contratos</h2>' +
       '<p class="ayuda" style="margin:0 0 10px">Dónde se insertan los contratos nuevos ' +
         '(arriba de la fila TOTAL) y de dónde salen las listas de exportadores, ' +
@@ -2087,7 +2153,8 @@ function vistaApp() {
              : S.vista === 'contratos' ? vistaContratos()
              : vistaGrilla(evs);
   var panel = '';
-  if (S.sel !== null) {
+  if (S.editCtr) panel = panelContrato();
+  else if (S.sel !== null) {
     var item = todosEvs.filter(function (x) { return x.emb._id === S.sel; })[0];
     if (item) panel = vistaPanel(item);
   }
@@ -2805,7 +2872,14 @@ function vistaContratos() {
 // Escribir para ir acotando, en vez de buscar en una lista de 500. Si lo que
 // se escribe no está en la base, no se inventa: hay que darlo de alta en el
 // Peanut Matcher, porque si no el nombre no cruza con nada.
-function combo(campo, label, opciones, a) {
+function comboAlta(campo, label, opciones, a) {
+  var ops = opciones || [];
+  var val = a[campo] || '';
+  var ok = ops.some(function (o) { return clave(o) === clave(val); });
+  return comboGen('a-' + campo, campo, label, ops, val, ok, 'alta');
+}
+
+function comboViejo(campo, label, opciones, a) {
   var val = a[campo] || '';
   var abierto = S.combo === campo;
   var q = clave(val);
@@ -2859,6 +2933,181 @@ function resaltar(texto, q) {
          esc(texto.slice(i + q.length));
 }
 
+// Guardar cambios de un contrato. Se escribe celda por celda solo lo que
+// cambió, y nunca sobre las columnas con fórmula (Total, Comisión, ENT, Saldo).
+var CAMPOS_EDIT_CTR = [
+  ['fecha', 'Fecha', 'date'],
+  ['exportador', 'Exportador', 'combo'],
+  ['importador', 'Importador', 'combo'],
+  ['producto', 'Producto', 'combo'],
+  ['tipo', 'Tipo', 'combo'],
+  ['tns', 'Toneladas', 'number'],
+  ['precio', 'Precio USD/tn', 'number'],
+  ['packaging', 'Packaging', 'text'],
+  ['incoterm', 'Incoterm', 'text'],
+  ['formaPago', 'Forma de pago', 'pago'],
+  ['periodo', 'Período de embarque', 'text']
+];
+
+async function guardarContrato() {
+  var e = S.editCtr;
+  if (!e) return;
+  var ref = S.ctrEditables.get(e.contrato);
+  if (!ref) { S.editCtrError = 'No encontré la fila de este contrato.'; return pintar(); }
+
+  var reqs = [];
+  CAMPOS_EDIT_CTR.forEach(function (c) {
+    var campo = c[0];
+    if (!(campo in e.cambios)) return;
+    var idx = ref.mapa[campo];
+    if (idx === undefined) return;
+    var val = e.cambios[campo];
+    if (c[2] === 'number') val = val === '' ? '' : parseFloat(val);
+    reqs.push({
+      updateCells: {
+        range: { sheetId: ref.sheetId, startRowIndex: ref.fila - 1, endRowIndex: ref.fila,
+                 startColumnIndex: idx, endColumnIndex: idx + 1 },
+        rows: [{ values: [{ userEnteredValue: aValorSheets(val) }] }],
+        fields: 'userEnteredValue'
+      }
+    });
+  });
+
+  if (!reqs.length) { S.editCtr = null; return pintar(); }
+
+  S.guardandoCtr = true; S.editCtrError = null; pintar();
+  try {
+    await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: reqs })
+    });
+    S.editCtr = null;
+    S.avisoOk = 'Contrato ' + e.contrato + ' actualizado en "' + ref.tab + '".';
+    await cargarTodo();
+  } catch (err) {
+    S.editCtrError = 'No se pudo guardar: ' + err.message;
+  } finally {
+    S.guardandoCtr = false; pintar();
+  }
+}
+
+function panelContrato() {
+  var e = S.editCtr;
+  var ref = S.ctrEditables.get(e.contrato);
+  var L = S.listas || { exportadores: [], importadores: [], productos: [], tipos: [] };
+
+  var v = function (campo) {
+    if (campo in e.cambios) return e.cambios[campo];
+    return e.orig[campo] == null ? '' : String(e.orig[campo]);
+  };
+
+  var listaDe = {
+    exportador: L.exportadores, importador: L.importadores,
+    producto: L.productos, tipo: L.tipos
+  };
+
+  var fuera = [];
+  var campos = CAMPOS_EDIT_CTR.filter(function (c) {
+    return ref && ref.mapa[c[0]] !== undefined;
+  }).map(function (c) {
+    var campo = c[0], label = c[1], tipo = c[2], val = v(campo);
+
+    if (tipo === 'combo') {
+      var ops = listaDe[campo] || [];
+      var ok = ops.some(function (o) { return clave(o) === clave(val); });
+      if (val && !ok) fuera.push(label);
+      return comboGen('c-' + campo, campo, label, ops, val, ok, 'ctr');
+    }
+    if (tipo === 'pago') {
+      var ops2 = S.formasPago.map(function (f) { return f.texto; });
+      return comboGen('c-' + campo, campo, label, ops2, val, true, 'ctr', true);
+    }
+    if (tipo === 'date') {
+      var iso = val;
+      var d = normFecha(val);
+      if (esFecha(d)) {
+        iso = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') +
+              '-' + String(d.getUTCDate()).padStart(2, '0');
+      }
+      return '<div class="campo"><label for="c-' + campo + '">' + label + '</label>' +
+        '<input type="date" id="c-' + campo + '" data-ectr="' + campo + '" value="' +
+        esc(iso) + '"></div>';
+    }
+    return '<div class="campo"><label for="c-' + campo + '">' + label + '</label>' +
+      '<input id="c-' + campo + '" data-ectr="' + campo + '" type="' +
+      (tipo === 'number' ? 'number' : 'text') + '" value="' + esc(val) + '"></div>';
+  }).join('');
+
+  var hayCambios = Object.keys(e.cambios).length > 0;
+
+  return '<div class="velo" data-act="ctrcerrar"></div>' +
+    '<aside class="panel" role="dialog" aria-label="Editar contrato">' +
+    '<button class="cerrar" data-act="ctrcerrar">Cerrar</button>' +
+    '<h2>' + esc(e.contrato) + '</h2>' +
+    (ref
+      ? '<p style="margin:2px 0 0;font-size:12.5px;color:var(--tinta3)">' +
+        esc(ref.tab) + ' · fila ' + ref.fila + '</p>'
+      : '<div class="error" style="margin-top:12px">Este contrato no está en las pestañas ' +
+        'editables. Revisá la configuración de pestañas.</div>') +
+    (S.editCtrError ? '<div class="error" style="margin-top:12px">' + esc(S.editCtrError) + '</div>' : '') +
+    (ref
+      ? '<div class="bloque">' + campos + '</div>' +
+        '<p class="ayuda">Total, Comisión, ENT y Saldo son fórmulas de la planilla ' +
+        'y no se tocan.</p>' +
+        (fuera.length
+          ? '<p class="no-base">Fuera de la base: ' + fuera.join(', ') +
+            '. Agregalos desde el Peanut Matcher.</p>' : '') +
+        '<div class="alta-acc">' +
+          '<button class="primario" data-act="ctrguardar"' +
+            (!hayCambios || fuera.length || S.guardandoCtr ? ' disabled' : '') + '>' +
+            (S.guardandoCtr ? 'Guardando…' : 'Guardar cambios') + '</button>' +
+          '<span class="ayuda">' +
+            (hayCambios ? Object.keys(e.cambios).length + ' campo(s) modificado(s)'
+                        : 'Sin cambios') + '</span>' +
+        '</div>'
+      : '') +
+    '</aside>';
+}
+
+// Combo reutilizable: alta de contratos y edición usan el mismo.
+function comboGen(id, campo, label, opciones, val, ok, ctx, libre) {
+  var abierto = S.combo === ctx + ':' + campo;
+  var q = clave(val);
+  var sug = [];
+  if (abierto) {
+    sug = (q
+      ? opciones.filter(function (o) { return clave(o).indexOf(q) >= 0; })
+          .sort(function (x, y) {
+            var a1 = clave(x).indexOf(q) === 0 ? 0 : 1;
+            var b1 = clave(y).indexOf(q) === 0 ? 0 : 1;
+            return a1 - b1 || x.localeCompare(y, 'es');
+          })
+      : opciones).slice(0, 9);
+  }
+
+  return '<div class="campo combo-wrap' + (val && !ok && !libre ? ' malo' : '') + '">' +
+    '<label for="' + id + '">' + label +
+      (ok && val && !libre ? '<span class="ok-tick">✓</span>' : '') + '</label>' +
+    '<input id="' + id + '" data-combo2="' + ctx + ':' + campo + '" autocomplete="off" ' +
+      'placeholder="Escribí para buscar" value="' + esc(val) + '">' +
+    (abierto && sug.length
+      ? '<div class="combo-lista">' + sug.map(function (o) {
+          return '<button data-act="combosel2" data-c="' + ctx + ':' + campo + '" ' +
+            'data-v="' + esc(o) + '">' + resaltar(o, q) + '</button>';
+        }).join('') + '</div>'
+      : '') +
+    (abierto && q && !sug.length
+      ? '<div class="combo-lista"><p class="sin-match">' +
+        (libre
+          ? 'No coincide con ninguna condición ya usada. Se puede guardar igual, pero ' +
+            'las alertas de cobro no van a funcionar hasta mapearla.'
+          : 'Ninguno coincide. Si es nuevo, cargalo en el <b>Peanut Matcher</b>.') +
+        '</p></div>'
+      : '') +
+    '</div>';
+}
+
 function formAlta() {
   var a = S.alta || {};
   var L = S.listas || { exportadores: [], importadores: [], productos: [], tipos: [] };
@@ -2905,15 +3154,16 @@ function formAlta() {
     '<div class="alta-grid">' +
       txt('fecha', 'Fecha', 'date') +
       txt('contrato', 'Contrato', 'text', 'LT100-2026') +
-      combo('exportador', 'Exportador', L.exportadores, a) +
-      combo('importador', 'Importador', L.importadores, a) +
-      combo('producto', 'Producto', L.productos, a) +
-      combo('tipo', 'Tipo', L.tipos, a) +
+      comboAlta('exportador', 'Exportador', L.exportadores, a) +
+      comboAlta('importador', 'Importador', L.importadores, a) +
+      comboAlta('producto', 'Producto', L.productos, a) +
+      comboAlta('tipo', 'Tipo', L.tipos, a) +
       txt('toneladas', 'Toneladas', 'number') +
       txt('precio', 'Precio USD/tn', 'number') +
       txt('packaging', 'Packaging', 'text', 'Big Bags 1250 kgs') +
       txt('incoterm', 'Incoterm', 'text', 'CIF Rotterdam') +
-      txt('formaPago', 'Forma de pago', 'text', 'CAD BANK') +
+      comboGen('a-formaPago', 'formaPago', 'Forma de pago',
+        S.formasPago.map(function (f) { return f.texto; }), a.formaPago || '', true, 'alta', true) +
       txt('periodo', 'Período de embarque', 'text', 'Octubre 2026') +
     '</div>' +
     (total ? '<p class="alta-total">Total: US$ ' +
@@ -2953,14 +3203,21 @@ function filaContrato(r) {
     ? '<div class="barra"><i style="width:' + Math.round(r.pct * 100) + '%" class="' +
       (r.saldo < -0.5 ? 'exc' : r.saldo <= 0.5 ? 'full' : '') + '"></i></div>' : '';
 
-  return '<article class="emb ctr-fila">' +
+  var editable = S.ctrEditables.has(r.contrato);
+  return '<article class="emb ctr-fila' + (editable ? ' editable' : '') + '"' +
+    (editable ? ' data-act="ctrabrir" data-k="' + esc(r.contrato) + '" tabindex="0"' : '') + '>' +
     '<div class="fila-top" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.3fr) minmax(0,1fr)">' +
       '<div>' +
         '<div class="partes">' +
           (r.exportador ? '<span class="exp">' + esc(r.exportador) + '</span><span class="fl">→</span>' : '') +
           '<span class="imp">' + esc(r.importador || 'Sin cliente') + '</span></div>' +
         '<div class="ctr-cod">' + esc(r.contrato) + '</div>' +
-        (r.origen ? '<div class="orig">' + esc(r.origen) + '</div>' : '') +
+        (function () {
+          var ref = S.ctrEditables.get(r.contrato);
+          if (ref) return '<div class="orig">' + esc(ref.tab) + ' · fila ' + ref.fila +
+            ' <span class="ed">editar</span></div>';
+          return r.origen ? '<div class="orig">' + esc(r.origen) + ' · solo lectura</div>' : '';
+        })() +
         (r.huerfano ? '<div class="orig">No figura en las pestañas de contratos</div>' : '') +
       '</div>' +
       '<div>' + barra +
@@ -3469,6 +3726,16 @@ function pintar() {
 }
 
 document.addEventListener('focusin', function (e) {
+  var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
+  if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
+  var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
+  if (cb2) {
+    var p2 = cb2.split(':');
+    if (p2[0] === 'ctr' && S.editCtr) S.editCtr.cambios[p2[1]] = e.target.value;
+    else { S.alta = S.alta || {}; S.alta[p2[1]] = e.target.value; }
+    S.combo = cb2;
+    return pintar();
+  }
   var cb = e.target.getAttribute && e.target.getAttribute('data-combo');
   if (cb && S.combo !== cb) { S.combo = cb; pintar(); }
 });
@@ -3512,6 +3779,7 @@ document.addEventListener('click', function (ev) {
     S.cfg.tabsEmb = S.setup.tabsEmb.slice();
     S.cfg.tabsCtr = S.setup.tabsCtr.slice();
     S.cfg.tabsFact = S.setup.tabsFact.slice();
+    S.cfg.tabsCtrEdit = S.setup.tabsCtrEdit.slice();
     S.cfg.tabAlta = S.setup.tabAlta;
     S.cfg.tabDB = S.setup.tabDB;
     S.cfg.titulo = S.pestanas.titulo;
@@ -3574,6 +3842,38 @@ document.addEventListener('click', function (ev) {
     });
   }
 
+  if (act === 'ctrabrir') {
+    var kctr = el.getAttribute('data-k');
+    var ref0 = S.ctrEditables.get(kctr);
+    if (!ref0) return;
+    var orig = {};
+    Object.keys(ref0.mapa).forEach(function (campo) {
+      var raw = ref0.celdas[ref0.mapa[campo]];
+      if (campo === 'fecha') {
+        var d0 = normFecha(raw);
+        orig[campo] = esFecha(d0)
+          ? d0.getUTCFullYear() + '-' + String(d0.getUTCMonth() + 1).padStart(2, '0') +
+            '-' + String(d0.getUTCDate()).padStart(2, '0')
+          : (raw == null ? '' : String(raw));
+      } else {
+        orig[campo] = raw == null ? '' : String(raw);
+      }
+    });
+    S.editCtr = { contrato: kctr, orig: orig, cambios: {} };
+    S.editCtrError = null; S.combo = null;
+    return pintar();
+  }
+  if (act === 'ctrcerrar') { S.editCtr = null; S.combo = null; return pintar(); }
+  if (act === 'ctrguardar') return guardarContrato();
+  if (act === 'combosel2') {
+    var par = el.getAttribute('data-c').split(':');
+    var valor = el.getAttribute('data-v');
+    if (par[0] === 'ctr' && S.editCtr) S.editCtr.cambios[par[1]] = valor;
+    else { S.alta = S.alta || {}; S.alta[par[1]] = valor; }
+    S.combo = null;
+    return pintar();
+  }
+
   if (act === 'usarnum') {
     S.alta = S.alta || {};
     S.alta.contrato = el.getAttribute('data-v');
@@ -3609,6 +3909,7 @@ document.addEventListener('click', function (ev) {
       tabsEmb: (S.cfg.tabsEmb || []).slice(),
       tabsCtr: (S.cfg.tabsCtr || []).slice(),
       tabsFact: (S.cfg.tabsFact || []).slice(),
+      tabsCtrEdit: (S.cfg.tabsCtrEdit || []).slice(),
       tabAlta: S.cfg.tabAlta || '', tabDB: S.cfg.tabDB || '',
       buscando: false, entrando: false, soloPestanas: true
     };
@@ -3620,7 +3921,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'salir') {
     S.cfg = { clientId: S.cfg.clientId };   // conserva el Client ID
     S.pestanas = null; S.datos = null; S.fuentes = null; S.pantalla = 'setup'; S.error = null;
-    S.setup = { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabAlta: '', tabDB: '', buscando: false, entrando: false };
+    S.setup = { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabsCtrEdit: [], tabAlta: '', tabDB: '', buscando: false, entrando: false };
     guardarCfg(); return pintar();
   }
 
@@ -3656,6 +3957,16 @@ document.addEventListener('click', function (ev) {
 document.addEventListener('input', function (e) {
   if (e.target.id === 'busca') { S.busca = e.target.value; pintar(); }
   if (e.target.id === 'nuevo-com') S.borrador = e.target.value;   // sin redibujar
+  var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
+  if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
+  var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
+  if (cb2) {
+    var p2 = cb2.split(':');
+    if (p2[0] === 'ctr' && S.editCtr) S.editCtr.cambios[p2[1]] = e.target.value;
+    else { S.alta = S.alta || {}; S.alta[p2[1]] = e.target.value; }
+    S.combo = cb2;
+    return pintar();
+  }
   var cb = e.target.getAttribute && e.target.getAttribute('data-combo');
   if (cb) {
     S.alta = S.alta || {};
@@ -3700,6 +4011,8 @@ document.addEventListener('change', function (e) {
 });
 
 document.addEventListener('change', function (e) {
+  var ecd = e.target.getAttribute && e.target.getAttribute('data-ectr');
+  if (ecd && S.editCtr) { S.editCtr.cambios[ecd] = e.target.value; return pintar(); }
   var cf = e.target.getAttribute && e.target.getAttribute('data-fecha');
   if (!cf) return;
   var idf = e.target.getAttribute('data-f');
@@ -3783,6 +4096,7 @@ async function buscarPlanilla() {
     var all = todas('all contratos');
     S.setup.tabsCtr = all.length ? all : todas('contratos abiertos', 'contratos cerrados');
     S.setup.tabsFact = todas('a facturar', 'facturar');
+    S.setup.tabsCtrEdit = todas('contratos abiertos', 'contratos cerrados');
     S.setup.tabAlta = (todas('contratos abiertos')[0]) || '';
     S.setup.tabDB = (todas('import_db', 'import db', 'database')[0]) || '';
     // Que "a facturar" no quede también como pestaña de embarques.
