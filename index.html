@@ -146,6 +146,31 @@ h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 .pill.hueco .pt{background:none;box-shadow:inset 0 0 0 1.5px var(--linea3)}
 .pill.hueco{color:var(--tinta3)}
 .pill.gris .pt{background:var(--tinta3)}
+.pill.coment{color:var(--acento)}
+.pill.coment .pt{background:var(--acento)}
+
+/* Comentarios ------------------------------------------------------------ */
+.ultimo-com{margin-top:12px;padding-top:11px;border-top:1px solid var(--linea);
+  display:flex;gap:8px;align-items:baseline;font-size:12.5px;min-width:0}
+.ultimo-com .autor{color:var(--acento);font-weight:500;flex:none}
+.ultimo-com .txt{color:var(--tinta2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ultimo-com .mas{color:var(--tinta3);flex:none}
+
+.hilo{display:flex;flex-direction:column;gap:11px;margin-bottom:14px}
+.com{background:var(--sup2);border-radius:var(--r2);padding:11px 13px}
+.com-cab{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:4px}
+.com-autor{font-weight:600;font-size:13px;color:var(--acento)}
+.com-fecha{font-size:11.5px;color:var(--tinta3);white-space:nowrap}
+.com-txt{margin:0;font-size:13.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.com-sobre{margin:6px 0 0;font-size:11.5px;color:var(--tinta3);font-style:italic}
+
+textarea{font:inherit;width:100%;padding:10px 12px;border:1px solid var(--linea2);
+  border-radius:var(--r3);background:var(--sup);color:var(--tinta);resize:vertical;
+  min-height:62px;line-height:1.5}
+textarea::placeholder{color:var(--tinta3)}
+textarea:focus{outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba(31,77,61,.11)}
+.com-acc{display:flex;gap:11px;align-items:center;margin-top:9px;flex-wrap:wrap}
+.com-acc .ayuda{margin:0}
 
 /* Aviso dentro de la tarjeta --------------------------------------------- */
 .aviso-fila{margin-top:14px;padding:12px 14px;border-radius:var(--r2);background:var(--sup2)}
@@ -309,7 +334,14 @@ code{font-family:var(--mono);font-size:12px;background:var(--sup3);padding:2px 6
    navegador. En el código no hay nada hardcodeado.
    =========================================================================== */
 
-var SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+// userinfo.email para saber quién comenta: el portal lo usan varias personas y
+// un comentario sin autor no sirve de nada.
+var SCOPE = 'https://www.googleapis.com/auth/spreadsheets ' +
+            'https://www.googleapis.com/auth/userinfo.email ' +
+            'https://www.googleapis.com/auth/userinfo.profile';
+
+var HOJA_COMENTARIOS = 'Comentarios app';
+var ENC_COMENTARIOS = ['Fecha', 'Autor', 'Pestaña', 'Contrato', 'BL', 'Comentario', 'Sobre'];
 var LS = 'embarques:cfg';
 var MAX_COLS = 60, MAX_FILAS = 3000;
 
@@ -333,7 +365,13 @@ var S = {
   f: { docs: '', pics: '', tr: '', cbte: '', falta: '', fact: '' },
   fuentes: [],
   facturar: new Map(),
+  usuario: null,
+  comentarios: new Map(),
+  hojaComentarios: null,
+  enviando: false,
   fContrato: '',
+  borrador: '',
+  ultimaEval: {},
   avisos: [],
   error: null,
   cargando: false,
@@ -964,10 +1002,24 @@ function pedirToken(interactivo) {
 // El popup solo se abre confiable si sale de un clic directo, sin ningún await
 // en el medio. Por eso el login es un paso propio y no algo que pasa de rebote
 // cuando la app necesita leer la planilla.
+// Quién está usando el portal. Si falla, se sigue igual: el comentario queda
+// sin autor antes que romper el flujo.
+async function identificar() {
+  try {
+    var r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + S.token }
+    });
+    if (!r.ok) return;
+    var u = await r.json();
+    S.usuario = { email: u.email || '', nombre: u.name || u.email || '' };
+  } catch (e) {}
+}
+
 async function entrar() {
   S.error = null; S.setup.entrando = true; pintar();
   try {
     await pedirToken(false);
+    await identificar();
     S.setup.entrando = false;
     // Si ya estaba todo elegido de una sesión anterior, no volvemos a preguntar.
     if (S.cfg.sheetId && (S.cfg.tabsEmb || []).length) {
@@ -1118,6 +1170,105 @@ function escribirCeldas(id, sheetId, fila, valores, colores) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ requests: reqs })
   });
+}
+
+/* --- Comentarios -----------------------------------------------------------
+   Viven en una pestaña propia de la misma planilla: una fila por comentario.
+   Así quedan auditables, se ven desde Sheets y no pisan las celdas de datos.
+   Se atan al embarque por contrato + BL + pestaña, no por número de fila, que
+   cambia cuando alguien inserta u ordena.
+   -------------------------------------------------------------------------- */
+
+// Clave estable de un embarque para colgarle comentarios.
+function claveComentario(emb) {
+  return [clave(emb._tab), clave(emb.contract), clave(emb.bl || '')].join('|');
+}
+
+async function cargarComentarios() {
+  S.comentarios = new Map();
+  try {
+    var meta = await api(BASE + S.cfg.sheetId +
+      '?fields=' + encodeURIComponent('sheets(properties(sheetId,title))'));
+    var hoja = (meta.sheets || []).filter(function (h) {
+      return clave(h.properties.title) === clave(HOJA_COMENTARIOS);
+    })[0];
+    if (!hoja) { S.hojaComentarios = null; return; }
+    S.hojaComentarios = hoja.properties.title;
+
+    var r = await api(BASE + S.cfg.sheetId + '/values/' +
+      encodeURIComponent("'" + S.hojaComentarios + "'!A2:G5000"));
+    (r.values || []).forEach(function (f) {
+      if (!f || !f[5]) return;
+      var k = [clave(f[2]), clave(f[3]), clave(f[4] || '')].join('|');
+      var lista = S.comentarios.get(k) || [];
+      lista.push({ fecha: f[0], autor: f[1], texto: f[5], sobre: f[6] || '' });
+      S.comentarios.set(k, lista);
+    });
+  } catch (e) {
+    // Sin comentarios no se cae la app.
+    S.hojaComentarios = null;
+  }
+}
+
+async function crearHojaComentarios() {
+  await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [{ addSheet: { properties: { title: HOJA_COMENTARIOS } } }]
+    })
+  });
+  await api(BASE + S.cfg.sheetId + '/values/' +
+    encodeURIComponent("'" + HOJA_COMENTARIOS + "'!A1") +
+    ':append?valueInputOption=USER_ENTERED', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [ENC_COMENTARIOS] })
+  });
+  S.hojaComentarios = HOJA_COMENTARIOS;
+}
+
+async function comentar(id, texto) {
+  texto = String(texto || '').trim();
+  if (!texto) return;
+  var emb = filaPorId(id);
+  if (!emb) return;
+
+  S.enviando = true; pintar();
+  try {
+    if (!S.hojaComentarios) await crearHojaComentarios();
+
+    var ahora = new Date();
+    var fecha = ahora.toLocaleDateString('es-AR') + ' ' +
+                ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    var autor = S.usuario ? (S.usuario.email || S.usuario.nombre) : 'desconocido';
+    var ev = S.ultimaEval && S.ultimaEval[id];
+    var sobre = ev && ev.alertas.length ? ev.alertas[0].titulo : '';
+
+    var fila = [fecha, autor, emb._tab, emb.contract || '', emb.bl || '', texto, sobre];
+
+    await api(BASE + S.cfg.sheetId + '/values/' +
+      encodeURIComponent("'" + S.hojaComentarios + "'!A1") +
+      ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [fila] })
+    });
+
+    var k = claveComentario(emb);
+    var lista = S.comentarios.get(k) || [];
+    lista.push({ fecha: fecha, autor: autor, texto: texto, sobre: sobre });
+    S.comentarios.set(k, lista);
+    S.borrador = '';
+  } catch (e) {
+    S.error = 'No se pudo guardar el comentario: ' + e.message;
+  } finally {
+    S.enviando = false; pintar();
+  }
+}
+
+function comentariosDe(emb) {
+  return S.comentarios.get(claveComentario(emb)) || [];
 }
 
 /* --- Carga de datos -------------------------------------------------------- */
@@ -1322,6 +1473,8 @@ async function cargarTodo() {
       }
       if (it) { it.usado = true; o._aFacturar = true; }
     });
+
+    await cargarComentarios();
 
     S.avisos = avisos;
   } catch (e) {
@@ -1531,11 +1684,13 @@ function vistaSetup() {
 
 function evaluarTodo() {
   var hoy = new Date();
+  S.ultimaEval = {};
   return S.datos.filas.map(function (emb) {
     var ctr = S.contratos.get(String(emb.contract || '').trim()) || null;
     var src = fuenteDe(emb);
-    return { emb: emb, contrato: ctr, src: src,
-             ev: evaluar(emb, ctr, hoy, src.mapa, src.noAplica) };
+    var ev = evaluar(emb, ctr, hoy, src.mapa, src.noAplica);
+    S.ultimaEval[emb._id] = ev;
+    return { emb: emb, contrato: ctr, src: src, ev: ev };
   });
 }
 
@@ -1809,13 +1964,34 @@ function filaEmbarque(x, opts) {
           ? '<span class="pill nar"><span class="pt"></span>Falta comprobante</span>' : '') +
         (emb._aFacturar
           ? '<span class="pill ok"><span class="pt"></span>Cliente pagó</span>' : '') +
+        (function () {
+          var n = comentariosDe(emb).length;
+          return n ? '<span class="pill coment"><span class="pt"></span>' + n +
+            (n === 1 ? ' comentario' : ' comentarios') + '</span>' : '';
+        })() +
       '</div>' +
     '</div>' +
 
     alerta +
     (refs ? '<div class="refs">' + refs + '</div>' : '') +
     (notas ? '<div class="notas">' + notas + '</div>' : '') +
+    (function () {
+      var cs = comentariosDe(emb);
+      if (!cs.length) return '';
+      var u = cs[cs.length - 1];
+      return '<div class="ultimo-com">' +
+        '<span class="autor">' + esc(nombreCortoAutor(u.autor)) + '</span>' +
+        '<span class="txt">' + esc(u.texto) + '</span>' +
+        (cs.length > 1 ? '<span class="mas">+' + (cs.length - 1) + '</span>' : '') +
+        '</div>';
+    })() +
     '</article>';
+}
+
+// juan.perez@empresa.com -> juan.perez
+function nombreCortoAutor(a) {
+  var t = String(a || '');
+  return t.indexOf('@') > 0 ? t.slice(0, t.indexOf('@')) : t;
 }
 
 
@@ -2353,6 +2529,35 @@ function vistaPanel(x) {
   }
   h += '</div>';
 
+  // Comentarios: lo que el equipo se dice sobre este embarque.
+  var cs = comentariosDe(emb);
+  h += '<div class="bloque"><h3 class="gt">Comentarios' +
+    (cs.length ? ' <span>' + cs.length + '</span>' : '') + '</h3>';
+
+  if (cs.length) {
+    h += '<div class="hilo">' + cs.map(function (c) {
+      return '<div class="com">' +
+        '<div class="com-cab"><span class="com-autor">' + esc(nombreCortoAutor(c.autor)) + '</span>' +
+        '<span class="com-fecha">' + esc(c.fecha) + '</span></div>' +
+        '<p class="com-txt">' + esc(c.texto) + '</p>' +
+        (c.sobre ? '<p class="com-sobre">sobre: ' + esc(c.sobre) + '</p>' : '') +
+        '</div>';
+    }).join('') + '</div>';
+  } else {
+    h += '<p class="ayuda" style="margin:0 0 10px">Todavía no hay comentarios.</p>';
+  }
+
+  h += '<textarea id="nuevo-com" data-com="' + esc(emb._id) + '" rows="2" ' +
+    'placeholder="Escribí un comentario para el equipo…">' + esc(S.borrador || '') + '</textarea>' +
+    '<div class="com-acc">' +
+      '<button class="primario" data-act="comentar" data-f="' + esc(emb._id) + '"' +
+        (S.enviando ? ' disabled' : '') + '>' +
+        (S.enviando ? 'Guardando…' : 'Comentar') + '</button>' +
+      '<span class="ayuda">' +
+        (S.usuario ? 'Como ' + esc(nombreCortoAutor(S.usuario.email)) : 'Sin identificar') +
+      '</span>' +
+    '</div></div>';
+
   // Campos editables.
   var eds = EDITABLES.filter(function (c) {
     return src.mapa[c] !== undefined && !src.noAplica[c];
@@ -2512,6 +2717,10 @@ document.addEventListener('click', function (ev) {
 
   if (act === 'tab') { S.vista = el.getAttribute('data-v'); return pintar(); }
   if (act === 'csv') return exportarCSV();
+  if (act === 'comentar') {
+    var ta = document.getElementById('nuevo-com');
+    return comentar(el.getAttribute('data-f'), ta ? ta.value : '');
+  }
   if (act === 'densidad') { S.compacto = !S.compacto; return pintar(); }
   if (act === 'pfiltros') { S.panelFiltros = !S.panelFiltros; return pintar(); }
   if (act === 'orden') { S.orden = el.getAttribute('data-o'); return pintar(); }
@@ -2568,6 +2777,7 @@ document.addEventListener('click', function (ev) {
 
 document.addEventListener('input', function (e) {
   if (e.target.id === 'busca') { S.busca = e.target.value; pintar(); }
+  if (e.target.id === 'nuevo-com') S.borrador = e.target.value;   // sin redibujar
   if (e.target.id === 'cid' || e.target.id === 'url') S.setup.entrada = e.target.value;
 });
 
@@ -2614,6 +2824,10 @@ document.addEventListener('keydown', function (e) {
     e.preventDefault();
     S.sel = e.target.getAttribute('data-f');
     return pintar();
+  }
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.target.id === 'nuevo-com') {
+    e.preventDefault();
+    return comentar(e.target.getAttribute('data-com'), e.target.value);
   }
   if (e.key === 'Escape' && S.sel !== null) { S.sel = null; pintar(); }
   if (e.key === 'Enter' && (e.target.id === 'cid' || e.target.id === 'url')) {
