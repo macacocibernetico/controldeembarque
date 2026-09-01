@@ -238,6 +238,23 @@ textarea:focus{outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba
 .limpiar{margin-top:14px;font-size:13px}
 .conteo{font-size:12.5px;color:var(--tinta3);margin:0 0 12px}
 
+/* Alta de contratos */
+.alta{background:var(--sup);border:1px solid var(--linea2);border-radius:var(--r);
+  padding:20px 22px;margin-bottom:18px;box-shadow:0 4px 16px rgba(23,23,20,.07)}
+.alta-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.alta-cab h3{font-size:16px;margin:0}
+.alta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:13px}
+.alta-grid .campo{margin-bottom:0}
+.alta-total{margin:14px 0 0;font-size:13.5px;color:var(--tinta2);
+  background:var(--sup2);padding:9px 12px;border-radius:var(--r3)}
+.alta-acc{display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.alta-acc .ayuda{margin:0}
+.req{color:var(--pend)}
+.ok-aviso{background:var(--okbg);border:1px solid var(--okbd,#a8d4bb);color:var(--ok);
+  padding:11px 14px;border-radius:var(--r2);font-size:13.5px;margin:14px 0;
+  display:flex;gap:12px;align-items:center}
+.ok-aviso button{font-size:12.5px;padding:4px 10px;margin-left:auto}
+
 /* Contratos */
 .ctr-fila{cursor:default}
 .ctr-cod{font-family:var(--mono);font-size:12.5px;color:var(--tinta);margin-top:3px}
@@ -483,12 +500,15 @@ var S = {
   borrador: '',
   ultimaEval: {},
   menuSem: null,
+  listas: null,
+  alta: null,
+  creando: false,
   avisos: [],
   error: null,
   cargando: false,
   guardando: 0,
   pantalla: 'setup',
-  setup: { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], buscando: false, entrando: false }
+  setup: { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabAlta: '', tabDB: '', buscando: false, entrando: false }
 };
 
 try { S.cfg = JSON.parse(localStorage.getItem(LS)) || null; } catch (e) {}
@@ -1291,6 +1311,140 @@ function escribirCeldas(id, sheetId, fila, valores, colores) {
   });
 }
 
+/* --- Listas de import_DB ---------------------------------------------------
+   Los desplegables del alta salen de ahí: exportadores C3:C, importadores B3:B,
+   productos D3:D y tipos E3:E5. Así no entran nombres nuevos escritos a mano,
+   que es lo que rompe el cruce con los contratos.
+   -------------------------------------------------------------------------- */
+
+var TIPOS_FALLBACK = ['Maní', 'Aceite', 'Expeller', 'Birdfood'];
+
+async function cargarListas() {
+  S.listas = { exportadores: [], importadores: [], productos: [], tipos: [] };
+  if (!S.cfg.tabDB) return;
+
+  var limpiar = function (col) {
+    var out = [], vistos = {};
+    (col || []).forEach(function (f) {
+      var v = f && f[0] ? String(f[0]).trim() : '';
+      if (!v) return;
+      var k = clave(v);
+      if (vistos[k]) return;      // la lista tiene repetidos
+      vistos[k] = 1; out.push(v);
+    });
+    return out.sort(function (a, b) { return a.localeCompare(b, 'es'); });
+  };
+
+  try {
+    var q = "'" + S.cfg.tabDB.replace(/'/g, "''") + "'!";
+    var r = await api(BASE + S.cfg.sheetId + '/values:batchGet?' +
+      ['B3:B2000', 'C3:C2000', 'D3:D2000', 'E3:E20'].map(function (rg) {
+        return 'ranges=' + encodeURIComponent(q + rg);
+      }).join('&'));
+
+    var v = r.valueRanges || [];
+    S.listas.importadores = limpiar(v[0] && v[0].values);
+    S.listas.exportadores = limpiar(v[1] && v[1].values);
+    S.listas.productos    = limpiar(v[2] && v[2].values);
+    S.listas.tipos        = limpiar(v[3] && v[3].values);
+    if (!S.listas.tipos.length) S.listas.tipos = TIPOS_FALLBACK.slice();
+  } catch (e) {
+    S.listas.tipos = TIPOS_FALLBACK.slice();
+  }
+}
+
+/* --- Alta de contratos -----------------------------------------------------
+   La fila se inserta justo arriba de la que dice TOTAL en la columna A, para
+   que quede dentro del bloque de datos. Las columnas calculadas (Total,
+   Comisión, ENT, Saldo) se escriben como fórmula, iguales a las del resto.
+   -------------------------------------------------------------------------- */
+
+async function filaTotalDe(pestana) {
+  var r = await api(BASE + S.cfg.sheetId + '/values/' +
+    encodeURIComponent("'" + pestana.replace(/'/g, "''") + "'!A1:A2000"));
+  var vals = r.values || [];
+  for (var i = 0; i < vals.length; i++) {
+    var v = vals[i] && vals[i][0];
+    if (v && String(v).trim().toUpperCase().indexOf('TOTAL') === 0) return i + 1;
+  }
+  return null;
+}
+
+async function crearContrato(datos) {
+  var pestana = S.cfg.tabAlta;
+  if (!pestana) throw new Error('No hay una pestaña de alta configurada.');
+
+  var meta = await api(BASE + S.cfg.sheetId +
+    '?fields=' + encodeURIComponent('sheets(properties(sheetId,title))'));
+  var hoja = (meta.sheets || []).filter(function (h) {
+    return h.properties.title === pestana;
+  })[0];
+  if (!hoja) throw new Error('No existe la pestaña "' + pestana + '".');
+  var sheetId = hoja.properties.sheetId;
+
+  var filaTotal = await filaTotalDe(pestana);
+  if (!filaTotal) {
+    throw new Error('No encontré una fila que diga TOTAL en la columna A de "' +
+      pestana + '". Sin eso no sé dónde insertar sin pisar nada.');
+  }
+  var destino = filaTotal;   // la nueva fila ocupa el lugar del TOTAL, que baja
+
+  // 1) Insertar la fila, heredando el formato de la de arriba.
+  await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [{
+        insertDimension: {
+          range: { sheetId: sheetId, dimension: 'ROWS',
+                   startIndex: destino - 1, endIndex: destino },
+          inheritFromBefore: true
+        }
+      }]
+    })
+  });
+
+  // 2) Escribir los valores. Las fórmulas replican las del resto de las filas.
+  var n = destino;
+  var sumifs =
+    "=SUMIFS('Embarques maritimos'!G:G, 'Embarques maritimos'!C:C, B" + n +
+    ", 'Embarques maritimos'!D:D, E" + n + ") + " +
+    "SUMIFS('Cargas terrestres'!G:G, 'Cargas terrestres'!C:C, B" + n +
+    ", 'Cargas terrestres'!D:D, E" + n + ") + " +
+    "SUMIFS('A facturar'!G:G, 'A facturar'!C:C, B" + n +
+    ", 'A facturar'!D:D, E" + n + ")";
+
+  var fila = [
+    datos.fecha,          // A Fecha
+    datos.contrato,       // B
+    datos.exportador,     // C
+    datos.importador,     // D
+    datos.producto,       // E
+    datos.tipo,           // F
+    datos.toneladas,      // G
+    datos.precio,         // H
+    '=H' + n + '*G' + n,  // I Total
+    datos.packaging,      // J
+    datos.incoterm,       // K
+    datos.formaPago,      // L
+    '=I' + n + '*0.02',   // M Comisión
+    '',                   // N PAGOS USA
+    sumifs,               // O ENT
+    '=G' + n + '-O' + n,  // P Saldo
+    datos.periodo         // Q
+  ];
+
+  await api(BASE + S.cfg.sheetId + '/values/' +
+    encodeURIComponent("'" + pestana.replace(/'/g, "''") + "'!A" + n) +
+    '?valueInputOption=USER_ENTERED', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [fila] })
+  });
+
+  return n;
+}
+
 /* --- Comentarios -----------------------------------------------------------
    Viven en una pestaña propia de la misma planilla: una fila por comentario.
    Así quedan auditables, se ven desde Sheets y no pisan las celdas de datos.
@@ -1593,6 +1747,7 @@ async function cargarTodo() {
       if (it) { it.usado = true; o._aFacturar = true; }
     });
 
+    await cargarListas();
     await cargarComentarios();
 
     S.avisos = avisos;
@@ -1784,6 +1939,24 @@ function vistaSetup() {
       lista('emb', st.tabsEmb) +
     '</div>' +
     '<div class="caja">' +
+      '<h2>Alta de contratos</h2>' +
+      '<p class="ayuda" style="margin:0 0 10px">Dónde se insertan los contratos nuevos ' +
+        '(arriba de la fila TOTAL) y de dónde salen las listas de exportadores, ' +
+        'importadores y productos.</p>' +
+      '<div class="campo"><label for="talta">Pestaña donde dar de alta</label>' +
+        '<select id="talta"><option value="">No dar de alta desde la app</option>' +
+        S.pestanas.pestanas.map(function (p) {
+          return '<option value="' + esc(p.nombre) + '"' +
+            (st.tabAlta === p.nombre ? ' selected' : '') + '>' + esc(p.nombre) + '</option>';
+        }).join('') + '</select></div>' +
+      '<div class="campo"><label for="tdb">Pestaña con las listas</label>' +
+        '<select id="tdb"><option value="">Sin listas</option>' +
+        S.pestanas.pestanas.map(function (p) {
+          return '<option value="' + esc(p.nombre) + '"' +
+            (st.tabDB === p.nombre ? ' selected' : '') + '>' + esc(p.nombre) + '</option>';
+        }).join('') + '</select></div>' +
+    '</div>' +
+    '<div class="caja">' +
       '<h2>A facturar</h2>' +
       '<p class="ayuda" style="margin:0 0 8px">La pestaña adonde pasa un embarque ' +
         'cuando el cliente ya le pagó al exportador. Sirve como prueba de cobro.</p>' +
@@ -1839,6 +2012,8 @@ function vistaApp() {
 
   return cabecera() + '<div class="app">' +
     (S.error ? '<div class="error" style="margin-top:14px">' + esc(S.error) + '</div>' : '') +
+    (S.avisoOk ? '<div class="ok-aviso">' + esc(S.avisoOk) +
+      ' <button data-act="cerraviso">Cerrar</button></div>' : '') +
     diagnostico() +
     '<div class="tabs" role="tablist">' +
       '<button role="tab" aria-selected="' + (S.vista === 'control') + '" data-act="tab" data-v="control">Control</button>' +
@@ -2516,7 +2691,10 @@ function vistaContratos() {
 
   var h = '<div class="filtros">' +
     '<input id="busca" placeholder="Buscar contrato, cliente" value="' + esc(S.busca) + '" aria-label="Buscar">' +
+    (S.cfg.tabAlta && !S.alta
+      ? '<button class="primario" data-act="altaabrir">Nuevo contrato</button>' : '') +
     '<button data-act="csv" style="margin-left:auto">Exportar CSV</button></div>' +
+    (S.alta ? formAlta() : '') +
     '<div class="chips">' +
     [['', 'Con movimiento'], ['abiertos', 'Con saldo'], ['completos', 'Completos'],
      ['excedidos', 'Excedidos'], ['sin_contrato', 'Sin contrato']]
@@ -2529,6 +2707,67 @@ function vistaContratos() {
   if (!lista.length) return h + '<p class="centro">Nada coincide.</p>';
 
   return h + '<div class="lista">' + lista.map(filaContrato).join('') + '</div>';
+}
+
+function formAlta() {
+  var a = S.alta || {};
+  var L = S.listas || { exportadores: [], importadores: [], productos: [], tipos: [] };
+
+  function sel(campo, label, opciones, obligatorio) {
+    return '<div class="campo"><label for="a-' + campo + '">' + label +
+      (obligatorio ? ' <span class="req">·</span>' : '') + '</label>' +
+      '<select id="a-' + campo + '" data-alta="' + campo + '">' +
+      '<option value="">Elegir…</option>' +
+      opciones.map(function (o) {
+        return '<option value="' + esc(o) + '"' + (a[campo] === o ? ' selected' : '') +
+          '>' + esc(o) + '</option>';
+      }).join('') + '</select></div>';
+  }
+
+  function txt(campo, label, tipo, ph) {
+    return '<div class="campo"><label for="a-' + campo + '">' + label + '</label>' +
+      '<input id="a-' + campo + '" data-alta="' + campo + '" type="' + (tipo || 'text') + '" ' +
+      'value="' + esc(a[campo] || '') + '"' +
+      (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
+  }
+
+  var faltan = ['contrato', 'exportador', 'importador', 'producto', 'tipo', 'toneladas', 'precio']
+    .filter(function (k) { return !a[k]; });
+
+  var total = (parseFloat(a.toneladas) || 0) * (parseFloat(a.precio) || 0);
+
+  return '<div class="alta">' +
+    '<div class="alta-cab"><h3>Nuevo contrato</h3>' +
+      '<button data-act="altacerrar">Cancelar</button></div>' +
+    (S.altaError ? '<div class="error">' + esc(S.altaError) + '</div>' : '') +
+    '<div class="alta-grid">' +
+      txt('fecha', 'Fecha', 'date') +
+      txt('contrato', 'Contrato', 'text', 'LT100-2026') +
+      sel('exportador', 'Exportador', L.exportadores, true) +
+      sel('importador', 'Importador', L.importadores, true) +
+      sel('producto', 'Producto', L.productos, true) +
+      sel('tipo', 'Tipo', L.tipos, true) +
+      txt('toneladas', 'Toneladas', 'number') +
+      txt('precio', 'Precio USD/tn', 'number') +
+      txt('packaging', 'Packaging', 'text', 'Big Bags 1250 kgs') +
+      txt('incoterm', 'Incoterm', 'text', 'CIF Rotterdam') +
+      txt('formaPago', 'Forma de pago', 'text', 'CAD BANK') +
+      txt('periodo', 'Período de embarque', 'text', 'Octubre 2026') +
+    '</div>' +
+    (total ? '<p class="alta-total">Total: US$ ' +
+      total.toLocaleString('es-AR', { maximumFractionDigits: 2 }) +
+      ' · comisión estimada US$ ' +
+      (total * 0.02).toLocaleString('es-AR', { maximumFractionDigits: 2 }) + '</p>' : '') +
+    '<div class="alta-acc">' +
+      '<button class="primario" data-act="altaguardar"' +
+        (faltan.length || S.creando ? ' disabled' : '') + '>' +
+        (S.creando ? 'Creando…' : 'Crear contrato') + '</button>' +
+      '<span class="ayuda">' +
+        (faltan.length
+          ? 'Falta completar: ' + faltan.join(', ')
+          : 'Se inserta en "' + esc(S.cfg.tabAlta || '—') + '", arriba de la fila TOTAL') +
+      '</span>' +
+    '</div></div>';
 }
 
 function filaContrato(r) {
@@ -2925,6 +3164,36 @@ function kv(k, v) {
   return '<div class="kv"><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>';
 }
 
+async function guardarAlta() {
+  var a = S.alta || {};
+  var req = ['contrato', 'exportador', 'importador', 'producto', 'tipo', 'toneladas', 'precio'];
+  var faltan = req.filter(function (k) { return !a[k]; });
+  if (faltan.length) {
+    S.altaError = 'Falta completar: ' + faltan.join(', ');
+    return pintar();
+  }
+
+  S.creando = true; S.altaError = null; pintar();
+  try {
+    var fila = await crearContrato({
+      fecha: a.fecha || '',
+      contrato: String(a.contrato).trim(),
+      exportador: a.exportador, importador: a.importador,
+      producto: a.producto, tipo: a.tipo,
+      toneladas: parseFloat(a.toneladas), precio: parseFloat(a.precio),
+      packaging: a.packaging || '', incoterm: a.incoterm || '',
+      formaPago: a.formaPago || '', periodo: a.periodo || ''
+    });
+    S.alta = null;
+    S.avisoOk = 'Contrato ' + a.contrato + ' creado en la fila ' + fila + '.';
+    await cargarTodo();
+  } catch (e) {
+    S.altaError = e.message;
+  } finally {
+    S.creando = false; pintar();
+  }
+}
+
 // Exporta lo que se está viendo, con los filtros aplicados. Con BOM y punto y
 // coma para que Excel en español lo abra bien de una.
 function exportarCSV() {
@@ -3070,6 +3339,8 @@ document.addEventListener('click', function (ev) {
     S.cfg.tabsEmb = S.setup.tabsEmb.slice();
     S.cfg.tabsCtr = S.setup.tabsCtr.slice();
     S.cfg.tabsFact = S.setup.tabsFact.slice();
+    S.cfg.tabAlta = S.setup.tabAlta;
+    S.cfg.tabDB = S.setup.tabDB;
     S.cfg.titulo = S.pestanas.titulo;
     guardarCfg(); S.pantalla = 'app'; S.error = null;
     return cargarTodo();
@@ -3109,6 +3380,18 @@ document.addEventListener('click', function (ev) {
     return pintar();
   }
   if (act === 'ftab') { S.filtroTab = el.getAttribute('data-t') || ''; return pintar(); }
+  if (act === 'cerraviso') { S.avisoOk = null; return pintar(); }
+  if (act === 'altaabrir') {
+    var hoy = new Date();
+    S.alta = { fecha: hoy.getFullYear() + '-' +
+      String(hoy.getMonth() + 1).padStart(2, '0') + '-' +
+      String(hoy.getDate()).padStart(2, '0') };
+    S.altaError = null;
+    return pintar();
+  }
+  if (act === 'altacerrar') { S.alta = null; S.altaError = null; return pintar(); }
+  if (act === 'altaguardar') return guardarAlta();
+
   if (act === 'fcontrato') { S.fContrato = el.getAttribute('data-c') || ''; return pintar(); }
   if (act === 'fetapa') {
     S.filtroEtapa = el.getAttribute('data-e') || '';
@@ -3129,6 +3412,7 @@ document.addEventListener('click', function (ev) {
       tabsEmb: (S.cfg.tabsEmb || []).slice(),
       tabsCtr: (S.cfg.tabsCtr || []).slice(),
       tabsFact: (S.cfg.tabsFact || []).slice(),
+      tabAlta: S.cfg.tabAlta || '', tabDB: S.cfg.tabDB || '',
       buscando: false, entrando: false, soloPestanas: true
     };
     S.pantalla = 'setup';
@@ -3139,7 +3423,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'salir') {
     S.cfg = { clientId: S.cfg.clientId };   // conserva el Client ID
     S.pestanas = null; S.datos = null; S.fuentes = null; S.pantalla = 'setup'; S.error = null;
-    S.setup = { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], buscando: false, entrando: false };
+    S.setup = { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabAlta: '', tabDB: '', buscando: false, entrando: false };
     guardarCfg(); return pintar();
   }
 
@@ -3175,6 +3459,8 @@ document.addEventListener('click', function (ev) {
 document.addEventListener('input', function (e) {
   if (e.target.id === 'busca') { S.busca = e.target.value; pintar(); }
   if (e.target.id === 'nuevo-com') S.borrador = e.target.value;   // sin redibujar
+  var al = e.target.getAttribute && e.target.getAttribute('data-alta');
+  if (al && e.target.tagName === 'INPUT') { S.alta = S.alta || {}; S.alta[al] = e.target.value; }
   var fc = e.target.getAttribute && e.target.getAttribute('data-fcol');
   if (fc && e.target.tagName === 'INPUT') { S.fCol[fc] = e.target.value; pintar(); }
   if (e.target.id === 'cid' || e.target.id === 'url') S.setup.entrada = e.target.value;
@@ -3183,9 +3469,13 @@ document.addEventListener('input', function (e) {
 document.addEventListener('change', function (e) {
   if (e.target.id === 'ftab') { S.filtroTab = e.target.value; return pintar(); }
   if (e.target.id === 'orden') { S.orden = e.target.value; return pintar(); }
+  if (e.target.id === 'talta') { S.setup.tabAlta = e.target.value; return; }
+  if (e.target.id === 'tdb') { S.setup.tabDB = e.target.value; return; }
   if (e.target.id === 'fcbte') { S.f.cbte = e.target.value; return pintar(); }
   if (e.target.id === 'ffact') { S.f.fact = e.target.value; return pintar(); }
   if (e.target.id === 'ffalta') { S.f.falta = e.target.value; return pintar(); }
+  var alS = e.target.getAttribute && e.target.getAttribute('data-alta');
+  if (alS) { S.alta = S.alta || {}; S.alta[alS] = e.target.value; return pintar(); }
   var fcs = e.target.getAttribute && e.target.getAttribute('data-fcol');
   if (fcs && e.target.tagName === 'SELECT') { S.fCol[fcs] = e.target.value; return pintar(); }
   var col = e.target.getAttribute && e.target.getAttribute('data-col');
@@ -3288,6 +3578,8 @@ async function buscarPlanilla() {
     var all = todas('all contratos');
     S.setup.tabsCtr = all.length ? all : todas('contratos abiertos', 'contratos cerrados');
     S.setup.tabsFact = todas('a facturar', 'facturar');
+    S.setup.tabAlta = (todas('contratos abiertos')[0]) || '';
+    S.setup.tabDB = (todas('import_db', 'import db', 'database')[0]) || '';
     // Que "a facturar" no quede también como pestaña de embarques.
     S.setup.tabsEmb = S.setup.tabsEmb.filter(function (n) {
       return S.setup.tabsFact.indexOf(n) < 0;
