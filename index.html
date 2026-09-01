@@ -269,8 +269,38 @@ tbody tr.sel td{background:var(--solbg)}
   box-shadow:0 1px 2px rgba(23,23,20,.09)}
 
 /* Vista planilla: réplica del Sheets --------------------------------------- */
+/* Rompe el ancho del contenedor: la planilla necesita toda la pantalla. */
+.full{width:100vw;margin-left:calc(50% - 50vw);padding:0 20px}
 .hoja{border:1px solid var(--linea2);border-radius:var(--r3);overflow:auto;background:#fff;
-  max-height:76vh}
+  max-height:78vh}
+
+.hoja-barra{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.hoja-barra button{font-size:13px;padding:5px 12px}
+.hoja-barra button[aria-pressed=true]{background:var(--acento);color:#fff;border-color:var(--acento)}
+
+.cols-panel{background:var(--sup);border:1px solid var(--linea);border-radius:var(--r2);
+  padding:14px 16px;margin-bottom:12px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:2px 16px}
+.cols-panel .chk{padding:3px 0;font-size:13px}
+.cols-acc{grid-column:1/-1;display:flex;gap:8px;margin-top:10px;
+  border-top:1px solid var(--linea);padding-top:12px}
+.cols-acc button{font-size:13px}
+
+/* Encabezado con ordenar y ocultar */
+.th-in{display:flex;align-items:center;gap:4px}
+.th-ord{border:none;background:none;padding:0;font:inherit;font-weight:600;font-size:11.5px;
+  color:#3c4043;cursor:pointer;white-space:nowrap}
+.th-ord:hover{background:none;text-decoration:underline}
+.th-x{border:none;background:none;padding:0 2px;color:#9aa0a6;cursor:pointer;font-size:14px;
+  line-height:1;opacity:0}
+.tbl-hoja th:hover .th-x{opacity:1}
+.th-x:hover{background:none;color:var(--pend)}
+
+/* Fila de filtros */
+.tbl-hoja th.fth{top:31px;padding:3px 4px;background:#f8f9fa;border-bottom:1px solid #b0b6bb}
+.tbl-hoja th.fth input,.tbl-hoja th.fth select{width:100%;min-width:74px;font-size:11.5px;
+  padding:3px 6px;border:1px solid #dadce0;border-radius:3px;background:#fff;font-weight:400}
+.tbl-hoja th.fth input:focus,.tbl-hoja th.fth select:focus{box-shadow:none;border-color:var(--acento)}
 .tbl-hoja{border-collapse:separate;border-spacing:0;font-size:12px;
   font-family:'Instrument Sans',system-ui,sans-serif}
 .tbl-hoja th{position:sticky;top:0;z-index:2;background:#f1f3f4;color:#3c4043;
@@ -349,6 +379,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--sup3);padding:2px 6
   .refs{gap:14px}
 }
 @media(max-width:640px){
+  .full{padding:0 14px}
   .app{padding:18px 15px 64px}
   .cab-acc{margin-left:0;width:100%}
   .panel{width:100%;padding:22px 20px 64px}
@@ -398,6 +429,10 @@ var S = {
   filtroEtapa: '',
   filtroNivel: '',
   modo: 'tarjetas',
+  colsOcultas: {},
+  colsPanel: false,
+  fCol: {},
+  ordenCol: null,
   orden: 'eta_asc',
   panelFiltros: false,
   f: { docs: '', pics: '', tr: '', cbte: '', falta: '', fact: '' },
@@ -2043,6 +2078,19 @@ var ORDENES = {
 };
 
 function ordenar(filas, clave) {
+  // Si se clickeó un encabezado de la planilla, ese orden manda.
+  if (S.ordenCol) {
+    var campo = S.ordenCol.campo, dir = S.ordenCol.dir;
+    return filas.slice().sort(function (a, b) {
+      var va = valorOrden(a.emb, campo), vb = valorOrden(b.emb, campo);
+      if (va === null && vb === null) return 0;
+      if (va === null) return 1;
+      if (vb === null) return -1;
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+      return String(va).localeCompare(String(vb), 'es', { numeric: true }) * dir;
+    });
+  }
+
   var o = ORDENES[clave] || ORDENES.eta_asc;
   var copia = filas.slice();
 
@@ -2071,6 +2119,30 @@ function ordenar(filas, clave) {
   });
 }
 
+function valorOrden(emb, campo) {
+  var v = emb[campo];
+  if (v === null || v === undefined || v === '') return null;
+  if (v instanceof Date) return v.getTime();
+  if (typeof v === 'object' && v.invalida) return null;
+  if (SEMAFOROS.indexOf(campo) >= 0) {
+    return ['vacio', 'pendiente', 'atencion', 'ok'].indexOf(v);
+  }
+  return v;
+}
+
+// Texto que se ve en una celda, que es contra lo que filtra el usuario.
+function textoCelda(emb, campo) {
+  if (SEMAFOROS.indexOf(campo) >= 0) {
+    var n = (emb._notas && emb._notas[campo]) || '';
+    return etiqueta(campo, emb[campo]) + ' ' + n;
+  }
+  var v = emb[campo];
+  if (v === null || v === undefined) return '';
+  if (v instanceof Date) return fmtFecha(v);
+  if (typeof v === 'object' && v.invalida) return String(v.crudo);
+  return String(v);
+}
+
 function aplicarFiltros(evs) {
   var q = S.busca.trim().toLowerCase();
   return evs.filter(function (x) {
@@ -2097,6 +2169,15 @@ function aplicarFiltros(evs) {
     if (S.f.cbte === 'si' && !emb._faltaComprobante) return false;
     if (S.f.cbte === 'no' && emb._faltaComprobante) return false;
 
+    // Filtros escritos en el encabezado de la vista planilla.
+    var claves = Object.keys(S.fCol);
+    for (var j = 0; j < claves.length; j++) {
+      var cc = claves[j], q2 = String(S.fCol[cc] || '').trim().toLowerCase();
+      if (!q2) continue;
+      if (src.mapa[cc] === undefined) return false;
+      if (textoCelda(emb, cc).toLowerCase().indexOf(q2) < 0) return false;
+    }
+
     // Falta un dato concreto.
     if (S.f.falta) {
       var k = S.f.falta;
@@ -2116,6 +2197,7 @@ function filtrosActivos() {
   if (S.f.falta) n++;
   if (S.filtroTab) n++;
   if (S.filtroEtapa) n++;
+  Object.keys(S.fCol).forEach(function (k) { if (S.fCol[k]) n++; });
   return n;
 }
 
@@ -2457,27 +2539,70 @@ function filaContrato(r) {
 }
 
 // Vista planilla: para quien está acostumbrado a mirar el Sheets y quiere
-// encontrar lo mismo donde lo espera. Grilla completa, números de fila reales
-// y las celdas de estado pintadas con los colores de siempre.
-function vistaPlanilla(filas) {
-  // Todas las columnas que alguna pestaña tenga, en el orden de la planilla.
-  var orden = ['exporter', 'importer', 'contract', 'product', 'tipo', 'price', 'tns',
-               'total', 'etd', 'eta', 'port', 'vessel', 'shippingLine', 'lots',
-               'containers', 'bl', 'booking', 'invoice', 'docs', 'pics', 'tr',
-               'tracking', 'pagoEstimado', 'commission', 'guia'];
-  var cols = orden.filter(function (c) {
+// encontrar lo mismo donde lo espera. Ancho completo, grilla, números de fila
+// reales, colores de siempre, y filtro y orden en cada columna.
+
+var COLS_PLANILLA = ['exporter', 'importer', 'contract', 'product', 'tipo', 'price', 'tns',
+  'total', 'etd', 'eta', 'port', 'vessel', 'shippingLine', 'lots', 'containers',
+  'bl', 'booking', 'invoice', 'docs', 'pics', 'tr', 'tracking', 'pagoEstimado',
+  'commission', 'guia', 'incoterm', 'status'];
+
+function columnasDisponibles() {
+  return COLS_PLANILLA.filter(function (c) {
     return S.fuentes.some(function (f) { return f.mapa[c] !== undefined; });
   });
+}
 
-  var enc = '<tr><th class="nrofila">#</th>' +
-    cols.map(function (c) {
-      var ord = c === 'etd' ? 'etd' : c === 'eta' ? 'eta' : null;
-      if (!ord) return '<th>' + CAMPOS[c].label + '</th>';
-      var asc = ord + '_asc', desc = ord + '_desc';
-      var f = S.orden === asc ? ' ↑' : S.orden === desc ? ' ↓' : '';
-      return '<th class="ord" data-act="orden" data-o="' +
-        (S.orden === desc ? asc : desc) + '">' + CAMPOS[c].label + f + '</th>';
-    }).join('') + '</tr>';
+function vistaPlanilla(filas) {
+  var todas = columnasDisponibles();
+  var cols = todas.filter(function (c) { return !S.colsOcultas[c]; });
+  var ocultas = todas.length - cols.length;
+
+  var barra = '<div class="hoja-barra">' +
+    '<button data-act="cols" aria-pressed="' + S.colsPanel + '">Columnas' +
+      (ocultas ? ' · ' + ocultas + ' ocultas' : '') + '</button>' +
+    (Object.keys(S.fCol).some(function (k) { return S.fCol[k]; }) || S.ordenCol
+      ? '<button data-act="limpiarcol">Quitar filtros de columna</button>' : '') +
+    '<span class="ayuda" style="margin-left:auto">' + filas.length + ' filas</span>' +
+    '</div>';
+
+  if (S.colsPanel) {
+    barra += '<div class="cols-panel">' +
+      todas.map(function (c) {
+        return '<label class="chk"><input type="checkbox" data-col="' + c + '"' +
+          (S.colsOcultas[c] ? '' : ' checked') + '><span>' + CAMPOS[c].label + '</span></label>';
+      }).join('') +
+      '<div class="cols-acc">' +
+        '<button data-act="colstodas">Mostrar todas</button>' +
+        '<button data-act="colsminimas">Solo lo esencial</button>' +
+      '</div></div>';
+  }
+
+  function encabezado(c) {
+    var act = S.ordenCol && S.ordenCol.campo === c;
+    var flecha = act ? (S.ordenCol.dir === 1 ? ' ↑' : ' ↓') : '';
+    return '<th><div class="th-in">' +
+      '<button class="th-ord" data-act="ordcol" data-c="' + c + '" title="Ordenar">' +
+        CAMPOS[c].label + flecha + '</button>' +
+      '<button class="th-x" data-act="ocultar" data-c="' + c + '" title="Ocultar columna">×</button>' +
+      '</div></th>';
+  }
+
+  function filtroCol(c) {
+    if (SEMAFOROS.indexOf(c) >= 0) {
+      return '<th class="fth"><select data-fcol="' + c + '">' +
+        ['', 'ok', 'pendiente', 'atencion', 'vacio'].map(function (o) {
+          return '<option value="' + (o ? etiqueta(c, o) : '') + '"' +
+            (S.fCol[c] === (o ? etiqueta(c, o) : '') ? ' selected' : '') + '>' +
+            (o ? etiqueta(c, o) : '—') + '</option>';
+        }).join('') + '</select></th>';
+    }
+    return '<th class="fth"><input data-fcol="' + c + '" value="' +
+      esc(S.fCol[c] || '') + '" placeholder="filtrar"></th>';
+  }
+
+  var enc = '<tr><th class="nrofila">#</th>' + cols.map(encabezado).join('') + '</tr>' +
+            '<tr><th class="nrofila fth"></th>' + cols.map(filtroCol).join('') + '</tr>';
 
   var cuerpo = filas.map(function (x) {
     var emb = x.emb, src = x.src;
@@ -2486,9 +2611,6 @@ function vistaPlanilla(filas) {
       '<td class="nrofila" title="' + esc(emb._tab) + '">' + emb._fila + '</td>' +
       cols.map(function (c) {
         if (src.mapa[c] === undefined) return '<td class="na"></td>';
-
-        // Columnas de estado: se pintan como en la planilla, con el texto que
-        // tengan escrito adentro.
         if (SEMAFOROS.indexOf(c) >= 0) {
           if (src.noAplica[c]) return '<td class="na"></td>';
           var est = emb[c] || 'vacio';
@@ -2496,7 +2618,6 @@ function vistaPlanilla(filas) {
           return '<td class="cel-' + est + '" title="' + esc(etiqueta(c, est)) +
             (txt ? ' — ' + esc(txt) : '') + '">' + esc(txt) + '</td>';
         }
-
         var v = emb[c];
         var cls = (c === 'tns' || c === 'price' || c === 'total' || c === 'commission')
           ? ' class="num"' : '';
@@ -2508,11 +2629,13 @@ function vistaPlanilla(filas) {
       }).join('') + '</tr>';
   }).join('');
 
-  return '<div class="hoja"><table class="tbl-hoja"><thead>' + enc +
+  return '<div class="full">' + barra +
+    '<div class="hoja"><table class="tbl-hoja"><thead>' + enc +
     '</thead><tbody>' + cuerpo + '</tbody></table></div>' +
-    '<p class="ayuda" style="margin-top:10px">Los colores son los mismos de la planilla. ' +
-    'El número de la izquierda es la fila real; pasá el mouse para ver de qué pestaña es. ' +
-    'Clic en cualquier fila abre el detalle.</p>';
+    '<p class="ayuda" style="margin-top:9px">Los colores son los mismos de la planilla. ' +
+    'El número de la izquierda es la fila real. Clic en el nombre de una columna ordena, ' +
+    'la × la oculta, y la fila de abajo filtra. Clic en una fila abre el detalle.</p>' +
+    '</div>';
 }
 
 var EDITABLES = ['vessel', 'shippingLine', 'booking', 'containers', 'bl', 'invoice', 'tracking', 'nota'];
@@ -2826,11 +2949,30 @@ document.addEventListener('click', function (ev) {
     return comentar(el.getAttribute('data-f'), ta ? ta.value : '');
   }
   if (act === 'modo') { S.modo = el.getAttribute('data-m'); return pintar(); }
+  if (act === 'cols') { S.colsPanel = !S.colsPanel; return pintar(); }
+  if (act === 'ocultar') { S.colsOcultas[el.getAttribute('data-c')] = true; return pintar(); }
+  if (act === 'colstodas') { S.colsOcultas = {}; return pintar(); }
+  if (act === 'colsminimas') {
+    var dejar = { importer:1, contract:1, tns:1, etd:1, eta:1, port:1, bl:1, docs:1, tr:1 };
+    S.colsOcultas = {};
+    columnasDisponibles().forEach(function (c) { if (!dejar[c]) S.colsOcultas[c] = true; });
+    return pintar();
+  }
+  if (act === 'limpiarcol') { S.fCol = {}; S.ordenCol = null; return pintar(); }
+  if (act === 'ordcol') {
+    var c0 = el.getAttribute('data-c');
+    S.ordenCol = (S.ordenCol && S.ordenCol.campo === c0 && S.ordenCol.dir === 1)
+      ? { campo: c0, dir: -1 }
+      : (S.ordenCol && S.ordenCol.campo === c0 && S.ordenCol.dir === -1)
+        ? null
+        : { campo: c0, dir: 1 };
+    return pintar();
+  }
   if (act === 'pfiltros') { S.panelFiltros = !S.panelFiltros; return pintar(); }
   if (act === 'orden') { S.orden = el.getAttribute('data-o'); return pintar(); }
   if (act === 'limpiar') {
     S.f = { docs:'', pics:'', tr:'', cbte:'', falta:'', fact:'' };
-    S.filtroTab = ''; S.filtroEtapa = ''; S.busca = '';
+    S.filtroTab = ''; S.filtroEtapa = ''; S.busca = ''; S.fCol = {}; S.ordenCol = null;
     return pintar();
   }
   if (act === 'ftab') { S.filtroTab = el.getAttribute('data-t') || ''; return pintar(); }
@@ -2882,6 +3024,8 @@ document.addEventListener('click', function (ev) {
 document.addEventListener('input', function (e) {
   if (e.target.id === 'busca') { S.busca = e.target.value; pintar(); }
   if (e.target.id === 'nuevo-com') S.borrador = e.target.value;   // sin redibujar
+  var fc = e.target.getAttribute && e.target.getAttribute('data-fcol');
+  if (fc && e.target.tagName === 'INPUT') { S.fCol[fc] = e.target.value; pintar(); }
   if (e.target.id === 'cid' || e.target.id === 'url') S.setup.entrada = e.target.value;
 });
 
@@ -2891,6 +3035,13 @@ document.addEventListener('change', function (e) {
   if (e.target.id === 'fcbte') { S.f.cbte = e.target.value; return pintar(); }
   if (e.target.id === 'ffact') { S.f.fact = e.target.value; return pintar(); }
   if (e.target.id === 'ffalta') { S.f.falta = e.target.value; return pintar(); }
+  var fcs = e.target.getAttribute && e.target.getAttribute('data-fcol');
+  if (fcs && e.target.tagName === 'SELECT') { S.fCol[fcs] = e.target.value; return pintar(); }
+  var col = e.target.getAttribute && e.target.getAttribute('data-col');
+  if (col) {
+    if (e.target.checked) delete S.colsOcultas[col]; else S.colsOcultas[col] = true;
+    return pintar();
+  }
   var fe = e.target.getAttribute && e.target.getAttribute('data-festado');
   if (fe) { S.f[fe] = e.target.value; return pintar(); }
   var cbte = e.target.getAttribute && e.target.getAttribute('data-cbte');
