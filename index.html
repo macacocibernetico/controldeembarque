@@ -52,14 +52,20 @@ h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0}
 .app{max-width:1120px;margin:0 auto;padding:26px 26px 96px}
 
 /* Segmentado marítimo / terrestre --------------------------------------- */
-.segmento{display:inline-flex;gap:3px;background:var(--sup3);padding:3px;border-radius:10px;
-  margin-bottom:20px;flex-wrap:wrap}
-.segmento button{border:none;background:none;border-radius:7px;padding:7px 15px;
-  color:var(--tinta2);font-size:13.5px;display:inline-flex;align-items:center;gap:7px}
-.segmento button:hover{background:rgba(255,255,255,.7)}
-.segmento button[aria-pressed=true]{background:var(--sup);color:var(--tinta);font-weight:500;
-  box-shadow:0 1px 3px rgba(23,23,20,.09)}
-.segmento .cnt{font-size:11.5px;color:var(--tinta3);font-variant-numeric:tabular-nums}
+.segmento{display:inline-flex;gap:4px;background:var(--sup3);padding:4px;border-radius:11px;
+  margin-bottom:22px;flex-wrap:wrap}
+.segmento button{border:none;background:none;border-radius:8px;padding:9px 18px;
+  color:var(--tinta2);font-size:14px;display:inline-flex;align-items:center;gap:8px}
+.segmento button:hover{background:rgba(255,255,255,.75);color:var(--tinta)}
+.segmento button[aria-pressed=true]{background:var(--sup);color:var(--tinta);font-weight:600;
+  box-shadow:0 1px 3px rgba(23,23,20,.11)}
+.segmento .cnt{font-size:12px;color:var(--tinta3);font-variant-numeric:tabular-nums;
+  background:var(--sup3);padding:1px 7px;border-radius:20px}
+.segmento button[aria-pressed=true] .cnt{background:var(--acentobg);color:var(--acento)}
+.aviso-tab{background:var(--acentobg);border:1px solid rgba(31,77,61,.18);color:var(--acento);
+  padding:12px 15px;border-radius:var(--r2);font-size:13.5px;margin-bottom:20px;
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.aviso-tab button{font-size:13px;padding:5px 12px;background:var(--sup);border-color:rgba(31,77,61,.28)}
 .segmento button[aria-pressed=true] .cnt{color:var(--acento)}
 
 /* Cabecera --------------------------------------------------------------- */
@@ -1571,7 +1577,20 @@ function vistaApp() {
 // primero que se toca, así que va arriba y siempre visible, no escondido en
 // el panel de filtros.
 function segmentoPestanas(evs) {
-  if (S.fuentes.length < 2) return '';
+  // Con una sola pestaña de embarques no hay nada que separar, pero conviene
+  // decirlo: suele ser que falta agregar las terrestres.
+  if (S.fuentes.length < 2) {
+    var otras = (S.pestanas && S.pestanas.pestanas || []).filter(function (p) {
+      var k = clave(p.nombre);
+      return (k.indexOf('carga') >= 0 || k.indexOf('embarque') >= 0) &&
+             S.cfg.tabsEmb.indexOf(p.nombre) < 0;
+    });
+    return '<div class="aviso-tab">' +
+      'Estás viendo solo <b>' + esc(S.fuentes[0] ? S.fuentes[0].tab : '—') + '</b>. ' +
+      'Si querés ver también las otras cargas, agregalas.' +
+      ' <button data-act="pestanas">Elegir pestañas</button></div>';
+  }
+
   var cuenta = {};
   evs.forEach(function (x) { cuenta[x.emb._tab] = (cuenta[x.emb._tab] || 0) + 1; });
 
@@ -1604,6 +1623,7 @@ function cabecera() {
     '<span class="cab-acc">' +
       '<button data-act="recargar"' + (S.cargando ? ' disabled' : '') + '>' +
         (S.cargando ? 'Actualizando…' : 'Actualizar') + '</button>' +
+      '<button data-act="pestanas">Pestañas</button>' +
       '<button data-act="salir">Cambiar planilla</button>' +
     '</span></div>';
 }
@@ -2514,6 +2534,20 @@ document.addEventListener('click', function (ev) {
   if (act === 'recargar') return cargarTodo();
   if (act === 'cerrar') { S.sel = null; return pintar(); }
 
+  if (act === 'pestanas') {
+    S.pestanas = null; S.error = null;
+    S.setup = {
+      entrada: S.cfg.sheetId,
+      tabsEmb: (S.cfg.tabsEmb || []).slice(),
+      tabsCtr: (S.cfg.tabsCtr || []).slice(),
+      tabsFact: (S.cfg.tabsFact || []).slice(),
+      buscando: false, entrando: false, soloPestanas: true
+    };
+    S.pantalla = 'setup';
+    pintar();
+    return buscarPlanilla();
+  }
+
   if (act === 'salir') {
     S.cfg = { clientId: S.cfg.clientId };   // conserva el Client ID
     S.pestanas = null; S.datos = null; S.fuentes = null; S.pantalla = 'setup'; S.error = null;
@@ -2604,6 +2638,8 @@ async function buscarPlanilla() {
       })[0];
       return p ? p.nombre : '';
     };
+    if (S.setup.soloPestanas) return;   // Ya venían elegidas, no pisar.
+
     // Preselección: todo lo que parezca embarques o contratos.
     var todas = function () {
       var t = Array.prototype.slice.call(arguments);
