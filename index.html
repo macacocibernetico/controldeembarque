@@ -63,6 +63,7 @@ a{color:var(--sol)}
 h1,h2,h3{font-weight:600;letter-spacing:-.018em;margin:0;color:#000}
 
 .app{max-width:1120px;margin:0 auto;padding:24px 26px 96px}
+body.con-barra .app{padding-bottom:200px}
 
 /* Barra superior --------------------------------------------------------- */
 .topbar{background:var(--acento);color:#fff;position:sticky;top:0;z-index:8;
@@ -279,6 +280,23 @@ textarea:focus{outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba
 .combo-lista button b{font-weight:700;color:var(--acento)}
 .sin-match{margin:0;padding:9px 11px;font-size:12.5px;color:var(--tinta2);line-height:1.45}
 .no-base{margin:5px 0 0;font-size:12px;color:var(--pend);line-height:1.45}
+/* Selección para el advice */
+.marcar{float:right;margin:-2px 0 0 10px;cursor:pointer}
+.marcar input{width:17px;height:17px;margin:0;cursor:pointer;accent-color:var(--acento)}
+
+.barra-flota{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--sup);
+  border-top:1px solid var(--linea2);box-shadow:0 -6px 24px rgba(11,11,10,.11)}
+.bf-in{max-width:1120px;margin:0 auto;padding:14px 26px}
+.bf-fila1{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin-bottom:11px}
+.bf-n{font-weight:600;font-size:14px}
+.bf-goods{font-size:13px;color:var(--tinta2);flex:1;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.bf-fila1 button{font-size:12.5px;padding:5px 12px}
+.bf-fila2{display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+.bf-fila2 input#adv-to{flex:1;min-width:190px}
+.bf-error{margin:0 0 11px;font-size:12.5px;color:var(--pend);background:var(--pendbg);
+  padding:9px 12px;border-radius:var(--r3)}
+
 .adv-fila{display:flex;gap:16px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
 .advice-falta{margin:0 0 12px;font-size:12.5px;color:var(--nar);background:var(--narbg);
   padding:9px 12px;border-radius:var(--r3);line-height:1.45}
@@ -564,6 +582,7 @@ var S = {
   advicePeter: false,
   adviceTo: null,
   adviceFilas: {},
+  marcados: {},
   alta: null,
   combo: null,
   creando: false,
@@ -624,6 +643,7 @@ var CAMPOS = {
   etdMaximo:    {label:'ETD máximo',   tipo:'fecha',   alias:['etd maximo permitido','etd maximo']},
   reclamo:      {label:'Reclamo',      tipo:'texto',   alias:['reclamo','claim']},
   incoterm:     {label:'Incoterm',     tipo:'texto',   alias:['incoterm']},
+  mailsCC:      {label:'Mails CC',     tipo:'texto',   alias:['mails cc','mail cc','mails','destinatarios']},
   paymentCond:  {label:'Cond. pago',   tipo:'texto',   alias:['payment condition','condicion de pago']},
   guia:         {label:'Guía',         tipo:'texto',   alias:['guia','guía','courier']},
   nota:         {label:'Nota',         tipo:'texto',   alias:['nota','notas','observaciones']}
@@ -1593,28 +1613,34 @@ function filasAdvice(emb) {
   return sel.sort(function (a, b) { return a._fila - b._fila; });
 }
 
-async function enviarAdvice(id) {
-  var emb = filaPorId(id);
-  if (!emb) return;
+async function enviarAdvice(ids, desdeBarra) {
+  var sel = (Array.isArray(ids) ? ids : [ids]).map(filaPorId).filter(Boolean)
+    .sort(function (a, b) { return a._fila - b._fila; });
+  if (!sel.length) return;
+
+  var marca = desdeBarra ? { barra: true } : { id: sel[0]._id };
+
   if (!S.cfg.adviceUrl) {
-    S.adviceMsg = { id: id, error: 'Falta la URL del script. Se carga en Pestañas.' };
+    S.adviceMsg = Object.assign({ error: 'Falta la URL del script. Se carga en Pestañas.' }, marca);
     return pintar();
   }
 
-  var sel = filasAdvice(emb);
   var destino = (S.adviceTo !== null && S.adviceTo !== undefined)
     ? S.adviceTo : (sel[0].mailsCC || '');
   if (!String(destino).trim()) {
-    S.adviceMsg = { id: id, error: 'Falta el destinatario.' };
+    S.adviceMsg = Object.assign({
+      error: 'Falta el destinatario. La columna Mails CC de esa fila está vacía.'
+    }, marca);
     return pintar();
   }
 
-  S.adviceEnviando = id; S.adviceMsg = null; pintar();
+  S.adviceEnviando = desdeBarra ? 'barra' : sel[0]._id;
+  S.adviceMsg = null; pintar();
 
   var cuerpo = {
     accion: 'shipment_advice',
     token: S.cfg.adviceToken || '',
-    pestana: emb._tab,
+    pestana: sel[0]._tab,
     filas: sel.map(function (o) { return o._fila; }),
     contratos: sel.map(function (o) { return o.contract || ''; }),
     toEmail: String(destino).trim(),
@@ -1637,23 +1663,25 @@ async function enviarAdvice(id) {
     try { data = JSON.parse(txt); } catch (e) {}
 
     if (!r.ok) throw new Error('El script respondió ' + r.status);
-    if (!data) throw new Error('Respuesta inesperada del script. ¿Está publicado como aplicación web?');
+    if (!data) throw new Error('Respuesta inesperada. ¿Está publicado como aplicación web con acceso "Cualquier usuario"?');
     if (data.error) throw new Error(data.error);
 
-    S.adviceMsg = { id: id, ok: true, texto: data.mensaje || 'Borrador creado.',
-                    url: data.draftUrl };
+    S.adviceMsg = Object.assign({
+      ok: true, texto: data.mensaje || 'Borrador creado.', url: data.draftUrl
+    }, marca);
+    if (desdeBarra) S.marcados = {};
   } catch (e) {
     var qs = '?accion=shipment_advice&token=' + encodeURIComponent(S.cfg.adviceToken || '') +
-      '&pestana=' + encodeURIComponent(emb._tab) +
+      '&pestana=' + encodeURIComponent(sel[0]._tab) +
       '&filas=' + sel.map(function (o) { return o._fila; }).join(',') +
       '&contratos=' + encodeURIComponent(sel.map(function (o) { return o.contract || ''; }).join('|')) +
       '&toEmail=' + encodeURIComponent(String(destino).trim()) +
       '&idioma=' + (S.adviceIdioma || 'en') +
       '&conPeter=' + (S.advicePeter ? 'true' : 'false');
-    S.adviceMsg = {
-      id: id, error: e.message,
+    S.adviceMsg = Object.assign({
+      error: e.message,
       fallback: S.cfg.adviceUrl.replace(/\?.*$/, '') + qs
-    };
+    }, marca);
   } finally {
     S.adviceEnviando = null; pintar();
   }
@@ -2375,12 +2403,88 @@ function vistaApp() {
       '<button role="tab" aria-selected="' + (S.vista === 'control') + '" data-act="tab" data-v="control">Control</button>' +
       '<button role="tab" aria-selected="' + (S.vista === 'carga') + '" data-act="tab" data-v="carga">Carga</button>' +
       '<button role="tab" aria-selected="' + (S.vista === 'contratos') + '" data-act="tab" data-v="contratos">Contratos</button>' +
-    '</div>' + segmentado + cuerpo + diagnostico() + '</div>' + panel;
+    '</div>' + segmentado + cuerpo + diagnostico() + '</div>' + panel + barraAdvice(todosEvs);
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
 // primero que se toca, así que va arriba y siempre visible, no escondido en
 // el panel de filtros.
+// Barra flotante: aparece cuando hay embarques marcados. Es la forma natural
+// de armar un advice con varias filas sin tener que entrar a cada tarjeta.
+function barraAdvice(evs) {
+  if (!S.cfg.adviceUrl) return '';
+  var ids = Object.keys(S.marcados || {}).filter(function (k) { return S.marcados[k]; });
+  if (!ids.length) return '';
+
+  var sel = ids.map(filaPorId).filter(Boolean)
+    .sort(function (a, b) { return a._fila - b._fila; });
+  if (!sel.length) return '';
+
+  // Las mismas condiciones que valida el script del lado de la planilla.
+  var base = sel[0];
+  var f = function (d) { return esFecha(d) ? d.getTime() : String(d || ''); };
+  var difs = [];
+  [['exporter', 'Exportador'], ['importer', 'Importador'], ['vessel', 'Buque'],
+   ['port', 'Puerto'], ['bl', 'BL']].forEach(function (c) {
+    if (sel.some(function (o) { return clave(o[c[0]]) !== clave(base[c[0]]); })) difs.push(c[1]);
+  });
+  [['etd', 'ETD'], ['eta', 'ETA']].forEach(function (c) {
+    if (sel.some(function (o) { return f(o[c[0]]) !== f(base[c[0]]); })) difs.push(c[1]);
+  });
+  var tabs = {};
+  sel.forEach(function (o) { tabs[o._tab] = 1; });
+  if (Object.keys(tabs).length > 1) difs.unshift('la pestaña');
+
+  var destino = (S.adviceTo !== null && S.adviceTo !== undefined)
+    ? S.adviceTo : (base.mailsCC || '');
+  var msg = (S.adviceMsg && S.adviceMsg.barra) ? S.adviceMsg : null;
+  var goods = sel.map(function (o) {
+    return (o.tns || '') + ' Tns ' + (o.product || '');
+  }).join(' / ');
+
+  var h = '<div class="barra-flota"><div class="bf-in">';
+
+  if (msg && msg.ok) {
+    h += '<div class="ok-aviso" style="margin:0 0 10px;white-space:pre-line">' + esc(msg.texto) +
+      (msg.url ? '\n<a href="' + esc(msg.url) + '" target="_blank" rel="noopener">Abrir Gmail</a>' : '') +
+      '</div>';
+  }
+  if (msg && msg.error) {
+    h += '<div class="error" style="margin:0 0 10px;white-space:pre-line">' + esc(msg.error) +
+      (msg.fallback ? '<br><a href="' + esc(msg.fallback) + '" target="_blank" rel="noopener">' +
+        'Probar en una pestaña</a>' : '') + '</div>';
+  }
+
+  h += '<div class="bf-fila1">' +
+    '<span class="bf-n">' + sel.length + (sel.length === 1 ? ' embarque' : ' embarques') + '</span>' +
+    '<span class="bf-goods">' + esc(goods) + '</span>' +
+    '<button data-act="desmarcar">Quitar selección</button>' +
+    '</div>';
+
+  if (difs.length) {
+    h += '<p class="bf-error">No se pueden combinar: no coincide ' + difs.join(', ') +
+      '. El advice necesita que sean del mismo embarque.</p>';
+  }
+
+  h += '<div class="bf-fila2">' +
+    '<input id="adv-to" data-advto="1" value="' + esc(destino) + '" ' +
+      'placeholder="destinatarios, separados por coma">' +
+    '<span class="modos">' +
+      [['en', 'EN'], ['es', 'ES']].map(function (o) {
+        return '<button data-act="advidioma" data-v="' + o[0] + '" aria-pressed="' +
+          ((S.adviceIdioma || 'en') === o[0]) + '">' + o[1] + '</button>';
+      }).join('') +
+    '</span>' +
+    '<label class="chk"><input type="checkbox" data-advpeter="1"' +
+      (S.advicePeter ? ' checked' : '') + '><span>Peter</span></label>' +
+    '<button class="primario" data-act="adviceMulti"' +
+      (difs.length || S.adviceEnviando ? ' disabled' : '') + '>' +
+      (S.adviceEnviando ? 'Generando…' : 'Generar advice') + '</button>' +
+    '</div></div></div>';
+
+  return h;
+}
+
 function segmentoPestanas(evs) {
   // Con una sola pestaña de embarques no hay nada que separar, pero conviene
   // decirlo: suele ser que falta agregar las terrestres.
@@ -2616,6 +2720,11 @@ function filaEmbarque(x, opts) {
 
     '<div class="fila-top">' +
       '<div class="ident">' +
+        (S.cfg.adviceUrl && emb._tab === (S.cfg.tabAdvice || emb._tab)
+          ? '<label class="marcar" title="Seleccionar para el advice">' +
+            '<input type="checkbox" data-marcar="' + esc(emb._id) + '"' +
+            (S.marcados && S.marcados[emb._id] ? ' checked' : '') + '></label>'
+          : '') +
         '<div class="partes">' + partes + '</div>' +
         (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') +
         (S.fuentes.length > 1 ? '<div class="orig">' + esc(emb._tab) + '</div>' : '') +
@@ -3919,6 +4028,11 @@ function pintar() {
   }
 
   document.getElementById('root').innerHTML = html;
+  // Aire extra abajo cuando la barra flotante está visible.
+  try {
+    var hayBarra = !!(S.marcados && Object.keys(S.marcados).some(function (k) { return S.marcados[k]; }));
+    document.body.classList[hayBarra ? 'add' : 'remove']('con-barra');
+  } catch (e) {}
 
   Object.keys(scrolls).forEach(function (sel) {
     var el = document.querySelector(sel);
@@ -3951,6 +4065,11 @@ document.addEventListener('focusin', function (e) {
 });
 
 document.addEventListener('click', function (ev) {
+  // El checkbox de la tarjeta no debe abrir el panel.
+  if (ev.target.getAttribute && ev.target.getAttribute('data-marcar')) {
+    ev.stopPropagation();
+    return;
+  }
   var el = ev.target.closest('[data-act]');
   if (!el) {
     var dentro = ev.target.closest && ev.target.closest('.combo-wrap');
@@ -4054,7 +4173,14 @@ document.addEventListener('click', function (ev) {
     });
   }
 
-  if (act === 'advice') return enviarAdvice(el.getAttribute('data-f'));
+  if (act === 'advice') {
+    var emb0 = filaPorId(el.getAttribute('data-f'));
+    return enviarAdvice(filasAdvice(emb0).map(function (o) { return o._id; }), false);
+  }
+  if (act === 'adviceMulti') {
+    return enviarAdvice(Object.keys(S.marcados).filter(function (k) { return S.marcados[k]; }), true);
+  }
+  if (act === 'desmarcar') { S.marcados = {}; S.adviceMsg = null; return pintar(); }
   if (act === 'advidioma') { S.adviceIdioma = el.getAttribute('data-v'); return pintar(); }
   if (act === 'ctrabrir') {
     var kctr = el.getAttribute('data-k');
@@ -4215,6 +4341,17 @@ document.addEventListener('change', function (e) {
   if (fcs && e.target.tagName === 'SELECT') { S.fCol[fcs] = e.target.value; return pintar(); }
   if (e.target.getAttribute && e.target.getAttribute('data-advpeter')) {
     S.advicePeter = e.target.checked; return pintar();
+  }
+  var mk = e.target.getAttribute && e.target.getAttribute('data-marcar');
+  if (mk) {
+    S.marcados = S.marcados || {};
+    if (e.target.checked) {
+      // Al marcar el primero, el destinatario sale de esa fila.
+      if (!Object.keys(S.marcados).length) S.adviceTo = null;
+      S.marcados[mk] = true;
+    } else delete S.marcados[mk];
+    S.adviceMsg = null;
+    return pintar();
   }
   var af = e.target.getAttribute && e.target.getAttribute('data-advfila');
   if (af) {
