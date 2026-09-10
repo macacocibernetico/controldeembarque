@@ -622,6 +622,7 @@ var S = {
   adviceFilas: {},
   marcados: {},
   advices: new Map(),
+  advicesViejos: 0,
   alta: null,
   combo: null,
   creando: false,
@@ -1844,20 +1845,27 @@ async function cargarAdvices() {
     var r = await api(BASE + S.cfg.sheetId + '/values/' +
       encodeURIComponent("'" + HOJA_ADVICES + "'!A2:I3000"));
 
-    (r.values || []).forEach(function (f) {
-      var fecha = f[0] || '', pestana = f[1] || '', contratos = f[3] || '',
-          bls = f[4] || '', quien = f[8] || '';
-      // Compatibilidad con el log viejo, que tenía menos columnas.
-      if (!contratos && f[1] && /^[\d,\s]+$/.test(String(f[1]))) {
-        quien = f[5] || '';
-      }
-      var reg = { fecha: fecha, quien: quien, pestana: pestana };
+    S.advicesViejos = 0;
 
-      String(contratos).split(',').forEach(function (c) {
+    (r.values || []).forEach(function (f) {
+      // Formato viejo: Fecha | Filas | Para | CC | Idioma | Quién. Se reconoce
+      // porque la columna B es una lista de números.
+      //
+      // Esos registros NO se pueden ubicar: guardaban el número de fila, y las
+      // filas se reordenan por ETA, así que hoy apuntan a otro embarque.
+      // Marcar por ahí sería peor que no marcar. Se cuentan para avisar.
+      if (f[1] && /^[\d,\s]+$/.test(String(f[1]).trim())) {
+        S.advicesViejos++;
+        return;
+      }
+
+      var reg = { fecha: f[0] || '', pestana: f[1] || '', quien: f[8] || '' };
+
+      String(f[3] || '').split(',').forEach(function (c) {
         var k = clave(c);
         if (k) S.advices.set('c|' + k, reg);
       });
-      String(bls).split(',').forEach(function (b) {
+      String(f[4] || '').split(',').forEach(function (b) {
         var k = clave(b);
         if (k) S.advices.set('b|' + k, reg);
       });
@@ -2723,6 +2731,15 @@ function diagnostico() {
         '</b>. Las alertas que dependen de esas columnas quedan apagadas.</div>';
     }
   });
+
+  if (S.advicesViejos) {
+    h += '<div class="aviso">Hay ' + S.advicesViejos + ' registro' +
+      (S.advicesViejos > 1 ? 's' : '') + ' en <b>Advices enviados</b> del formato ' +
+      'anterior, que solo guardaba el número de fila. Como las filas se reordenan ' +
+      'por ETA, esos números ya no identifican al embarque y no se pueden marcar. ' +
+      'Para recuperarlos, completá la columna <b>BLs</b> de esas filas con el BL ' +
+      'del embarque y apretá Actualizar.</div>';
+  }
 
   if ((S.cfg.tabsCtr || []).length && S.contratos.size === 0) {
     h += '<div class="aviso">No se cargó ningún contrato, así que no hay condiciones de pago ' +
