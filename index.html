@@ -292,9 +292,31 @@ textarea:focus{outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba
 .combo-lista button b{font-weight:700;color:var(--acento)}
 .sin-match{margin:0;padding:9px 11px;font-size:12.5px;color:var(--tinta2);line-height:1.45}
 .no-base{margin:5px 0 0;font-size:12px;color:var(--pend);line-height:1.45}
-/* Selección para el advice */
-.marcar{float:right;margin:-2px 0 0 10px;cursor:pointer}
-.marcar input{width:17px;height:17px;margin:0;cursor:pointer;accent-color:var(--acento)}
+/* Selección para el advice: con la palabra al lado, para que se entienda de
+   qué se trata sin tener que probarlo. */
+.marcar{float:right;margin:-3px 0 6px 12px;cursor:pointer;display:inline-flex;
+  align-items:center;gap:7px;padding:5px 11px 5px 8px;border-radius:20px;
+  border:1px dashed var(--linea3);background:var(--sup);
+  font-size:12px;color:var(--tinta2);user-select:none;transition:all .13s;white-space:nowrap}
+.marcar:hover{border-color:var(--acento);color:var(--acento);background:var(--acentobg)}
+.marcar input{position:absolute;opacity:0;width:0;height:0;margin:0}
+.marcar .cuad{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--linea3);
+  display:inline-flex;align-items:center;justify-content:center;flex:none;background:#fff}
+.marcar .cuad .ico{width:11px;height:11px;stroke-width:2.6;color:#fff}
+.marcar.on{border-style:solid;border-color:var(--acento);background:var(--acentobg);
+  color:var(--acento);font-weight:500}
+.marcar.on .cuad{background:var(--acento);border-color:var(--acento)}
+.marcar input:focus-visible + .cuad{outline:2px solid var(--acento);outline-offset:2px}
+
+/* Marca de advice ya generado */
+.pill.adv{color:var(--acento);gap:5px}
+.pill.adv .ico{width:13px;height:13px}
+.adv-hecho{display:flex;gap:9px;align-items:flex-start;background:var(--acentobg);
+  border-radius:var(--r3);padding:10px 13px;margin-bottom:13px;font-size:12.5px;
+  color:var(--acento);line-height:1.45}
+.adv-hecho .ico{width:15px;height:15px;flex:none;margin-top:1px;stroke-width:2.2}
+.pt-adv{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--acento);
+  margin-left:4px;vertical-align:middle}
 
 .barra-flota{position:fixed;left:0;right:0;bottom:0;z-index:20;
   background:rgba(255,255,255,.97);backdrop-filter:blur(8px);
@@ -599,6 +621,7 @@ var S = {
   adviceTo: null,
   adviceFilas: {},
   marcados: {},
+  advices: new Map(),
   alta: null,
   combo: null,
   creando: false,
@@ -1685,6 +1708,19 @@ async function enviarAdvice(ids, desdeBarra) {
     S.adviceMsg = Object.assign({
       ok: true, texto: data.mensaje || 'Borrador creado.', url: data.draftUrl
     }, marca);
+
+    // Marcar en el acto, sin esperar a releer la planilla.
+    var ahora = new Date();
+    var reg = {
+      fecha: ahora.toLocaleDateString('es-AR'),
+      quien: S.usuario ? S.usuario.email : '',
+      pestana: sel[0]._tab
+    };
+    sel.forEach(function (o) {
+      if (o.bl) S.advices.set('b|' + clave(o.bl), reg);
+      if (o.contract) S.advices.set('c|' + clave(o.contract), reg);
+    });
+
     if (desdeBarra) S.marcados = {};
   } catch (e) {
     var qs = '?accion=shipment_advice&token=' + encodeURIComponent(S.cfg.adviceToken || '') +
@@ -1714,7 +1750,17 @@ function bloqueAdvice(emb, ev) {
   var destino = (S.adviceTo !== null && S.adviceTo !== undefined)
     ? S.adviceTo : (sel[0].mailsCC || '');
 
+  var yaEnviado = adviceDe(emb);
   var h = '<div class="bloque"><h3 class="gt">Shipment advice</h3>';
+
+  if (yaEnviado) {
+    var fEnv = fechaAdvice(yaEnviado);
+    h += '<div class="adv-hecho">' + ico('check') +
+      '<span>Ya se generó un advice para este embarque' +
+      (fEnv ? ' el ' + esc(fEnv) : '') +
+      (yaEnviado.quien ? ', por ' + esc(nombreCortoAutor(yaEnviado.quien)) : '') +
+      '. Si lo volvés a generar se crea otro borrador.</span></div>';
+  }
 
   if (msg && msg.ok) {
     h += '<div class="ok-aviso" style="margin:0 0 12px;white-space:pre-line">' +
@@ -1775,6 +1821,76 @@ function bloqueAdvice(emb, ev) {
     '</div>';
 
   return h;
+}
+
+/* --- Registro de advices enviados -----------------------------------------
+   El script deja una fila en "Advices enviados" cada vez que genera un
+   borrador. La app la lee para marcar los embarques: así la marca sobrevive a
+   recargar y la ven todos, no solo quien lo generó.
+   -------------------------------------------------------------------------- */
+
+var HOJA_ADVICES = 'Advices enviados';
+
+async function cargarAdvices() {
+  S.advices = new Map();
+  try {
+    var meta = await api(BASE + S.cfg.sheetId +
+      '?fields=' + encodeURIComponent('sheets(properties(title))'));
+    var existe = (meta.sheets || []).some(function (h) {
+      return clave(h.properties.title) === clave(HOJA_ADVICES);
+    });
+    if (!existe) return;
+
+    var r = await api(BASE + S.cfg.sheetId + '/values/' +
+      encodeURIComponent("'" + HOJA_ADVICES + "'!A2:I3000"));
+
+    (r.values || []).forEach(function (f) {
+      var fecha = f[0] || '', pestana = f[1] || '', contratos = f[3] || '',
+          bls = f[4] || '', quien = f[8] || '';
+      // Compatibilidad con el log viejo, que tenía menos columnas.
+      if (!contratos && f[1] && /^[\d,\s]+$/.test(String(f[1]))) {
+        quien = f[5] || '';
+      }
+      var reg = { fecha: fecha, quien: quien, pestana: pestana };
+
+      String(contratos).split(',').forEach(function (c) {
+        var k = clave(c);
+        if (k) S.advices.set('c|' + k, reg);
+      });
+      String(bls).split(',').forEach(function (b) {
+        var k = clave(b);
+        if (k) S.advices.set('b|' + k, reg);
+      });
+    });
+  } catch (e) {
+    S.advices = new Map();
+  }
+}
+
+// El BL manda: identifica el embarque exacto. El contrato es el respaldo para
+// las cargas sin BL.
+function adviceDe(emb) {
+  if (!S.advices || !S.advices.size) return null;
+  if (emb.bl) {
+    var porBL = S.advices.get('b|' + clave(emb.bl));
+    if (porBL) return porBL;
+  }
+  if (emb.contract) {
+    var porCtr = S.advices.get('c|' + clave(emb.contract));
+    // Sin BL propio no se puede distinguir un parcial de otro, así que solo
+    // se acepta el match por contrato cuando el embarque no tiene BL.
+    if (porCtr && !emb.bl) return porCtr;
+  }
+  return null;
+}
+
+// Fecha corta del registro, que puede venir como texto de Sheets.
+function fechaAdvice(reg) {
+  var t = String(reg && reg.fecha || '');
+  var m = t.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+  if (m) return m[1];
+  var d = new Date(t);
+  return isNaN(d) ? '' : fmtFecha(d);
 }
 
 /* --- Comentarios -----------------------------------------------------------
@@ -2132,6 +2248,7 @@ async function cargarTodo() {
 
     await cargarListas();
     await cargarComentarios();
+    await cargarAdvices();
 
     S.avisos = avisos;
   } catch (e) {
@@ -2759,10 +2876,17 @@ function filaEmbarque(x, opts) {
 
     '<div class="fila-top">' +
       '<div class="ident">' +
-        (S.cfg.adviceUrl && emb._tab === (S.cfg.tabAdvice || emb._tab)
-          ? '<label class="marcar" title="Seleccionar para el advice">' +
-            '<input type="checkbox" data-marcar="' + esc(emb._id) + '"' +
-            (S.marcados && S.marcados[emb._id] ? ' checked' : '') + '></label>'
+        (S.cfg.adviceUrl
+          ? (function () {
+              var on = !!(S.marcados && S.marcados[emb._id]);
+              return '<label class="marcar' + (on ? ' on' : '') + '" ' +
+                'title="Elegir este embarque para el shipment advice">' +
+                '<input type="checkbox" data-marcar="' + esc(emb._id) + '"' +
+                (on ? ' checked' : '') + '>' +
+                '<span class="cuad">' + (on ? ico('check') : '') + '</span>' +
+                '<span class="txt">' + (on ? 'Elegido' : 'Elegir para advice') + '</span>' +
+                '</label>';
+            })()
           : '') +
         '<div class="partes">' + partes + '</div>' +
         (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') +
@@ -2776,6 +2900,14 @@ function filaEmbarque(x, opts) {
           ? '<span class="pill nar"><span class="pt"></span>Falta comprobante</span>' : '') +
         (emb._aFacturar
           ? '<span class="pill ok"><span class="pt"></span>Cliente pagó</span>' : '') +
+        (function () {
+          var a = adviceDe(emb);
+          if (!a) return '';
+          var f = fechaAdvice(a);
+          return '<span class="pill adv" title="' +
+            esc('Generado por ' + (a.quien || 'alguien') + (f ? ' el ' + f : '')) + '">' +
+            ico('mail') + 'Advice enviado' + (f ? ' · ' + f : '') + '</span>';
+        })() +
         (function () {
           var n = comentariosDe(emb).length;
           return n ? '<span class="pill coment"><span class="pt"></span>' + n +
@@ -3684,7 +3816,9 @@ function vistaPlanilla(filas) {
     var emb = x.emb, src = x.src;
     return '<tr' + (emb._id === S.sel ? ' class="sel"' : '') +
       ' data-act="abrir" data-f="' + esc(emb._id) + '">' +
-      '<td class="nrofila" title="' + esc(emb._tab) + '">' + emb._fila + '</td>' +
+      '<td class="nrofila" title="' + esc(emb._tab) +
+        (adviceDe(emb) ? ' · advice enviado' : '') + '">' + emb._fila +
+        (adviceDe(emb) ? '<i class="pt-adv"></i>' : '') + '</td>' +
       cols.map(function (c) {
         if (src.mapa[c] === undefined) return '<td class="na"></td>';
         if (SEMAFOROS.indexOf(c) >= 0) {
