@@ -4255,8 +4255,9 @@ document.addEventListener('focusin', function (e) {
 });
 
 document.addEventListener('click', function (ev) {
-  // El checkbox de la tarjeta no debe abrir el panel.
-  if (ev.target.getAttribute && ev.target.getAttribute('data-marcar')) {
+  // Elegir para el advice no debe abrir el panel. Se mira toda la píldora, no
+  // solo el input: el clic suele caer en el texto o en el cuadradito.
+  if (ev.target.closest && ev.target.closest('.marcar')) {
     ev.stopPropagation();
     return;
   }
