@@ -30,10 +30,11 @@
   --sol:#0a7189;  --solbg:#e6f3f7;
   --nar:#b26a00;  --narbg:#fdf2e2;
 
-  --s1:0 1px 2px rgba(0,0,0,.04);
-  --s2:0 2px 8px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04);
-  --s3:0 12px 40px rgba(0,0,0,.14);
-  --r:14px; --r2:11px; --r3:9px;
+  --s1:0 1px 2px rgba(0,0,0,.03), 0 0 0 .5px rgba(0,0,0,.035);
+  --s2:0 4px 16px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04), 0 0 0 .5px rgba(0,0,0,.035);
+  --s3:0 20px 60px rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.06);
+  --ease:cubic-bezier(.32,.72,0,1);
+  --r:18px; --r2:13px; --r3:10px;
   --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,monospace;
   --safe:env(safe-area-inset-bottom,0px);
 }
@@ -55,9 +56,9 @@ button{font:inherit;font-weight:500;font-size:14px;cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
   border:none;background:rgba(0,0,0,.05);color:var(--tinta);
   min-height:34px;padding:0 15px;border-radius:980px;
-  transition:background .18s cubic-bezier(.4,0,.2,1),opacity .18s,transform .08s}
+  transition:background .22s var(--ease),opacity .22s,transform .12s var(--ease)}
 button:hover{background:rgba(0,0,0,.09)}
-button:active{transform:scale(.97)}
+button:active{transform:scale(.96)}
 button:focus-visible{outline:3px solid rgba(10,125,90,.35);outline-offset:1px}
 button:disabled{opacity:.35;cursor:default}
 button:disabled:hover{background:rgba(0,0,0,.05)}
@@ -109,6 +110,10 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .quien-soy{font-size:13px;color:var(--tinta3);white-space:nowrap}
 
 /* Pestañas ----------------------------------------------------------------- */
+.titulo-vista{margin:6px 0 20px}
+.titulo-vista h1{font-size:32px;letter-spacing:-.033em;line-height:1.1;font-weight:700}
+.titulo-vista p{margin:5px 0 0;font-size:15px;color:var(--tinta3)}
+
 .tabs{display:flex;gap:26px;margin:0 0 22px;border-bottom:1px solid var(--linea);
   overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
@@ -130,17 +135,24 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .segmento button:hover{background:rgba(255,255,255,.55)}
 .segmento button[aria-pressed=true]{background:var(--sup);color:var(--tinta);
   font-weight:500;box-shadow:var(--s1)}
+.segmento.sub{margin-top:-12px;margin-bottom:22px;background:none;padding:0;gap:7px}
+.segmento.sub button{background:rgba(0,0,0,.05);border-radius:980px;min-height:31px;
+  padding:0 14px;font-size:13.5px}
+.segmento.sub button:hover{background:rgba(0,0,0,.09)}
+.segmento.sub button[aria-pressed=true]{background:var(--acento);color:#fff;
+  box-shadow:none;font-weight:500}
+.segmento.sub button[aria-pressed=true] .cnt{color:rgba(255,255,255,.75)}
 .segmento .cnt{font-size:12.5px;color:var(--tinta3)}
 .segmento button[aria-pressed=true] .cnt{color:var(--acento)}
 
 /* Resumen ------------------------------------------------------------------ */
 .tira{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
   gap:10px;margin-bottom:26px}
-.tira button{display:block;text-align:left;padding:15px 17px;border-radius:var(--r);
-  background:var(--sup);width:100%;box-shadow:var(--s1);min-height:0;
-  border:1.5px solid transparent}
-.tira button:hover{background:var(--sup);box-shadow:var(--s2)}
-.tira button[aria-pressed=true]{border-color:var(--acento)}
+.tira button{display:block;text-align:left;padding:17px 19px;border-radius:var(--r);
+  background:var(--sup);width:100%;box-shadow:var(--s1);min-height:0}
+.tira button:hover{background:var(--sup);box-shadow:var(--s2);transform:translateY(-1px)}
+.tira button:active{transform:translateY(0) scale(.99)}
+.tira button[aria-pressed=true]{box-shadow:var(--s2),0 0 0 2px var(--acento)}
 .tira .n{font-size:27px;font-weight:600;line-height:1.08;letter-spacing:-.03em;display:block}
 .tira .l{font-size:13px;color:var(--tinta2);margin-top:2px;display:block;font-weight:400}
 .tira .crit .n{color:var(--pend)}
@@ -148,18 +160,18 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .tira .bien .n{color:var(--ok)}
 
 /* Títulos de sección ------------------------------------------------------- */
-.gt{font-size:20px;margin:34px 0 13px;font-weight:600;letter-spacing:-.024em;
+.gt{font-size:21px;margin:36px 0 14px;font-weight:600;letter-spacing:-.026em;
   display:flex;align-items:baseline;gap:9px}
 .gt span{font-weight:400;color:var(--tinta3);font-size:15px}
 .gt:first-child{margin-top:0}
 
 /* Tarjeta de embarque ------------------------------------------------------ */
-.lista{display:flex;flex-direction:column;gap:10px}
-.emb{background:var(--sup);border:1.5px solid transparent;border-radius:var(--r);
-  padding:18px 20px;cursor:pointer;box-shadow:var(--s1);
-  transition:box-shadow .2s,border-color .2s}
-.emb:hover{box-shadow:var(--s2)}
-.emb.sel{border-color:var(--acento)}
+.lista{display:flex;flex-direction:column;gap:11px}
+.emb{background:var(--sup);border-radius:var(--r);padding:20px 22px;cursor:pointer;
+  box-shadow:var(--s1);transition:box-shadow .26s var(--ease),transform .26s var(--ease)}
+.emb:hover{box-shadow:var(--s2);transform:translateY(-1px)}
+.emb:active{transform:translateY(0) scale(.995)}
+.emb.sel{box-shadow:var(--s2),0 0 0 2px var(--acento)}
 .emb:focus-visible{outline:3px solid rgba(10,125,90,.35);outline-offset:2px}
 
 .fila-top{display:grid;gap:16px;align-items:start;
@@ -233,7 +245,8 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .aviso-fila.critico .tit{color:var(--pend)}
 .aviso-fila.alto{background:var(--narbg)}
 .aviso-fila.alto .tit{color:var(--nar)}
-.emb.n-critico{border-color:rgba(208,52,44,.3)}
+.emb.n-critico{box-shadow:var(--s1),0 0 0 1px rgba(208,52,44,.22)}
+.emb.n-critico.sel{box-shadow:var(--s2),0 0 0 2px var(--acento)}
 .adv-hecho{display:flex;gap:9px;align-items:flex-start;background:var(--acentobg);
   border-radius:var(--r2);padding:12px 14px;margin-bottom:14px;font-size:13.5px;
   color:var(--acento);line-height:1.45}
@@ -274,8 +287,8 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .filtros button[aria-pressed=true],.hoja-barra button[aria-pressed=true]{
   background:var(--acento);color:#fff}
 .conteo{font-size:13px;color:var(--tinta3);margin:0 0 14px}
-.caja-filtros{background:var(--sup);border-radius:var(--r);padding:18px 20px;
-  margin-bottom:18px;box-shadow:var(--s1)}
+.caja-filtros{background:var(--sup);border-radius:var(--r);padding:20px 22px;
+  margin-bottom:18px;box-shadow:var(--s1);animation:aparecer .3s var(--ease)}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:15px}
 .fcampo label{display:block;font-size:13px;color:var(--tinta2);margin-bottom:6px}
 .limpiar{margin-top:15px}
@@ -288,7 +301,7 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 
 /* Tabla compacta ------------------------------------------------------------ */
 .marco{border-radius:var(--r);overflow:auto;background:var(--sup);max-height:72vh;
-  box-shadow:var(--s1);-webkit-overflow-scrolling:touch}
+  box-shadow:var(--s2);-webkit-overflow-scrolling:touch}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th{text-align:left;font-weight:500;font-size:13px;color:var(--tinta3);padding:12px 14px;
   border-bottom:1px solid var(--linea);white-space:nowrap;position:sticky;top:0;
@@ -354,12 +367,15 @@ th.ord:hover{background:#ebebed}
   border-top:1px solid var(--linea);padding-top:14px}
 
 /* Panel lateral ------------------------------------------------------------- */
-.velo{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:40;
+.velo{position:fixed;inset:0;background:rgba(0,0,0,.22);z-index:40;
+  animation:fundir .3s var(--ease);
   backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
 .panel{position:fixed;inset:0 0 0 auto;width:min(520px,100%);background:var(--sup);
-  box-shadow:var(--s3);overflow-y:auto;padding:26px 28px 70px;z-index:41;
-  -webkit-overflow-scrolling:touch}
-.panel h2{font-size:22px;margin:0 0 3px;padding-right:90px;letter-spacing:-.026em}
+  box-shadow:var(--s3);overflow-y:auto;padding:28px 30px 70px;z-index:41;
+  -webkit-overflow-scrolling:touch;animation:entrar .34s var(--ease)}
+@keyframes entrar{from{transform:translateX(100%)}to{transform:none}}
+@keyframes fundir{from{opacity:0}to{opacity:1}}
+.panel h2{font-size:24px;margin:0 0 3px;padding-right:90px;letter-spacing:-.028em}
 .panel .cerrar{position:absolute;top:20px;right:22px;font-size:13.5px;min-height:32px;
   padding:0 14px}
 .bloque{border-top:1px solid var(--linea);margin-top:26px;padding-top:20px}
@@ -388,10 +404,12 @@ th.ord:hover{background:#ebebed}
 .sembtn[data-e=vacio] .vl{color:var(--tinta3);font-weight:400}
 .sem-wrap{position:relative;flex:1;min-width:104px}
 .menu-est{position:absolute;top:calc(100% + 6px);left:0;right:0;min-width:160px;z-index:50;
+  animation:menu .2s var(--ease);transform-origin:top;
   background:rgba(255,255,255,.92);backdrop-filter:blur(20px);
   -webkit-backdrop-filter:blur(20px);border-radius:var(--r2);box-shadow:var(--s3);
   padding:5px;display:flex;flex-direction:column;gap:1px}
-.menu-est button{background:none;border-radius:7px;min-height:38px;padding:0 11px;
+@keyframes menu{from{opacity:0;transform:scale(.96) translateY(-4px)}to{opacity:1;transform:none}}
+.menu-est button{background:none;border-radius:8px;min-height:38px;padding:0 11px;
   justify-content:flex-start;gap:10px;font-size:14.5px;text-align:left;width:100%;
   font-weight:400}
 .menu-est button:hover{background:rgba(0,0,0,.05)}
@@ -418,10 +436,12 @@ th.ord:hover{background:#ebebed}
 
 /* Barra flotante ------------------------------------------------------------ */
 .barra-flota{position:fixed;left:0;right:0;bottom:0;z-index:35;
+  animation:subirBarra .32s var(--ease);
   background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(20px);
   -webkit-backdrop-filter:saturate(180%) blur(20px);
   border-top:1px solid var(--linea)}
-.bf-in{max-width:1060px;margin:0 auto;padding:15px 22px calc(17px + var(--safe))}
+@keyframes subirBarra{from{transform:translateY(100%)}to{transform:none}}
+.bf-in{max-width:1060px;margin:0 auto;padding:16px 22px calc(18px + var(--safe))}
 .bf-fila1{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
 .bf-n{font-weight:600;font-size:14px;background:var(--acentobg);color:var(--acento);
   padding:5px 13px;border-radius:980px;white-space:nowrap}
@@ -435,8 +455,9 @@ th.ord:hover{background:#ebebed}
   padding:11px 14px;border-radius:var(--r2)}
 
 /* Alta de contratos --------------------------------------------------------- */
-.alta{background:var(--sup);border-radius:var(--r);padding:22px 24px;
-  margin-bottom:20px;box-shadow:var(--s2)}
+.alta{background:var(--sup);border-radius:var(--r);padding:24px 26px;
+  margin-bottom:20px;box-shadow:var(--s2);animation:aparecer .3s var(--ease)}
+@keyframes aparecer{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .alta-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
 .alta-cab h3{font-size:18px;letter-spacing:-.022em}
 .alta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:15px}
@@ -483,7 +504,7 @@ th.ord:hover{background:#ebebed}
 .setup{max-width:540px;margin:9vh auto;padding:0 22px}
 .setup h1{font-size:28px;margin:0 0 8px;letter-spacing:-.03em}
 .setup .sub{color:var(--tinta2);margin:0 0 28px;font-size:16px}
-.caja{background:var(--sup);border-radius:var(--r);padding:24px;margin-bottom:16px;
+.caja{background:var(--sup);border-radius:var(--r);padding:26px;margin-bottom:16px;
   box-shadow:var(--s1)}
 .caja h2{font-size:16px;margin:0 0 12px}
 .ayuda{font-size:13px;color:var(--tinta2);margin:7px 0 0;line-height:1.45}
@@ -545,7 +566,12 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .tira button{padding:13px 15px}
   .tira .n{font-size:24px}
 
-  .gt{font-size:19px;margin:28px 0 12px}
+  .gt{font-size:20px;margin:30px 0 12px}
+  .titulo-vista{margin:2px 0 16px}
+  .titulo-vista h1{font-size:28px}
+  .titulo-vista p{font-size:14px}
+  .segmento.sub{margin-top:-8px;overflow-x:auto}
+  .segmento.sub button{flex:none}
   .emb{padding:16px;border-radius:var(--r2)}
   .partes{font-size:15.5px}
   .marcar{float:none;display:flex;width:100%;justify-content:center;margin:0 0 12px;
@@ -634,10 +660,11 @@ var S = {
   pestanas: null,
   datos: null,        // {filas, mapa, extras, encabezados}
   contratos: new Map(),
-  vista: 'control',
+  vista: 'carga',
   sel: null,
   busca: '',
   filtroTab: '',
+  filtroTipo: '',
   filtroEtapa: '',
   filtroNivel: '',
   modo: 'tarjetas',
@@ -706,6 +733,7 @@ var CAMPOS = {
   importer:     {label:'Importador',   tipo:'texto',   alias:['importer','importador','cliente']},
   contract:     {label:'Contrato',     tipo:'texto',   alias:['contract','contrato']},
   product:      {label:'Producto',     tipo:'texto',   alias:['product','producto']},
+  tipo:         {label:'Tipo',         tipo:'texto',   alias:['tipo','type','categoria']},
   price:        {label:'Precio',       tipo:'numero',  alias:['price','precio']},
   tns:          {label:'Tns',          tipo:'numero',  alias:['tns','tons','toneladas','tn']},
   total:        {label:'Total',        tipo:'numero',  alias:['total']},
@@ -2590,13 +2618,15 @@ function vistaApp() {
   }
 
   var todosEvs = evaluarTodo();
-  var evs = S.filtroTab
-    ? todosEvs.filter(function (x) { return x.emb._tab === S.filtroTab; })
-    : todosEvs;
+  var evs = todosEvs.filter(function (x) {
+    if (S.filtroTab && x.emb._tab !== S.filtroTab) return false;
+    if (S.filtroTipo && clave(x.emb.tipo) !== S.filtroTipo) return false;
+    return true;
+  });
   var cuenta = { critico: 0, alto: 0, medio: 0, ok: 0 };
   evs.forEach(function (x) { x.ev.nivelMax ? cuenta[x.ev.nivelMax]++ : cuenta.ok++; });
 
-  var segmentado = segmentoPestanas(todosEvs);
+  var segmentado = segmentoPestanas(todosEvs) + segmentoTipos(todosEvs);
   var cuerpo = S.vista === 'control' ? vistaControl(evs, cuenta)
              : S.vista === 'contratos' ? vistaContratos()
              : vistaGrilla(evs);
@@ -2611,6 +2641,7 @@ function vistaApp() {
     (S.error ? '<div class="error" style="margin-top:14px">' + esc(S.error) + '</div>' : '') +
     (S.avisoOk ? '<div class="ok-aviso">' + esc(S.avisoOk) +
       ' <button data-act="cerraviso">Cerrar</button></div>' : '') +
+    tituloVista() +
     '<div class="tabs" role="tablist">' +
       '<button role="tab" aria-selected="' + (S.vista === 'control') + '" data-act="tab" data-v="control">Control</button>' +
       '<button role="tab" aria-selected="' + (S.vista === 'carga') + '" data-act="tab" data-v="carga">Carga</button>' +
@@ -2728,6 +2759,61 @@ function segmentoPestanas(evs) {
       return op(f.tab, nombreCorto(f.tab), cuenta[f.tab] || 0);
     }).join('') +
     '</div>';
+}
+
+// Dentro de una pestaña, separar por tipo de producto: la columna Tipo dice
+// Maní, Expeller, Aceite. Solo aparece cuando hay más de uno para elegir.
+function tiposDisponibles(evs) {
+  var cuenta = {};
+  evs.forEach(function (x) {
+    if (S.filtroTab && x.emb._tab !== S.filtroTab) return;
+    var t = String(x.emb.tipo || '').trim();
+    if (!t) return;
+    var k = clave(t);
+    cuenta[k] = cuenta[k] || { n: 0, variantes: {} };
+    cuenta[k].n++;
+    cuenta[k].variantes[t] = (cuenta[k].variantes[t] || 0) + 1;
+  });
+  return Object.keys(cuenta).map(function (k) {
+    var v = cuenta[k];
+    // "Maní" y "MANI" son el mismo tipo: se muestra la escritura más usada.
+    var etiq = Object.keys(v.variantes).sort(function (a, b) {
+      return v.variantes[b] - v.variantes[a];
+    })[0];
+    return { clave: k, label: etiq, n: v.n };
+  }).sort(function (a, b) { return b.n - a.n; });
+}
+
+// Título grande, como el "Large Title" de iOS: ancla la pantalla y hace que
+// el contenido respire antes de empezar.
+function tituloVista() {
+  var t = { control: 'Control', carga: 'Cargas', contratos: 'Contratos' }[S.vista] || '';
+  var sub = '';
+  if (S.vista === 'carga' && S.datos) {
+    sub = S.datos.filas.length + ' embarques';
+    if (S.filtroTab) sub += ' · ' + nombreCorto(S.filtroTab);
+  } else if (S.vista === 'contratos') {
+    sub = S.contratos.size + ' contratos';
+  } else if (S.vista === 'control' && S.datos) {
+    sub = 'Lo que necesita atención';
+  }
+  return '<div class="titulo-vista"><h1>' + esc(t) + '</h1>' +
+    (sub ? '<p>' + esc(sub) + '</p>' : '') + '</div>';
+}
+
+function segmentoTipos(evs) {
+  var tipos = tiposDisponibles(evs);
+  if (tipos.length < 2) return '';
+
+  var total = tipos.reduce(function (a, t) { return a + t.n; }, 0);
+  return '<div class="segmento sub">' +
+    '<button data-act="ftipo" data-t="" aria-pressed="' + (!S.filtroTipo) + '">' +
+      'Todos<span class="cnt">' + total + '</span></button>' +
+    tipos.map(function (t) {
+      return '<button data-act="ftipo" data-t="' + esc(t.clave) + '" aria-pressed="' +
+        (S.filtroTipo === t.clave) + '">' + esc(t.label) +
+        '<span class="cnt">' + t.n + '</span></button>';
+    }).join('') + '</div>';
 }
 
 // "Embarques maritimos" -> "Marítimo". Nombres largos rompen el segmentado.
@@ -3312,7 +3398,9 @@ function calcularContratos() {
 
   // Embarques activos (respetando el filtro marítimo/terrestre).
   S.datos.filas.filter(function (e) {
-    return !S.filtroTab || e._tab === S.filtroTab;
+    if (S.filtroTab && e._tab !== S.filtroTab) return false;
+    if (S.filtroTipo && clave(e.tipo) !== S.filtroTipo) return false;
+    return true;
   }).forEach(function (emb) {
     var k = String(emb.contract || '').trim();
     if (!k) return;
@@ -4391,7 +4479,12 @@ document.addEventListener('click', function (ev) {
     S.filtroTab = ''; S.filtroEtapa = ''; S.busca = ''; S.fCol = {}; S.ordenCol = null;
     return pintar();
   }
-  if (act === 'ftab') { S.filtroTab = el.getAttribute('data-t') || ''; return pintar(); }
+  if (act === 'ftab') {
+    S.filtroTab = el.getAttribute('data-t') || '';
+    S.filtroTipo = '';   // los tipos cambian según la pestaña
+    return pintar();
+  }
+  if (act === 'ftipo') { S.filtroTipo = el.getAttribute('data-t') || ''; return pintar(); }
   if (act === 'cerraviso') { S.avisoOk = null; return pintar(); }
   if (act === 'altaabrir') {
     var hoy = new Date();
