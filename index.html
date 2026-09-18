@@ -574,6 +574,32 @@ th.ord:hover{background:#ebebed}
 .bf-fila2{display:flex;gap:11px;align-items:center;flex-wrap:wrap}
 .bf-fila2 input{flex:1;min-width:200px}
 .barra-flota .primario{min-height:40px;padding:0 20px}
+/* Interruptor de copia a Peter */
+.sw-peter{background:none;border-color:var(--linea2);gap:9px;padding:0 14px 0 8px}
+.sw-peter .riel{width:34px;height:20px;border-radius:980px;background:var(--sup3);
+  position:relative;flex:none;transition:background .2s var(--ease)}
+.sw-peter .bolita{position:absolute;top:2px;left:2px;width:16px;height:16px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);
+  transition:left .2s var(--ease)}
+.sw-peter .et{font-size:13.5px;color:var(--tinta2)}
+.sw-peter.on{background:var(--acentobg);border-color:var(--acento)}
+.sw-peter.on .riel{background:var(--acento)}
+.sw-peter.on .bolita{left:16px}
+.sw-peter.on .et{color:var(--acento);font-weight:600}
+
+/* Sugerencias de advice */
+.pill.sug{color:var(--acento);gap:5px;font-weight:500}
+.pill.sug .ico{width:13px;height:13px}
+.aviso-sug{display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+  background:var(--acentobg);border-radius:var(--r2);padding:13px 16px;margin-bottom:16px;
+  font-size:13.5px;color:var(--acento);line-height:1.45}
+.aviso-sug .ico{width:17px;height:17px;flex:none}
+.aviso-sug span{flex:1;min-width:180px}
+.aviso-sug b{font-weight:600}
+.aviso-sug button{margin-left:auto;background:var(--sup);border-color:transparent;
+  font-size:13px;min-height:32px}
+.aviso-sug button[aria-pressed=true]{background:var(--acento);color:#fff}
+
 .bf-error{margin:0 0 12px;font-size:13.5px;color:var(--pend);background:var(--pendbg);
   padding:11px 14px;border-radius:var(--r2)}
 
@@ -585,6 +611,10 @@ th.ord:hover{background:#ebebed}
 .alta-cab h3{font-size:18px;letter-spacing:-.022em}
 .alta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:15px}
 .alta-grid .campo{margin-bottom:0}
+.alta-nota{display:flex;gap:8px;align-items:center;margin:0 0 18px;font-size:13.5px;
+  color:var(--acento);background:var(--acentobg);padding:10px 13px;border-radius:var(--r3)}
+.alta-nota .ico{width:15px;height:15px;flex:none;stroke-width:2.2}
+.alta-nota.tenue{color:var(--tinta3);background:var(--sup2)}
 .alta-total{margin:16px 0 0;font-size:14.5px;color:var(--tinta2);background:var(--sup2);
   padding:11px 14px;border-radius:var(--r2)}
 .alta-acc{display:flex;gap:14px;align-items:center;margin-top:18px;flex-wrap:wrap}
@@ -969,6 +999,7 @@ var S = {
   busca: '',
   filtroTab: '',
   filtroTipo: '',
+  soloSug: false,
   filtroEtapa: '',
   filtroNivel: '',
   modo: 'tarjetas',
@@ -987,6 +1018,7 @@ var S = {
   enviando: false,
   fContrato: '',
   topeContratos: 40,
+  topeCargas: 0,
   borrador: '',
   ultimaEval: {},
   menuSem: null,
@@ -1010,6 +1042,9 @@ var S = {
   alta: null,
   combo: null,
   creando: false,
+  altaEmb: null,
+  altaEmbError: null,
+  creandoEmb: false,
   avisos: [],
   error: null,
   cargando: false,
@@ -1080,6 +1115,7 @@ var CAMPOS_CTR = {
   exportador: {alias:['exportador','exporter','seller']},
   importador: {alias:['importer','importador','cliente','buyer']},
   producto:   {alias:['producto','product']},
+  tipo:       {alias:['tipo','type']},
   tns:        {alias:['toneladas','tns','tons','cantidad']},
   precio:     {alias:['precio','price']},
   incoterm:   {alias:['incoterm']},
@@ -1780,6 +1816,8 @@ async function leerHoja(id, nombre) {
     if (p === null || p === '') continue;
     // Encabezado repetido en el medio: pasa cuando se pegan bloques de filas.
     if (clave(p) === primeraClave) continue;
+    // La fila de totales no es un embarque ni un contrato.
+    if (clave(p).indexOf('total') === 0) continue;
     var celdas = [], colores = [];
     for (var j = 0; j < MAX_COLS; j++) { var c2 = celda(vals[j]); celdas[j] = c2.v; colores[j] = c2.bg; }
     filas.push({ fila: i + 1, celdas: celdas, colores: colores });
@@ -2008,6 +2046,234 @@ async function crearContrato(datos) {
   });
 
   return n;
+}
+
+/* --- Alta de embarques -----------------------------------------------------
+   Se agrega una fila al final de la pestaña elegida, escribiendo solo las
+   columnas que esa pestaña tiene. Los contratos salen de los ya cargados, así
+   el nuevo embarque queda atado a su contrato desde el principio.
+   -------------------------------------------------------------------------- */
+
+var CAMPOS_ALTA_EMB = [
+  ['exporter', 'Exportador', 'combo-exp'],
+  ['importer', 'Importador', 'combo-imp'],
+  ['contract', 'Contrato', 'combo-ctr'],
+  ['product', 'Producto', 'combo-prod'],
+  ['tipo', 'Tipo', 'combo-tipo'],
+  ['tns', 'Toneladas', 'number'],
+  ['price', 'Precio USD/tn', 'number'],
+  ['etd', 'ETD', 'date'],
+  ['eta', 'ETA', 'date'],
+  ['port', 'Destino', 'text'],
+  ['vessel', 'Buque', 'text'],
+  ['shippingLine', 'Naviera', 'text'],
+  ['lots', 'Lotes', 'text'],
+  ['containers', 'Contenedores', 'text'],
+  ['booking', 'Booking', 'text'],
+  ['incoterm', 'Incoterm', 'text'],
+  ['mailsCC', 'Mails CC', 'text']
+];
+
+/* Las tres listas del alta se condicionan entre sí:
+   - elegido el contrato, exportador, importador, producto, tipo y precio salen
+     de él, que es lo que evita tipear lo que la planilla ya sabe;
+   - elegidos exportador e importador, solo se ofrecen SUS contratos;
+   - elegido el contrato, solo sus productos (el del contrato más los que ya se
+     hayan embarcado contra él). */
+
+function contratosDe(exp, imp) {
+  var out = [];
+  var kExp = clave(exp), kImp = clave(imp);
+  S.contratos.forEach(function (c, k) {
+    if (kExp && clave(c.exportador) !== kExp) return;
+    if (kImp && clave(c.importador) !== kImp) return;
+    out.push(k);
+  });
+  // Los más nuevos primero: es lo que se está cargando.
+  return out.sort(function (x, y) { return y.localeCompare(x, 'es', { numeric: true }); });
+}
+
+function productosDe(contrato) {
+  if (!contrato) return null;
+  var c = S.contratos.get(String(contrato).trim());
+  var out = [], vistos = {};
+  var sumar = function (p) {
+    var t = String(p || '').trim();
+    if (!t || vistos[clave(t)]) return;
+    vistos[clave(t)] = 1; out.push(t);
+  };
+  if (c) sumar(c.producto);
+  // Un contrato se parte en varios embarques, que pueden tener productos
+  // distintos: se suman los ya usados.
+  (S.datos.filas || []).forEach(function (o) {
+    if (clave(o.contract) === clave(contrato)) sumar(o.product);
+  });
+  return out.length ? out : null;
+}
+
+// Al elegir un contrato se copia lo que ya sabe, sin pisar lo que se escribió.
+function aplicarContrato(nombre) {
+  var c = S.contratos.get(String(nombre).trim());
+  if (!c) return;
+  var a = S.altaEmb;
+  if (!a.exporter && c.exportador) a.exporter = String(c.exportador).trim();
+  if (!a.importer && c.importador) a.importer = String(c.importador).trim();
+  if (!a.tipo && c.tipo) a.tipo = String(c.tipo).trim();
+  if (!a.price && c.precio) a.price = c.precio;
+  var prods = productosDe(nombre);
+  if (!a.product && prods && prods.length === 1) a.product = prods[0];
+  a._desdeContrato = true;
+}
+
+async function crearEmbarque() {
+  var a = S.altaEmb;
+  if (!a || !a.tab) return;
+  var src = S.fuentes.filter(function (f) { return f.tab === a.tab; })[0];
+  if (!src) { S.altaEmbError = 'No encuentro esa pestaña.'; return pintar(); }
+
+  var req = ['exporter', 'importer', 'contract', 'product', 'tns'];
+  var faltan = req.filter(function (c) { return !a[c] && src.mapa[c] !== undefined; });
+  if (faltan.length) {
+    S.altaEmbError = 'Falta: ' + faltan.map(function (c) { return CAMPOS[c].label; }).join(', ');
+    return pintar();
+  }
+
+  S.creandoEmb = true; S.altaEmbError = null; pintar();
+  try {
+    // Va justo arriba de la fila TOTAL, para quedar dentro del bloque de datos
+    // y que los totales la cuenten. Se relee la hoja: la posición cambia cada
+    // vez que alguien agrega o reordena.
+    var filaTotal = await filaTotalDe(a.tab);
+    var fila;
+    if (filaTotal) {
+      fila = filaTotal;
+      await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{
+            insertDimension: {
+              range: { sheetId: src.sheetId, dimension: 'ROWS',
+                       startIndex: fila - 1, endIndex: fila },
+              inheritFromBefore: true
+            }
+          }]
+        })
+      });
+    } else {
+      // Sin fila TOTAL, al final de los datos.
+      fila = (src.filas.length
+        ? Math.max.apply(null, src.filas.map(function (f) { return f._fila; }))
+        : 1) + 1;
+    }
+
+    var reqs = [];
+    CAMPOS_ALTA_EMB.forEach(function (c) {
+      var campo = c[0];
+      if (a[campo] === undefined || a[campo] === '') return;
+      var idx = src.mapa[campo];
+      if (idx === undefined) return;
+      var val = a[campo];
+      if (c[2] === 'number') val = parseFloat(val);
+      reqs.push({
+        updateCells: {
+          range: { sheetId: src.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
+                   startColumnIndex: idx, endColumnIndex: idx + 1 },
+          rows: [{ values: [{ userEnteredValue: aValorSheets(val) }] }],
+          fields: 'userEnteredValue'
+        }
+      });
+    });
+
+    // Los semáforos arrancan en rojo: nada está hecho todavía.
+    SEMAFOROS.forEach(function (c) {
+      var idx = src.mapa[c];
+      if (idx === undefined || src.noAplica[c]) return;
+      reqs.push({
+        repeatCell: {
+          range: { sheetId: src.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
+                   startColumnIndex: idx, endColumnIndex: idx + 1 },
+          cell: { userEnteredFormat: { backgroundColor: COLORES.pendiente } },
+          fields: 'userEnteredFormat.backgroundColor'
+        }
+      });
+    });
+
+    await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: reqs })
+    });
+
+    S.avisoOk = 'Carga agregada en "' + a.tab + '", fila ' + fila +
+      (filaTotal ? ' (arriba del TOTAL)' : '') + '.';
+    S.altaEmb = null;
+    await cargarTodo();
+  } catch (e) {
+    S.altaEmbError = 'No se pudo guardar: ' + e.message;
+  } finally {
+    S.creandoEmb = false; pintar();
+  }
+}
+
+function formAltaEmb() {
+  var a = S.altaEmb;
+  var src = S.fuentes.filter(function (f) { return f.tab === a.tab; })[0];
+  if (!src) return '';
+  var L = S.listas || {};
+  var contratos = contratosDe(a.exporter, a.importer);
+
+  var listaDe = {
+    'combo-exp': L.exportadores || [],
+    'combo-imp': L.importadores || [],
+    'combo-ctr': contratos,
+    'combo-prod': productosDe(a.contract) || L.productos || [],
+    'combo-tipo': L.tipos || []
+  };
+
+  var campos = CAMPOS_ALTA_EMB.filter(function (c) {
+    return src.mapa[c[0]] !== undefined && !src.noAplica[c[0]];
+  }).map(function (c) {
+    var campo = c[0], label = c[1], tipo = c[2], val = a[campo] || '';
+    if (listaDe[tipo]) {
+      var ops = listaDe[tipo];
+      var ok = ops.some(function (o) { return clave(o) === clave(val); });
+      // El contrato y el producto pueden ser nuevos; cliente y proveedor no.
+      var libre = (tipo === 'combo-ctr' || tipo === 'combo-prod');
+      return comboGen('e-' + campo, campo, label, ops, val, ok, 'emb', libre);
+    }
+    return '<div class="campo"><label for="e-' + campo + '">' + label + '</label>' +
+      '<input id="e-' + campo + '" data-aemb="' + campo + '" type="' +
+      (tipo === 'number' ? 'number' : tipo === 'date' ? 'date' : 'text') +
+      '" value="' + esc(val) + '"></div>';
+  }).join('');
+
+  var pestanas = S.fuentes.map(function (f) {
+    return '<button data-act="altaemb-tab" data-t="' + esc(f.tab) + '" aria-pressed="' +
+      (a.tab === f.tab) + '">' + esc(nombreCorto(f.tab)) + '</button>';
+  }).join('');
+
+  return '<div class="alta">' +
+    '<div class="alta-cab"><h3>Nueva carga</h3>' +
+      '<button data-act="altaemb-cerrar">Cancelar</button></div>' +
+    (S.altaEmbError ? '<div class="error">' + esc(S.altaEmbError) + '</div>' : '') +
+    (S.fuentes.length > 1 ? '<div class="chips" style="margin-bottom:18px">' + pestanas + '</div>' : '') +
+    (a.contract && S.contratos.get(String(a.contract).trim())
+      ? '<p class="alta-nota">' + ico('check') + 'Datos tomados del contrato ' +
+        esc(a.contract) + '. Se pueden cambiar.</p>'
+      : (a.exporter || a.importer)
+        ? '<p class="alta-nota tenue">' + contratos.length +
+          (contratos.length === 1 ? ' contrato' : ' contratos') + ' de ' +
+          esc([a.exporter, a.importer].filter(Boolean).join(' → ')) + '</p>'
+        : '') +
+    '<div class="alta-grid">' + campos + '</div>' +
+    '<div class="alta-acc">' +
+      '<button class="primario" data-act="altaemb-guardar"' +
+        (S.creandoEmb ? ' disabled' : '') + '>' +
+        (S.creandoEmb ? 'Guardando…' : ico('check') + 'Agregar carga') + '</button>' +
+      '<span class="ayuda">Se inserta arriba de la fila TOTAL de «' + esc(a.tab) +
+        '». Docs, Fotos y T.R. arrancan en rojo.</span>' +
+    '</div></div>';
 }
 
 /* --- Banderas --------------------------------------------------------------
@@ -2377,8 +2643,7 @@ function bloqueAdvice(emb, ev) {
           ((S.adviceIdioma || 'en') === o[0]) + '">' + o[1] + '</button>';
       }).join('') +
     '</span>' +
-    '<label class="chk"><input type="checkbox" data-advpeter="1"' +
-      (S.advicePeter ? ' checked' : '') + '><span>Peter en copia</span></label>' +
+    togglePeter() +
     '</div>';
 
   h += '<button class="primario ancho" data-act="advice" data-f="' + esc(emb._id) + '"' +
@@ -2690,6 +2955,8 @@ async function cargarTodo() {
           exportador: g('exportador'),
           importador: g('importador'),
           producto: g('producto'),
+          tipo: g('tipo'),
+          precio: normNum(g('precio')),
           tns: normNum(g('tns')),
           comision: normNum(g('comision')),
           // La planilla ya trae su propio entregado y saldo: los guardamos
@@ -3207,6 +3474,62 @@ function vistaApp() {
 // el panel de filtros.
 // Barra flotante: aparece cuando hay embarques marcados. Es la forma natural
 // de armar un advice con varias filas sin tener que entrar a cada tarjeta.
+/* ¿A este embarque le corresponde mandar el advice?
+   El advice se manda cuando el barco ya salió y están el BL y las fotos: es lo
+   que el cliente necesita para preparar la llegada. Antes de eso sale
+   incompleto; mucho después ya no sirve de aviso.
+
+   Se mira lo que la planilla ya dice, no hace falta cargar nada nuevo. */
+function sugerenciaAdvice(emb, ev) {
+  if (!S.cfg.adviceUrl) return null;
+  if (adviceDe(emb)) return null;                 // ya se mandó
+  var src = fuenteDe(emb);
+  if (src.mapa.bl === undefined || src.noAplica.bl) return null;  // terrestres
+
+  var hoy = new Date();
+  if (!lleno(emb, 'bl')) return null;             // sin BL no hay advice
+  if (!esFecha(emb.etd) || emb.etd > hoy) return null;   // todavía no salió
+
+  var faltan = faltantesAdvice(emb);
+  var dias = Math.round((hoy - emb.etd) / 86400000);
+
+  // El propio equipo lo marca en Docs con "Enviar Shipment Advice".
+  var marcado = /enviar\s*shipment\s*advice/i.test((emb._notas && emb._notas.docs) || '');
+
+  if (marcado) {
+    return { nivel: 'ya', texto: 'La planilla lo marca para enviar' };
+  }
+  if (faltan.length) {
+    return { nivel: 'falta', texto: 'Falta ' + faltan.join(', ').toLowerCase() };
+  }
+  if (esFecha(emb.eta) && emb.eta < hoy) {
+    var desde = Math.round((hoy - emb.eta) / 86400000);
+    // Pasadas tres semanas del arribo el advice ya no avisa nada: el cliente
+    // hace rato que sabe. Se deja de sugerir para no llenar la lista de ruido.
+    if (desde > 21) return null;
+    return { nivel: 'tarde', texto: 'Llegó hace ' + desde + ' días y no se avisó' };
+  }
+  return { nivel: 'ya', texto: 'Zarpó hace ' + dias + ' días, con BL y datos completos' };
+}
+
+function sugeridos(evs) {
+  return evs.filter(function (x) {
+    var sg = sugerenciaAdvice(x.emb, x.ev);
+    return sg && sg.nivel !== 'falta';
+  });
+}
+
+// Interruptor de copia a Peter. Era un checkbox nativo y dependía del evento
+// change, que se pierde fácil; ahora es un botón con su propia acción, y
+// además se ve encendido o apagado de un vistazo.
+function togglePeter() {
+  var on = !!S.advicePeter;
+  return '<button class="sw-peter' + (on ? ' on' : '') + '" data-act="advpeter" ' +
+    'aria-pressed="' + on + '">' +
+    '<span class="riel"><span class="bolita"></span></span>' +
+    '<span class="et">Copia a Peter</span></button>';
+}
+
 function barraAdvice(evs) {
   if (!S.cfg.adviceUrl) return '';
   var ids = Object.keys(S.marcados || {}).filter(function (k) { return S.marcados[k]; });
@@ -3271,8 +3594,7 @@ function barraAdvice(evs) {
           ((S.adviceIdioma || 'en') === o[0]) + '">' + o[1] + '</button>';
       }).join('') +
     '</span>' +
-    '<label class="chk"><input type="checkbox" data-advpeter="1"' +
-      (S.advicePeter ? ' checked' : '') + '><span>Peter</span></label>' +
+    togglePeter() +
     '<button class="primario" data-act="adviceMulti"' +
       (difs.length || S.adviceEnviando ? ' disabled' : '') + '>' +
       (S.adviceEnviando ? 'Creando…' : ico('mail') + 'Crear borrador del shipment advice') +
@@ -3745,6 +4067,12 @@ function filaEmbarque(x, opts) {
         (emb._aFacturar
           ? '<span class="pill ok"><span class="pt"></span>Cliente pagó</span>' : '') +
         (function () {
+          var sg = sugerenciaAdvice(emb, ev);
+          if (!sg || sg.nivel === 'falta') return '';
+          return '<span class="pill sug" title="' + esc(sg.texto) + '">' +
+            ico('mail') + 'Conviene el advice</span>';
+        })() +
+        (function () {
           var a = adviceDe(emb);
           if (!a) return '';
           var f = fechaAdvice(a);
@@ -3918,9 +4246,32 @@ function filtrosActivos() {
 
 function vistaGrilla(evs) {
   var filas = ordenar(aplicarFiltros(evs), S.orden);
+  if (S.soloSug) {
+    var ids = {};
+    sugeridos(evs).forEach(function (x) { ids[x.emb._id] = 1; });
+    filas = filas.filter(function (x) { return ids[x.emb._id]; });
+  }
+
+  // Con el formulario abierto, dibujar 70 tarjetas detrás hace lento cada
+  // tecleo. Se muestran unas pocas.
+  var tope = S.altaEmb ? 6 : (S.topeCargas || 0);
+  var cortadas = 0;
+  if (tope && filas.length > tope) { cortadas = filas.length - tope; filas = filas.slice(0, tope); }
   var nf = filtrosActivos();
 
-  var h = '<div class="filtros">' +
+  var h = '';
+  if (!S.altaEmb) {
+    h += '<div class="barra-alta">' +
+      '<div class="accion-bloque">' +
+        '<button class="primario grande" data-act="altaemb">' +
+          ico('plus') + 'Cargar embarque nuevo</button>' +
+        '<p class="ayuda-accion">Se inserta arriba de la fila TOTAL de la pestaña que elijas</p>' +
+      '</div></div>';
+  } else {
+    h += formAltaEmb();
+  }
+
+  h += '<div class="filtros">' +
     '<input id="busca" placeholder="Buscar cliente, contrato, BL, factura, anotaciones" value="' +
       esc(S.busca) + '" aria-label="Buscar">' +
     '<select id="orden" aria-label="Ordenar por">' +
@@ -3952,6 +4303,20 @@ function vistaGrilla(evs) {
         (S.filtroEtapa === e.id) + '">' + e.label + ' · ' + cuentaEtapa[e.id] + '</button>';
     }).join('') + '</div>';
 
+  // Atajo: los que conviene avisar hoy.
+  var sug = sugeridos(evs);
+  if (sug.length) {
+    h += '<div class="aviso-sug">' + ico('mail') +
+      '<span><b>' + sug.length + (sug.length === 1
+        ? ' embarque listo para el shipment advice</b>'
+        : ' embarques listos para el shipment advice</b>') +
+      ' — zarparon, tienen BL y todavía no se avisó.</span>' +
+      '<button data-act="fsug" aria-pressed="' + (S.soloSug === true) + '">' +
+        (S.soloSug ? 'Ver todos' : 'Ver cuáles') + '</button>' +
+      (S.soloSug ? '<button data-act="marcarsug">Elegirlos todos</button>' : '') +
+      '</div>';
+  }
+
   h += '<p class="conteo">' + filas.length +
     (filas.length === 1 ? ' embarque' : ' embarques') +
     (filas.length !== evs.length ? ' de ' + evs.length : '') +
@@ -3962,9 +4327,14 @@ function vistaGrilla(evs) {
       (nf ? ' <button data-act="limpiar">Limpiar filtros</button>' : '') + '</p>';
   }
 
-  if (S.modo === 'planilla') return h + vistaPlanilla(filas);
-  if (S.modo === 'tabla') return h + tablaCompacta(filas);
-  return h + '<div class="lista">' + filas.map(function (x) { return filaEmbarque(x); }).join('') + '</div>';
+  var masAbajo = cortadas
+    ? '<div class="ver-mas"><span class="ayuda">' + cortadas +
+      ' embarques más, ocultos mientras cargás</span></div>' : '';
+
+  if (S.modo === 'planilla') return h + vistaPlanilla(filas) + masAbajo;
+  if (S.modo === 'tabla') return h + tablaCompacta(filas) + masAbajo;
+  return h + '<div class="lista">' + filas.map(function (x) { return filaEmbarque(x); }).join('') +
+    '</div>' + masAbajo;
 }
 
 function panelFiltros(evs) {
@@ -4437,6 +4807,14 @@ function refrescarCombo(id, campo, opciones, val, ctx, libre) {
 // Qué lista corresponde a cada campo, para poder refrescar sin rearmar todo.
 function listaDeCampo(campo) {
   var L = S.listas || {};
+  if (S.altaEmb) {
+    var a = S.altaEmb;
+    if (campo === 'exporter') return L.exportadores || [];
+    if (campo === 'importer') return L.importadores || [];
+    if (campo === 'tipo') return L.tipos || [];
+    if (campo === 'product') return productosDe(a.contract) || L.productos || [];
+    if (campo === 'contract') return contratosDe(a.exporter, a.importer);
+  }
   if (campo === 'exportador') return L.exportadores || [];
   if (campo === 'importador') return L.importadores || [];
   if (campo === 'producto') return L.productos || [];
@@ -5092,12 +5470,15 @@ function pintar() {
 }
 
 document.addEventListener('focusin', function (e) {
+  var ae = e.target.getAttribute && e.target.getAttribute('data-aemb');
+  if (ae && S.altaEmb) { S.altaEmb[ae] = e.target.value; return; }
   var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
   if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
   var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
   if (cb2) {
     var p2 = cb2.split(':'), ctx2 = p2[0], campo2 = p2[1];
     if (ctx2 === 'ctr' && S.editCtr) S.editCtr.cambios[campo2] = e.target.value;
+    else if (ctx2 === 'emb' && S.altaEmb) S.altaEmb[campo2] = e.target.value;
     else { S.alta = S.alta || {}; S.alta[campo2] = e.target.value; }
     S.combo = cb2;
     // Solo el desplegable, no la pantalla entera.
@@ -5236,6 +5617,35 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'desmarcar') { S.marcados = {}; S.adviceMsg = null; return pintar(); }
   if (act === 'advidioma') { S.adviceIdioma = el.getAttribute('data-v'); return pintar(); }
+  if (act === 'advpeter') { S.advicePeter = !S.advicePeter; return pintar(); }
+  if (act === 'fsug') { S.soloSug = !S.soloSug; return pintar(); }
+  if (act === 'altaemb') {
+    var hoyE = new Date();
+    S.altaEmb = { tab: S.filtroTab || (S.fuentes[0] && S.fuentes[0].tab) || '' };
+    S.altaEmbError = null; S.combo = null;
+    return pintar();
+  }
+  if (act === 'altaemb-cerrar') { S.altaEmb = null; S.altaEmbError = null; return pintar(); }
+  if (act === 'altaemb-tab') { S.altaEmb.tab = el.getAttribute('data-t'); return pintar(); }
+  if (act === 'altaemb-guardar') return crearEmbarque();
+  if (act === 'marcarsug') {
+    S.marcados = S.marcados || {};
+    var evsSug = sugeridos(evaluarTodo().filter(function (x) {
+      return (!S.filtroTab || x.emb._tab === S.filtroTab);
+    }));
+    // Solo los que combinan entre sí: mismo BL, buque y fechas.
+    if (evsSug.length) {
+      var base = evsSug[0].emb;
+      var f = function (d) { return esFecha(d) ? d.getTime() : String(d || ''); };
+      evsSug.forEach(function (x) {
+        var o = x.emb;
+        if (clave(o.bl) === clave(base.bl) && clave(o.vessel) === clave(base.vessel) &&
+            f(o.etd) === f(base.etd) && f(o.eta) === f(base.eta)) S.marcados[o._id] = true;
+      });
+      S.adviceTo = null;
+    }
+    return pintar();
+  }
   if (act === 'ctrabrir') {
     var kctr = el.getAttribute('data-k');
     var ref0 = S.ctrEditables.get(kctr);
@@ -5264,6 +5674,10 @@ document.addEventListener('click', function (ev) {
     var par = el.getAttribute('data-c').split(':');
     var valor = el.getAttribute('data-v');
     if (par[0] === 'ctr' && S.editCtr) S.editCtr.cambios[par[1]] = valor;
+    else if (par[0] === 'emb' && S.altaEmb) {
+      S.altaEmb[par[1]] = valor;
+      if (par[1] === 'contract') aplicarContrato(valor);
+    }
     else { S.alta = S.alta || {}; S.alta[par[1]] = valor; }
     S.combo = null;
     return pintar();
@@ -5363,12 +5777,15 @@ document.addEventListener('input', function (e) {
   if (e.target.id === 'psheet') { S.setup.paisSheet = e.target.value; return; }
   if (e.target.id === 'pcli') { S.setup.tabPaisCli = e.target.value; return; }
   if (e.target.id === 'ppro') { S.setup.tabPaisPro = e.target.value; return; }
+  var ae = e.target.getAttribute && e.target.getAttribute('data-aemb');
+  if (ae && S.altaEmb) { S.altaEmb[ae] = e.target.value; return; }
   var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
   if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
   var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
   if (cb2) {
     var p2 = cb2.split(':'), ctx2 = p2[0], campo2 = p2[1];
     if (ctx2 === 'ctr' && S.editCtr) S.editCtr.cambios[campo2] = e.target.value;
+    else if (ctx2 === 'emb' && S.altaEmb) S.altaEmb[campo2] = e.target.value;
     else { S.alta = S.alta || {}; S.alta[campo2] = e.target.value; }
     S.combo = cb2;
     // Solo el desplegable, no la pantalla entera.
@@ -5401,9 +5818,6 @@ document.addEventListener('change', function (e) {
   if (alS) { S.alta = S.alta || {}; S.alta[alS] = e.target.value; return pintar(); }
   var fcs = e.target.getAttribute && e.target.getAttribute('data-fcol');
   if (fcs && e.target.tagName === 'SELECT') { S.fCol[fcs] = e.target.value; return pintar(); }
-  if (e.target.getAttribute && e.target.getAttribute('data-advpeter')) {
-    S.advicePeter = e.target.checked; return pintar();
-  }
   var mk = e.target.getAttribute && e.target.getAttribute('data-marcar');
   if (mk) {
     S.marcados = S.marcados || {};
@@ -5439,6 +5853,8 @@ document.addEventListener('change', function (e) {
 });
 
 document.addEventListener('change', function (e) {
+  var aed = e.target.getAttribute && e.target.getAttribute('data-aemb');
+  if (aed && S.altaEmb) { S.altaEmb[aed] = e.target.value; return pintar(); }
   var ecd = e.target.getAttribute && e.target.getAttribute('data-ectr');
   if (ecd && S.editCtr) { S.editCtr.cambios[ecd] = e.target.value; return pintar(); }
   var cf = e.target.getAttribute && e.target.getAttribute('data-fecha');
