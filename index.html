@@ -287,6 +287,8 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .filtros button[aria-pressed=true],.hoja-barra button[aria-pressed=true]{
   background:var(--acento);color:#fff}
 .conteo{font-size:13px;color:var(--tinta3);margin:0 0 14px}
+.ver-mas{display:flex;gap:13px;align-items:center;justify-content:center;margin-top:16px}
+.ver-mas .ayuda{margin:0}
 .caja-filtros{background:var(--sup);border-radius:var(--r);padding:20px 22px;
   margin-bottom:18px;box-shadow:var(--s1);animation:aparecer .3s var(--ease)}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:15px}
@@ -477,7 +479,8 @@ th.ord:hover{background:#ebebed}
 .combo-wrap{position:relative}
 .combo-wrap.malo input{border-color:rgba(208,52,44,.5);background:var(--pendbg)}
 .combo-wrap .ok-tick{color:var(--ok);margin-left:5px}
-.combo-lista{position:absolute;top:100%;left:0;right:0;z-index:60;margin-top:4px;
+.combo-slot{position:absolute;top:100%;left:0;right:0;z-index:60}
+.combo-lista{position:absolute;top:0;left:0;right:0;margin-top:4px;
   background:rgba(255,255,255,.94);backdrop-filter:blur(20px);
   -webkit-backdrop-filter:blur(20px);border-radius:var(--r2);box-shadow:var(--s3);
   padding:5px;max-height:270px;overflow-y:auto}
@@ -682,6 +685,7 @@ var S = {
   hojaComentarios: null,
   enviando: false,
   fContrato: '',
+  topeContratos: 40,
   borrador: '',
   ultimaEval: {},
   menuSem: null,
@@ -3508,12 +3512,23 @@ function vistaContratos() {
 
   if (!lista.length) return h + '<p class="centro">Nada coincide.</p>';
 
-  return h + '<div class="lista">' + lista.map(filaContrato).join('') + '</div>';
+  // Con cientos de contratos, dibujarlos todos hace lento cada tecleo del
+  // formulario. Se muestran de a tandas.
+  var tope = S.topeContratos || 40;
+  var visibles = lista.slice(0, tope);
+  var resto = lista.length - visibles.length;
+
+  return h + '<div class="lista">' + visibles.map(filaContrato).join('') + '</div>' +
+    (resto > 0
+      ? '<div class="ver-mas"><button data-act="masctr">Ver ' +
+        Math.min(resto, 40) + ' más</button>' +
+        '<span class="ayuda">' + resto + ' contratos sin mostrar</span></div>'
+      : '');
 }
 
 // Escribir para ir acotando, en vez de buscar en una lista de 500. Si lo que
 // se escribe no está en la base, no se inventa: hay que darlo de alta en el
-// Peanut Matcher, porque si no el nombre no cruza con nada.
+// base de datos, porque si no el nombre no cruza con nada.
 function comboAlta(campo, label, opciones, a) {
   var ops = opciones || [];
   var val = a[campo] || '';
@@ -3521,6 +3536,7 @@ function comboAlta(campo, label, opciones, a) {
   return comboGen('a-' + campo, campo, label, ops, val, ok, 'alta');
 }
 
+// eslint-disable-next-line no-unused-vars
 function comboViejo(campo, label, opciones, a) {
   var val = a[campo] || '';
   var abierto = S.combo === campo;
@@ -3543,7 +3559,7 @@ function comboViejo(campo, label, opciones, a) {
   var estado = '';
   if (val && !coincide && !abierto) {
     estado = '<p class="no-base">«' + esc(val) + '» no está en la base. ' +
-      'Hay que agregarlo desde el <b>Peanut Matcher</b> y volver a abrir el alta.</p>';
+      'Hay que agregarlo primero a la <b>base de datos</b> y volver a abrir el alta.</p>';
   }
 
   return '<div class="campo combo-wrap' + (val && !coincide ? ' malo' : '') + '">' +
@@ -3562,7 +3578,7 @@ function comboViejo(campo, label, opciones, a) {
       : '') +
     (abierto && q && !sugeridas.length
       ? '<div class="combo-lista"><p class="sin-match">Ninguno coincide con «' + esc(val) + '». ' +
-        'Si es un cliente nuevo, cargalo primero en el <b>Peanut Matcher</b>.</p></div>'
+        'Si es nuevo, cargalo primero en la <b>base de datos</b>.</p></div>'
       : '') +
     estado + '</div>';
 }
@@ -3699,7 +3715,7 @@ function panelContrato() {
         'y no se tocan.</p>' +
         (fuera.length
           ? '<p class="no-base">Fuera de la base: ' + fuera.join(', ') +
-            '. Agregalos desde el Peanut Matcher.</p>' : '') +
+            '. Hay que agregarlos a la base de datos.</p>' : '') +
         '<div class="alta-acc">' +
           '<button class="primario" data-act="ctrguardar"' +
             (!hayCambios || fuera.length || S.guardandoCtr ? ' disabled' : '') + '>' +
@@ -3713,41 +3729,84 @@ function panelContrato() {
 }
 
 // Combo reutilizable: alta de contratos y edición usan el mismo.
-function comboGen(id, campo, label, opciones, val, ok, ctx, libre) {
-  var abierto = S.combo === ctx + ':' + campo;
+//
+// El desplegable vive en su propio contenedor con id fijo. Así, al tipear, se
+// regenera SOLO esa lista en vez de redibujar la pantalla entera: con 500
+// importadores y cientos de contratos de fondo, el redibujado completo por
+// cada tecla hacía que se trabara.
+function opcionesCombo(opciones, val) {
   var q = clave(val);
-  var sug = [];
-  if (abierto) {
-    sug = (q
-      ? opciones.filter(function (o) { return clave(o).indexOf(q) >= 0; })
-          .sort(function (x, y) {
-            var a1 = clave(x).indexOf(q) === 0 ? 0 : 1;
-            var b1 = clave(y).indexOf(q) === 0 ? 0 : 1;
-            return a1 - b1 || x.localeCompare(y, 'es');
-          })
-      : opciones).slice(0, 9);
+  if (!q) return (opciones || []).slice(0, 9);
+
+  var empiezan = [], contienen = [];
+  for (var i = 0; i < opciones.length; i++) {
+    var pos = clave(opciones[i]).indexOf(q);
+    if (pos === 0) { if (empiezan.length < 9) empiezan.push(opciones[i]); }
+    else if (pos > 0) { if (contienen.length < 9) contienen.push(opciones[i]); }
+    // Corta apenas junta suficientes: no hace falta recorrer los 500.
+    if (empiezan.length >= 9) break;
   }
+  return empiezan.concat(contienen).slice(0, 9);
+}
+
+function htmlListaCombo(id, campo, opciones, val, ctx, libre) {
+  var q = clave(val);
+  var sug = opcionesCombo(opciones, val);
+
+  if (sug.length) {
+    return '<div class="combo-lista">' + sug.map(function (o) {
+      return '<button data-act="combosel2" data-c="' + ctx + ':' + campo + '" ' +
+        'data-v="' + esc(o) + '">' + resaltar(o, q) + '</button>';
+    }).join('') + '</div>';
+  }
+  if (q) {
+    return '<div class="combo-lista"><p class="sin-match">' +
+      (libre
+        ? 'No coincide con ninguna condición ya usada. Se puede guardar igual, pero ' +
+          'las alertas de cobro no van a funcionar hasta mapearla.'
+        : 'Ninguno coincide. Si es nuevo, cargalo en la <b>base de datos</b>.') +
+      '</p></div>';
+  }
+  return '';
+}
+
+function comboGen(id, campo, label, opciones, val, ok, ctx, libre) {
+  var clave2 = ctx + ':' + campo;
+  var abierto = S.combo === clave2;
 
   return '<div class="campo combo-wrap' + (val && !ok && !libre ? ' malo' : '') + '">' +
     '<label for="' + id + '">' + label +
       (ok && val && !libre ? '<span class="ok-tick">✓</span>' : '') + '</label>' +
-    '<input id="' + id + '" data-combo2="' + ctx + ':' + campo + '" autocomplete="off" ' +
+    '<input id="' + id + '" data-combo2="' + clave2 + '" autocomplete="off" ' +
       'placeholder="Escribí para buscar" value="' + esc(val) + '">' +
-    (abierto && sug.length
-      ? '<div class="combo-lista">' + sug.map(function (o) {
-          return '<button data-act="combosel2" data-c="' + ctx + ':' + campo + '" ' +
-            'data-v="' + esc(o) + '">' + resaltar(o, q) + '</button>';
-        }).join('') + '</div>'
-      : '') +
-    (abierto && q && !sug.length
-      ? '<div class="combo-lista"><p class="sin-match">' +
-        (libre
-          ? 'No coincide con ninguna condición ya usada. Se puede guardar igual, pero ' +
-            'las alertas de cobro no van a funcionar hasta mapearla.'
-          : 'Ninguno coincide. Si es nuevo, cargalo en el <b>Peanut Matcher</b>.') +
-        '</p></div>'
-      : '') +
-    '</div>';
+    '<div class="combo-slot" id="cl-' + id + '">' +
+      (abierto ? htmlListaCombo(id, campo, opciones, val, ctx, libre) : '') +
+    '</div></div>';
+}
+
+// Regenera solo el desplegable, sin tocar el resto de la pantalla.
+function refrescarCombo(id, campo, opciones, val, ctx, libre) {
+  var slot = document.getElementById('cl-' + id);
+  if (!slot) return pintar();   // si no está, algo cambió: redibujo completo
+  slot.innerHTML = htmlListaCombo(id, campo, opciones, val, ctx, libre);
+
+  // El marco rojo de "no está en la base" se actualiza sin redibujar.
+  var wrap = slot.parentNode;
+  if (wrap && !libre) {
+    var existe = (opciones || []).some(function (o) { return clave(o) === clave(val); });
+    wrap.classList[(val && !existe) ? 'add' : 'remove']('malo');
+  }
+}
+
+// Qué lista corresponde a cada campo, para poder refrescar sin rearmar todo.
+function listaDeCampo(campo) {
+  var L = S.listas || {};
+  if (campo === 'exportador') return L.exportadores || [];
+  if (campo === 'importador') return L.importadores || [];
+  if (campo === 'producto') return L.productos || [];
+  if (campo === 'tipo') return L.tipos || [];
+  if (campo === 'formaPago') return (S.formasPago || []).map(function (f) { return f.texto; });
+  return [];
 }
 
 function formAlta() {
@@ -3818,7 +3877,7 @@ function formAlta() {
         (S.creando ? 'Creando…' : ico('check') + 'Crear contrato') + '</button>' +
       '<span class="ayuda">' +
         (fuera.length
-          ? 'Hay que dar de alta en el Peanut Matcher: ' + fuera.join(', ')
+          ? 'Hay que agregar a la base de datos: ' + fuera.join(', ')
           : faltan.length
             ? 'Falta completar: ' + faltan.join(', ')
             : 'Se inserta en "' + esc(S.cfg.tabAlta || '—') + '", arriba de la fila TOTAL') +
@@ -4381,11 +4440,13 @@ document.addEventListener('focusin', function (e) {
   if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
   var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
   if (cb2) {
-    var p2 = cb2.split(':');
-    if (p2[0] === 'ctr' && S.editCtr) S.editCtr.cambios[p2[1]] = e.target.value;
-    else { S.alta = S.alta || {}; S.alta[p2[1]] = e.target.value; }
+    var p2 = cb2.split(':'), ctx2 = p2[0], campo2 = p2[1];
+    if (ctx2 === 'ctr' && S.editCtr) S.editCtr.cambios[campo2] = e.target.value;
+    else { S.alta = S.alta || {}; S.alta[campo2] = e.target.value; }
     S.combo = cb2;
-    return pintar();
+    // Solo el desplegable, no la pantalla entera.
+    return refrescarCombo(e.target.id, campo2, listaDeCampo(campo2),
+                          e.target.value, ctx2, campo2 === 'formaPago');
   }
   var cb = e.target.getAttribute && e.target.getAttribute('data-combo');
   if (cb && S.combo !== cb) { S.combo = cb; pintar(); }
@@ -4487,6 +4548,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'ftipo') { S.filtroTipo = el.getAttribute('data-t') || ''; return pintar(); }
   if (act === 'cerraviso') { S.avisoOk = null; return pintar(); }
   if (act === 'altaabrir') {
+    S.topeContratos = 8;   // con el formulario abierto, la lista estorba
     var hoy = new Date();
     S.alta = { cargandoUltimo: true, fecha: hoy.getFullYear() + '-' +
       String(hoy.getMonth() + 1).padStart(2, '0') + '-' +
@@ -4534,9 +4596,10 @@ document.addEventListener('click', function (ev) {
     });
     S.editCtr = { contrato: kctr, orig: orig, cambios: {} };
     S.editCtrError = null; S.combo = null;
+    S.topeContratos = 8;
     return pintar();
   }
-  if (act === 'ctrcerrar') { S.editCtr = null; S.combo = null; return pintar(); }
+  if (act === 'ctrcerrar') { S.editCtr = null; S.combo = null; S.topeContratos = 40; return pintar(); }
   if (act === 'ctrguardar') return guardarContrato();
   if (act === 'combosel2') {
     var par = el.getAttribute('data-c').split(':');
@@ -4559,10 +4622,15 @@ document.addEventListener('click', function (ev) {
     S.combo = null;
     return pintar();
   }
-  if (act === 'altacerrar') { S.alta = null; S.altaError = null; return pintar(); }
+  if (act === 'altacerrar') { S.alta = null; S.altaError = null; S.topeContratos = 40; return pintar(); }
   if (act === 'altaguardar') return guardarAlta();
 
-  if (act === 'fcontrato') { S.fContrato = el.getAttribute('data-c') || ''; return pintar(); }
+  if (act === 'masctr') { S.topeContratos = (S.topeContratos || 40) + 40; return pintar(); }
+  if (act === 'fcontrato') {
+    S.fContrato = el.getAttribute('data-c') || '';
+    S.topeContratos = 40;
+    return pintar();
+  }
   if (act === 'fetapa') {
     S.filtroEtapa = el.getAttribute('data-e') || '';
     return pintar();
@@ -4640,11 +4708,13 @@ document.addEventListener('input', function (e) {
   if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
   var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
   if (cb2) {
-    var p2 = cb2.split(':');
-    if (p2[0] === 'ctr' && S.editCtr) S.editCtr.cambios[p2[1]] = e.target.value;
-    else { S.alta = S.alta || {}; S.alta[p2[1]] = e.target.value; }
+    var p2 = cb2.split(':'), ctx2 = p2[0], campo2 = p2[1];
+    if (ctx2 === 'ctr' && S.editCtr) S.editCtr.cambios[campo2] = e.target.value;
+    else { S.alta = S.alta || {}; S.alta[campo2] = e.target.value; }
     S.combo = cb2;
-    return pintar();
+    // Solo el desplegable, no la pantalla entera.
+    return refrescarCombo(e.target.id, campo2, listaDeCampo(campo2),
+                          e.target.value, ctx2, campo2 === 'formaPago');
   }
   var cb = e.target.getAttribute && e.target.getAttribute('data-combo');
   if (cb) {
