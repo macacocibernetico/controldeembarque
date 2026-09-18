@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZjRkM2QiLz48ZyBmaWxsPSIjZmZmZmZmIj48cmVjdCB4PSIyMCIgeT0iMTkiIHdpZHRoPSIxMCIgaGVpZ2h0PSI5IiByeD0iMS41Ii8+PHJlY3QgeD0iMzIiIHk9IjE5IiB3aWR0aD0iMTAiIGhlaWdodD0iOSIgcng9IjEuNSIvPjxyZWN0IHg9IjI2IiB5PSI5IiB3aWR0aD0iMTAiIGhlaWdodD0iOSIgcng9IjEuNSIvPjxyZWN0IHg9IjQ0IiB5PSIxNCIgd2lkdGg9IjYiIGhlaWdodD0iMTQiIHJ4PSIxLjUiLz48cGF0aCBkPSJNMTEgMzJoNDJsLTYgMTNhNSA1IDAgMCAxLTQuNSAzSDIxLjVhNSA1IDAgMCAxLTQuNS0zeiIvPjwvZz48cGF0aCBkPSJNOCA1NGM0IDAgNC0zIDgtM3M0IDMgOCAzIDQtMyA4LTMgNCAzIDggMyA0LTMgOC0zIDQgMyA4IDMiCiAgICAgICAgc3Ryb2tlPSIjOGZkM2I2IiBzdHJva2Utd2lkdGg9IjMuMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ===========================================================================
    El verde/rojo/celeste/naranja de la planilla es el vocabulario del equipo y
@@ -53,15 +53,16 @@
   --s3:0 25px 50px -12px rgba(0,0,0,.28), 0 0 0 1px rgba(17,24,39,.06);
   --ease:cubic-bezier(.4,0,.2,1);
   --r:12px; --r2:10px; --r3:8px;   /* rounded-xl / lg / md */
-  --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,monospace;
+  --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;
   --safe:env(safe-area-inset-bottom,0px);
 }
 
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',
-    'Helvetica Neue',system-ui,sans-serif;
+  /* San Francisco en Apple; Inter en el resto, que es la más parecida. */
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',
+    'Inter','Segoe UI Variable','Segoe UI','Helvetica Neue',system-ui,sans-serif;
   font-size:15px;line-height:1.47;color:var(--tinta);background:var(--papel);
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
   font-variant-numeric:tabular-nums;letter-spacing:-.01em;
@@ -178,19 +179,6 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
   color:var(--tinta)}
 .titulo-vista p{margin:6px 0 0;font-size:15px;color:var(--tinta3)}
 
-.tabs{display:none}
-.tabs-old{display:flex;gap:26px;margin:0 0 22px;border-bottom:1px solid var(--linea);
-  overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tabs button{background:none;border-radius:0;min-height:0;padding:0 0 12px;
-  color:var(--tinta2);font-size:15px;border-bottom:2px solid transparent;
-  margin-bottom:-1px;white-space:nowrap;font-weight:400}
-.tabs button:hover{background:none;color:var(--tinta)}
-.tabs button:active{transform:none}
-.tabs button[aria-selected=true]{color:var(--tinta);border-bottom-color:var(--acento);
-  font-weight:600}
-
-/* Segmentado --------------------------------------------------------------- */
 /* Segmented control: un contenedor gris claro con las opciones unidas por una
    divisoria tenue. El activo es un bloque blanco con sombra, no un color
    saturado: menos ruido y la misma información. */
@@ -277,10 +265,20 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 /* Jerarquía: el comprador en gray-900 semibold, lo secundario en gray-500. */
 .partes{font-size:16px;display:flex;flex-wrap:wrap;align-items:baseline;gap:7px;
   letter-spacing:-.011em;line-height:1.35}
-.partes .exp{font-weight:400;color:var(--tinta3);font-size:15px}
-.partes .fl{color:var(--tinta4);font-size:13px}
-.partes .imp{font-weight:600;color:var(--tinta)}
-.emb .sub{font-size:14px;color:var(--tinta3);margin-top:5px}
+/* Exportador y comprador apilados con su bandera. Los dos en gray-900: quién
+   vende importa tanto como quién compra, y en gris claro no se leía. */
+.via-partes{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.parte{display:flex;flex-direction:column;gap:3px;min-width:0}
+.partes .exp{font-weight:500;color:var(--tinta);font-size:15px;line-height:1.3}
+.partes .imp{font-weight:600;color:var(--tinta);font-size:15px;line-height:1.3}
+.partes .fl{color:var(--tinta4);font-size:14px;line-height:1.5;padding-top:1px;flex:none}
+
+.rot-pais{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--tinta3)}
+.pais{display:inline-flex;align-items:center;gap:4px}
+.bnd{font-size:14px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji',
+  'Noto Color Emoji',sans-serif}
+.cod2{font-size:11px;font-weight:600;color:var(--tinta4);letter-spacing:.02em}
+.emb .sub{font-size:14px;color:var(--tinta3);margin-top:9px}
 .emb .orig,.emb .ctr{font-size:12.5px;color:var(--tinta4);margin-top:4px}
 .emb .ctr{font-family:var(--mono);letter-spacing:0}
 .emb .quien{font-weight:600;color:var(--tinta)}
@@ -496,7 +494,10 @@ th.ord:hover{background:#ebebed}
   -webkit-overflow-scrolling:touch;animation:entrar .34s var(--ease)}
 @keyframes entrar{from{transform:translateX(100%)}to{transform:none}}
 @keyframes fundir{from{opacity:0}to{opacity:1}}
-.panel h2{font-size:24px;margin:0 0 3px;padding-right:90px;letter-spacing:-.028em}
+.panel h2{font-size:24px;margin:0 0 3px;padding-right:90px;letter-spacing:-.028em;
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.panel h2 .pais{font-size:15px}
+.panel h2 .bnd{font-size:19px}
 .panel .cerrar{position:absolute;top:20px;right:22px;font-size:13.5px;min-height:32px;
   padding:0 14px}
 .bloque{border-top:1px solid var(--linea);margin-top:26px;padding-top:20px}
@@ -669,6 +670,8 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 
 @media(max-width:900px){
   .fila-top,.ctr-fila .fila-top{grid-template-columns:1fr;gap:16px}
+  .via-partes{gap:8px}
+  .partes .exp,.partes .imp{font-size:15.5px}
   .ctr-fila .fila-top > div + div{padding-left:0;border-left:none;
     padding-top:16px;border-top:1px solid var(--linea2)}
   .estados{justify-content:flex-start}
@@ -738,6 +741,8 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
     box-shadow:0 0 0 2px var(--sup)}
 
   .fila-top,.ctr-fila .fila-top{grid-template-columns:1fr;gap:16px}
+  .via-partes{gap:8px}
+  .partes .exp,.partes .imp{font-size:15.5px}
   .ctr-fila .fila-top > div + div{padding-left:0;border-left:none;
     padding-top:16px;border-top:1px solid var(--linea2)}
   .estados{justify-content:flex-start}
@@ -813,6 +818,9 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 }
 
 @media(max-width:400px){
+  /* En pantallas muy chicas el "→" al costado no entra: se apila. */
+  .via-partes{flex-direction:column;gap:6px}
+  .via-partes .fl{transform:rotate(90deg);padding:0;margin-left:3px}
   .tira{grid-template-columns:1fr 1fr}
   .fgrid,.cols-panel,.fechas{grid-template-columns:1fr}
   .tabbar .tb-l{font-size:10px}
@@ -899,6 +907,9 @@ var S = {
   marcados: {},
   advices: new Map(),
   advicesViejos: 0,
+  paises: new Map(),
+  diagPaises: null,
+  sinPais: { clientes: [], proveedores: [] },
   alta: null,
   combo: null,
   creando: false,
@@ -907,7 +918,7 @@ var S = {
   cargando: false,
   guardando: 0,
   pantalla: 'setup',
-  setup: { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabsCtrEdit: [], tabAlta: '', tabDB: '', adviceUrl: '', adviceToken: '', buscando: false, entrando: false }
+  setup: { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabsCtrEdit: [], tabAlta: '', tabDB: '', adviceUrl: '', adviceToken: '', paisSheet: '', tabPaisCli: '', tabPaisPro: '', buscando: false, entrando: false }
 };
 
 try { S.cfg = JSON.parse(localStorage.getItem(LS)) || null; } catch (e) {}
@@ -960,6 +971,7 @@ var CAMPOS = {
   etdMaximo:    {label:'ETD máximo',   tipo:'fecha',   alias:['etd maximo permitido','etd maximo']},
   reclamo:      {label:'Reclamo',      tipo:'texto',   alias:['reclamo','claim']},
   incoterm:     {label:'Incoterm',     tipo:'texto',   alias:['incoterm']},
+  pais:         {label:'País',         tipo:'texto',   alias:['pais','país','country','destino pais']},
   mailsCC:      {label:'Mails CC',     tipo:'texto',   alias:['mails cc','mail cc','mails','destinatarios']},
   paymentCond:  {label:'Cond. pago',   tipo:'texto',   alias:['payment condition','condicion de pago']},
   guia:         {label:'Guía',         tipo:'texto',   alias:['guia','guía','courier']},
@@ -1725,31 +1737,50 @@ async function cargarListas() {
   S.listas = { exportadores: [], importadores: [], productos: [], tipos: [] };
   if (!S.cfg.tabDB) return;
 
-  var limpiar = function (col) {
+  var limpiar = function (vals) {
     var out = [], vistos = {};
-    (col || []).forEach(function (f) {
-      var v = f && f[0] ? String(f[0]).trim() : '';
-      if (!v) return;
-      var k = clave(v);
+    (vals || []).forEach(function (v) {
+      var t = v ? String(v).trim() : '';
+      if (!t) return;
+      var k = clave(t);
       if (vistos[k]) return;      // la lista tiene repetidos
-      vistos[k] = 1; out.push(v);
+      vistos[k] = 1; out.push(t);
     });
     return out.sort(function (a, b) { return a.localeCompare(b, 'es'); });
   };
 
   try {
     var q = "'" + S.cfg.tabDB.replace(/'/g, "''") + "'!";
-    var r = await api(BASE + S.cfg.sheetId + '/values:batchGet?' +
-      ['B3:B2000', 'C3:C2000', 'D3:D2000', 'E3:E20'].map(function (rg) {
-        return 'ranges=' + encodeURIComponent(q + rg);
-      }).join('&'));
+    var r = await api(BASE + S.cfg.sheetId + '/values/' +
+      encodeURIComponent(q + 'A1:Z3000'));
+    var filas = r.values || [];
 
-    var v = r.valueRanges || [];
-    S.listas.importadores = limpiar(v[0] && v[0].values);
-    S.listas.exportadores = limpiar(v[1] && v[1].values);
-    S.listas.productos    = limpiar(v[2] && v[2].values);
-    S.listas.tipos        = limpiar(v[3] && v[3].values);
+    // Los títulos de las listas están en la fila 2 ("Clients", "Suppliers"…).
+    var enc = filas[1] || [];
+    var col = function (test) {
+      for (var i = 0; i < enc.length; i++) {
+        if (enc[i] && test(clave(enc[i]))) return i;
+      }
+      return -1;
+    };
+
+    var cCli = col(function (h) { return h.indexOf('client') >= 0 || h.indexOf('importador') >= 0; });
+    var cPro = col(function (h) { return h.indexOf('supplier') >= 0 || h.indexOf('proveedor') >= 0 ||
+                                          h.indexOf('exportador') >= 0; });
+    var cPrd = col(function (h) { return h.indexOf('product') >= 0; });
+    var cTip = col(function (h) { return h.indexOf('tipo') >= 0 || h.indexOf('type') >= 0; });
+
+    var columna = function (i) {
+      if (i < 0) return [];
+      return filas.slice(2).map(function (f) { return f && f[i]; });
+    };
+
+    S.listas.importadores = limpiar(columna(cCli));
+    S.listas.exportadores = limpiar(columna(cPro));
+    S.listas.productos    = limpiar(columna(cPrd));
+    S.listas.tipos        = limpiar(columna(cTip));
     if (!S.listas.tipos.length) S.listas.tipos = TIPOS_FALLBACK.slice();
+
   } catch (e) {
     S.listas.tipos = TIPOS_FALLBACK.slice();
   }
@@ -1880,6 +1911,171 @@ async function crearContrato(datos) {
   });
 
   return n;
+}
+
+/* --- Banderas --------------------------------------------------------------
+   El país es un atributo de la EMPRESA, no del viaje: un comprador suizo puede
+   recibir la carga en Rotterdam. Por eso sale de la base de datos (import_DB),
+   con una columna de país al lado de cada lista.
+
+   Si una empresa no tiene país cargado, no se muestra bandera. Antes que una
+   bandera equivocada, ninguna.
+   -------------------------------------------------------------------------- */
+
+var PAISES = {
+  AR:'🇦🇷 Argentina', UY:'🇺🇾 Uruguay', PY:'🇵🇾 Paraguay', BR:'🇧🇷 Brasil',
+  BO:'🇧🇴 Bolivia', CL:'🇨🇱 Chile', PE:'🇵🇪 Perú', CO:'🇨🇴 Colombia',
+  EC:'🇪🇨 Ecuador', MX:'🇲🇽 México', US:'🇺🇸 Estados Unidos', CA:'🇨🇦 Canadá',
+  NL:'🇳🇱 Países Bajos', BE:'🇧🇪 Bélgica', DE:'🇩🇪 Alemania', ES:'🇪🇸 España',
+  IT:'🇮🇹 Italia', GB:'🇬🇧 Reino Unido', IE:'🇮🇪 Irlanda', FR:'🇫🇷 Francia',
+  PT:'🇵🇹 Portugal', CH:'🇨🇭 Suiza', AT:'🇦🇹 Austria', PL:'🇵🇱 Polonia',
+  CZ:'🇨🇿 Chequia', SK:'🇸🇰 Eslovaquia', HU:'🇭🇺 Hungría', SI:'🇸🇮 Eslovenia',
+  HR:'🇭🇷 Croacia', RO:'🇷🇴 Rumania', BG:'🇧🇬 Bulgaria', GR:'🇬🇷 Grecia',
+  LV:'🇱🇻 Letonia', EE:'🇪🇪 Estonia', LT:'🇱🇹 Lituania', FI:'🇫🇮 Finlandia',
+  SE:'🇸🇪 Suecia', NO:'🇳🇴 Noruega', DK:'🇩🇰 Dinamarca', RU:'🇷🇺 Rusia',
+  UA:'🇺🇦 Ucrania', GE:'🇬🇪 Georgia', TR:'🇹🇷 Turquía', IL:'🇮🇱 Israel',
+  AE:'🇦🇪 Emiratos', SA:'🇸🇦 Arabia Saudita', JO:'🇯🇴 Jordania', LB:'🇱🇧 Líbano',
+  EG:'🇪🇬 Egipto', DZ:'🇩🇿 Argelia', MA:'🇲🇦 Marruecos', TN:'🇹🇳 Túnez',
+  ZA:'🇿🇦 Sudáfrica', NG:'🇳🇬 Nigeria', KE:'🇰🇪 Kenia', CN:'🇨🇳 China',
+  JP:'🇯🇵 Japón', KR:'🇰🇷 Corea', IN:'🇮🇳 India', VN:'🇻🇳 Vietnam',
+  ID:'🇮🇩 Indonesia', TH:'🇹🇭 Tailandia', MY:'🇲🇾 Malasia', PH:'🇵🇭 Filipinas',
+  SG:'🇸🇬 Singapur', AU:'🇦🇺 Australia', NZ:'🇳🇿 Nueva Zelanda'
+};
+
+// Acepta el código ("CH") o el nombre escrito ("Suiza", "Switzerland").
+var NOMBRE_PAIS = {
+  'argentina':'AR','uruguay':'UY','paraguay':'PY','brasil':'BR','brazil':'BR',
+  'bolivia':'BO','chile':'CL','peru':'PE','colombia':'CO','ecuador':'EC',
+  'mexico':'MX','estados unidos':'US','usa':'US','eeuu':'US','canada':'CA',
+  'holanda':'NL','paises bajos':'NL','netherlands':'NL','belgica':'BE','belgium':'BE',
+  'alemania':'DE','germany':'DE','espana':'ES','spain':'ES','italia':'IT','italy':'IT',
+  'reino unido':'GB','inglaterra':'GB','uk':'GB','united kingdom':'GB','irlanda':'IE',
+  'francia':'FR','france':'FR','portugal':'PT','suiza':'CH','switzerland':'CH',
+  'austria':'AT','polonia':'PL','poland':'PL','chequia':'CZ','republica checa':'CZ',
+  'eslovaquia':'SK','hungria':'HU','eslovenia':'SI','croacia':'HR','rumania':'RO',
+  'romania':'RO','bulgaria':'BG','grecia':'GR','greece':'GR','letonia':'LV','latvia':'LV',
+  'estonia':'EE','lituania':'LT','finlandia':'FI','suecia':'SE','noruega':'NO',
+  'dinamarca':'DK','rusia':'RU','russia':'RU','ucrania':'UA','georgia':'GE',
+  'turquia':'TR','turkey':'TR','israel':'IL','emiratos':'AE','uae':'AE',
+  'arabia saudita':'SA','jordania':'JO','libano':'LB','egipto':'EG','egypt':'EG',
+  'argelia':'DZ','algeria':'DZ','marruecos':'MA','morocco':'MA','tunez':'TN',
+  'sudafrica':'ZA','south africa':'ZA','nigeria':'NG','kenia':'KE',
+  'china':'CN','japon':'JP','japan':'JP','corea':'KR','korea':'KR','india':'IN',
+  'vietnam':'VN','indonesia':'ID','tailandia':'TH','malasia':'MY','filipinas':'PH',
+  'singapur':'SG','australia':'AU','nueva zelanda':'NZ'
+};
+
+function codigoPais(v) {
+  var t = String(v == null ? '' : v).trim();
+  if (!t) return null;
+  var up = t.toUpperCase();
+  if (up.length === 2 && PAISES[up]) return up;
+  var k = clave(t);
+  return NOMBRE_PAIS[k] || null;
+}
+
+/* Los países viven en otra planilla (la comercial), en las hojas de la base de
+   datos. Se lee con el mismo permiso: alcanza con que tu cuenta tenga acceso.
+   Las empresas se atan por nombre, que es el mismo en las dos planillas. */
+async function cargarPaisesEmpresas() {
+  S.paises = new Map();
+  S.sinPais = { clientes: [], proveedores: [] };
+  S.diagPaises = null;
+  if (!S.cfg.paisSheetId) return;
+
+  try {
+    var meta = await api(BASE + S.cfg.paisSheetId +
+      '?fields=' + encodeURIComponent('properties(title),sheets(properties(title))'));
+    var hojas = (meta.sheets || []).map(function (h) { return h.properties.title; });
+
+    // Qué hoja es cuál. Se puede fijar a mano en la configuración; si no, se
+    // busca por nombre.
+    var buscar = function (incluye, excluye) {
+      return hojas.filter(function (n) {
+        var k = clave(n);
+        if (excluye && k.indexOf(excluye) >= 0) return false;
+        return k.indexOf(incluye) >= 0;
+      })[0] || '';
+    };
+    var hProv = S.cfg.tabPaisPro || buscar('supplier') || buscar('proveedor');
+    var hCli  = S.cfg.tabPaisCli || buscar('database', 'supplier') || buscar('client');
+
+    var usadas = [];
+
+    var leer = function (hoja, cubo, etiqueta) {
+      if (!hoja) return Promise.resolve();
+      return api(BASE + S.cfg.paisSheetId + '/values/' +
+        encodeURIComponent("'" + hoja.replace(/'/g, "''") + "'!A1:Z5000"))
+        .then(function (r) {
+          var filas = r.values || [];
+          if (!filas.length) return;
+
+          // El encabezado puede no estar en la fila 1: se toma la primera fila
+          // que tenga una columna de país.
+          var iEnc = -1, cPais = -1, cNom = -1;
+          for (var f = 0; f < Math.min(5, filas.length); f++) {
+            var enc = filas[f] || [];
+            for (var i = 0; i < enc.length; i++) {
+              var k = clave(enc[i]);
+              if (!k) continue;
+              if (cPais < 0 && (k === 'country' || k === 'pais' || k.indexOf('country') >= 0 ||
+                                k.indexOf('pais') >= 0)) { cPais = i; iEnc = f; }
+            }
+            if (cPais >= 0) {
+              var enc2 = filas[f] || [];
+              for (var j = 0; j < enc2.length; j++) {
+                var k2 = clave(enc2[j]);
+                if (cNom < 0 && (k2.indexOf('name') >= 0 || k2.indexOf('empresa') >= 0 ||
+                    k2.indexOf('client') >= 0 || k2.indexOf('supplier') >= 0 ||
+                    k2.indexOf('company') >= 0 || k2.indexOf('razon') >= 0 ||
+                    k2.indexOf('importador') >= 0 || k2.indexOf('exportador') >= 0 ||
+                    k2.indexOf('proveedor') >= 0)) cNom = j;
+              }
+              break;
+            }
+          }
+          if (cPais < 0) { usadas.push(hoja + ': sin columna Country'); return; }
+          // Sin columna de nombre clara, se usa la primera con texto.
+          if (cNom < 0) cNom = 0;
+
+          var con = 0;
+          filas.slice(iEnc + 1).forEach(function (f2) {
+            var nom = f2 && f2[cNom] ? String(f2[cNom]).trim() : '';
+            if (!nom) return;
+            var cod = codigoPais(f2[cPais]);
+            if (cod) { S.paises.set(clave(nom), cod); con++; }
+            else if (cubo.length < 400) cubo.push(nom);
+          });
+          usadas.push(hoja + ' → ' + con + ' con país');
+        })
+        .catch(function (e) { usadas.push(hoja + ': ' + e.message); });
+    };
+
+    await leer(hCli, S.sinPais.clientes, 'clientes');
+    await leer(hProv, S.sinPais.proveedores, 'proveedores');
+
+    S.diagPaises = {
+      planilla: (meta.properties && meta.properties.title) || '',
+      hojas: usadas,
+      total: S.paises.size
+    };
+  } catch (e) {
+    S.diagPaises = { error: e.message };
+  }
+}
+
+// El país sale de la base. Sin dato, no hay bandera.
+function paisDeEmpresa(nombre) {
+  if (!nombre || !S.paises || !S.paises.size) return null;
+  return S.paises.get(clave(nombre)) || null;
+}
+
+function bandera(cod) {
+  if (!cod || !PAISES[cod]) return '';
+  var partes = PAISES[cod].split(' ');
+  return '<span class="pais" title="' + esc(PAISES[cod].replace(partes[0] + ' ', '')) + '">' +
+    '<span class="bnd">' + partes[0] + '</span>' +
+    '<span class="cod2">' + cod + '</span></span>';
 }
 
 /* --- Shipment advice ------------------------------------------------------
@@ -2532,6 +2728,7 @@ async function cargarTodo() {
     }).sort(function (a, b) { return b.usos - a.usos; });
 
     await cargarListas();
+    await cargarPaisesEmpresas();
     await cargarComentarios();
     await cargarAdvices();
 
@@ -2609,11 +2806,6 @@ async function aplicarNota(id, campo, texto) {
   }
 }
 
-function ciclarSemaforo(id, campo) {
-  var f = filaPorId(id);
-  var actual = (f && f[campo]) || 'vacio';
-  aplicarCambio(id, campo, CICLO[(CICLO.indexOf(actual) + 1) % CICLO.length]);
-}
 
 /* ===========================================================================
    Vistas
@@ -2631,10 +2823,7 @@ var ICONOS = {
   check:  'M3 8.5l3.5 3.5L13 5',
   send:   'M14 2L7 9M14 2l-4.5 12L7 9 2 6.5z',
   gear:   'M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2',
-  tabs:   'M2 4h5v10H2zM9 4h5v10H9zM2 2h12',
-  caja:   'M2 5l6-3 6 3v6l-6 3-6-3zM2 5l6 3 6-3M8 8v6',
-  campana:'M8 2a4 4 0 0 0-4 4c0 3-1.5 4-1.5 4h11S12 9 12 6a4 4 0 0 0-4-4M6.5 13a1.8 1.8 0 0 0 3 0',
-  doc:    'M4 1.5h5L12.5 5v9.5h-9zM9 1.5V5h3.5M6 8h4M6 11h4'
+  tabs:   'M2 4h5v10H2zM9 4h5v10H9zM2 2h12'
 };
 
 function ico(nombre) {
@@ -2746,6 +2935,21 @@ function vistaSetup() {
       '<h2>Embarques</h2>' +
       '<p class="ayuda" style="margin:0 0 8px">Marítimas y terrestres si las dos tienen cargas vigentes.</p>' +
       lista('emb', st.tabsEmb) +
+    '</div>' +
+    '<div class="caja">' +
+      '<h2>Países de las empresas</h2>' +
+      '<p class="ayuda" style="margin:0 0 10px">Planilla donde está la base con la ' +
+        'columna <b>Country</b>. Puede ser otra planilla: alcanza con que tu cuenta ' +
+        'tenga acceso. Las empresas se atan por nombre.</p>' +
+      '<div class="campo"><label for="psheet">URL de la planilla comercial</label>' +
+        '<input id="psheet" value="' + esc(st.paisSheet || '') + '" ' +
+        'placeholder="https://docs.google.com/spreadsheets/d/…"></div>' +
+      '<div class="campo"><label for="pcli">Hoja de clientes (opcional)</label>' +
+        '<input id="pcli" value="' + esc(st.tabPaisCli || '') + '" ' +
+        'placeholder="Database_old — vacío = se busca sola"></div>' +
+      '<div class="campo"><label for="ppro">Hoja de proveedores (opcional)</label>' +
+        '<input id="ppro" value="' + esc(st.tabPaisPro || '') + '" ' +
+        'placeholder="Database suppliers — vacío = se busca sola"></div>' +
     '</div>' +
     '<div class="caja">' +
       '<h2>Shipment advice</h2>' +
@@ -3149,6 +3353,36 @@ function diagnostico() {
     }
   });
 
+  // Sin columna de país en la base no hay banderas. Se avisa una vez, con la
+  // instrucción concreta, en vez de dejar el dato en silencio.
+  if (!S.cfg.paisSheetId) {
+    h += '<div class="aviso">Para ver las banderas, cargá en <b>Pestañas</b> la URL de ' +
+      'la planilla comercial, donde están las hojas de base de datos con la columna ' +
+      '<b>Country</b>.</div>';
+  } else if (S.diagPaises && S.diagPaises.error) {
+    h += '<div class="aviso">No se pudo leer la planilla de países: ' +
+      esc(S.diagPaises.error) + '</div>';
+  } else if (S.paises && S.paises.size === 0) {
+    h += '<div class="aviso">Se abrió la planilla de países pero no se encontró ninguna ' +
+      'empresa con país.' +
+      (S.diagPaises && S.diagPaises.hojas.length
+        ? ' Hojas leídas: ' + esc(S.diagPaises.hojas.join(' · ')) + '.'
+        : '') +
+      ' Si las hojas se llaman distinto, se pueden fijar a mano en Pestañas.</div>';
+  } else if (S.sinPais && (S.sinPais.clientes.length || S.sinPais.proveedores.length)) {
+    var faltanP = [];
+    if (S.sinPais.proveedores.length) faltanP.push(S.sinPais.proveedores.length + ' proveedores');
+    if (S.sinPais.clientes.length) faltanP.push(S.sinPais.clientes.length + ' clientes');
+    h += '<details class="diag" style="margin:14px 0 0;padding-top:0;border:none">' +
+      '<summary>' + faltanP.join(' y ') + ' sin país en la base' +
+      ' · ' + (S.paises ? S.paises.size : 0) + ' con país' +
+      '</summary><p style="margin:8px 0 0">' +
+      (S.diagPaises ? esc(S.diagPaises.hojas.join(' · ')) + '. ' : '') +
+      esc(S.sinPais.proveedores.slice(0, 12).concat(S.sinPais.clientes.slice(0, 12)).join(', ')) +
+      (S.sinPais.clientes.length + S.sinPais.proveedores.length > 24 ? '…' : '') +
+      '</p></details>';
+  }
+
   if (S.advicesViejos) {
     h += '<div class="aviso">Hay ' + S.advicesViejos + ' registro' +
       (S.advicesViejos > 1 ? 's' : '') + ' en <b>Advices enviados</b> del formato ' +
@@ -3284,10 +3518,23 @@ function filaEmbarque(x, opts) {
     return src.mapa[c] !== undefined && !src.noAplica[c];
   });
 
+  // Exportador y comprador, cada uno con su bandera debajo. Se apilan, que es
+  // lo que permite que la bandera quede pegada a quien corresponde y no se
+  // pierda en una sola línea larga.
+  var fExp = bandera(paisDeEmpresa(emb.exporter));
+  var fImp = bandera(paisDeEmpresa(emb.importer));
   var partes = (emb.exporter && emb.importer)
-    ? '<span class="exp">' + esc(emb.exporter) + '</span>' +
-      '<span class="fl">→</span><span class="imp">' + esc(emb.importer) + '</span>'
-    : '<span class="imp">' + esc(emb.importer || emb.exporter || 'Sin cargar') + '</span>';
+    ? '<div class="via-partes">' +
+        '<div class="parte"><span class="exp">' + esc(emb.exporter) + '</span>' +
+          (fExp ? '<span class="rot-pais">' + fExp + '</span>' : '') + '</div>' +
+        '<span class="fl">→</span>' +
+        '<div class="parte"><span class="imp">' + esc(emb.importer) + '</span>' +
+          (fImp ? '<span class="rot-pais">' + fImp + '</span>' : '') + '</div>' +
+      '</div>'
+    : '<div class="via-partes"><div class="parte"><span class="imp">' +
+        esc(emb.importer || emb.exporter || 'Sin cargar') + '</span>' +
+        (fImp || fExp ? '<span class="rot-pais">' + (fImp || fExp) + '</span>' : '') +
+      '</div></div>';
 
   var tns = (emb.tns !== null && emb.tns !== undefined && emb.tns !== '')
     ? Number(emb.tns).toLocaleString('es-AR') + ' tn' : '';
@@ -3826,71 +4073,12 @@ function vistaContratos() {
       : '');
 }
 
-// Escribir para ir acotando, en vez de buscar en una lista de 500. Si lo que
-// se escribe no está en la base, no se inventa: hay que darlo de alta en el
-// base de datos, porque si no el nombre no cruza con nada.
-function comboAlta(campo, label, opciones, a) {
-  var ops = opciones || [];
-  var val = a[campo] || '';
-  var ok = ops.some(function (o) { return clave(o) === clave(val); });
-  return comboGen('a-' + campo, campo, label, ops, val, ok, 'alta');
-}
-
-// eslint-disable-next-line no-unused-vars
-function comboViejo(campo, label, opciones, a) {
-  var val = a[campo] || '';
-  var abierto = S.combo === campo;
-  var q = clave(val);
-
-  var coincide = opciones.filter(function (o) { return clave(o) === q; }).length > 0;
-  var sugeridas = [];
-  if (abierto) {
-    sugeridas = (q
-      ? opciones.filter(function (o) { return clave(o).indexOf(q) >= 0; })
-          .sort(function (x, y) {
-            // Primero las que empiezan igual: es lo que uno espera al tipear.
-            var a1 = clave(x).indexOf(q) === 0 ? 0 : 1;
-            var b1 = clave(y).indexOf(q) === 0 ? 0 : 1;
-            return a1 - b1 || x.localeCompare(y, 'es');
-          })
-      : opciones).slice(0, 9);
-  }
-
-  var estado = '';
-  if (val && !coincide && !abierto) {
-    estado = '<p class="no-base">«' + esc(val) + '» no está en la base. ' +
-      'Hay que agregarlo primero a la <b>base de datos</b> y volver a abrir el alta.</p>';
-  }
-
-  return '<div class="campo combo-wrap' + (val && !coincide ? ' malo' : '') + '">' +
-    '<label for="a-' + campo + '">' + label + ' <span class="req">·</span>' +
-    (coincide ? '<span class="ok-tick">✓</span>' : '') + '</label>' +
-    '<input id="a-' + campo + '" data-combo="' + campo + '" autocomplete="off" ' +
-      'placeholder="Escribí para buscar" value="' + esc(val) + '">' +
-    (abierto && sugeridas.length
-      ? '<div class="combo-lista">' +
-        sugeridas.map(function (o) {
-          return '<button data-act="combosel" data-c="' + campo + '" ' +
-            'data-v="' + esc(o) + '">' + resaltar(o, q) + '</button>';
-        }).join('') +
-        (q && !sugeridas.length ? '' : '') +
-        '</div>'
-      : '') +
-    (abierto && q && !sugeridas.length
-      ? '<div class="combo-lista"><p class="sin-match">Ninguno coincide con «' + esc(val) + '». ' +
-        'Si es nuevo, cargalo primero en la <b>base de datos</b>.</p></div>'
-      : '') +
-    estado + '</div>';
-}
-
-function resaltar(texto, q) {
-  if (!q) return esc(texto);
-  var i = clave(texto).indexOf(q);
-  if (i < 0) return esc(texto);
-  return esc(texto.slice(0, i)) + '<b>' + esc(texto.slice(i, i + q.length)) + '</b>' +
-         esc(texto.slice(i + q.length));
-}
-
+// Combo reutilizable: el alta de contratos y la edición usan el mismo.
+//
+// El desplegable vive en su propio contenedor con id fijo. Al tipear se
+// regenera SOLO esa lista en vez de redibujar la pantalla entera: con 500
+// importadores y cientos de contratos de fondo, el redibujado completo por
+// cada tecla hacía que se trabara.
 // Guardar cambios de un contrato. Se escribe celda por celda solo lo que
 // cambió, y nunca sobre las columnas con fórmula (Total, Comisión, ENT, Saldo).
 var CAMPOS_EDIT_CTR = [
@@ -4004,7 +4192,7 @@ function panelContrato() {
     '<button class="cerrar" data-act="ctrcerrar">Cerrar</button>' +
     '<h2>' + esc(e.contrato) + '</h2>' +
     (ref
-      ? '<p style="margin:2px 0 0;font-size:12.5px;color:var(--tinta3)">' +
+      ? '<p style="margin:2px 0 0;font-size:13px;color:var(--tinta3)">' +
         esc(ref.tab) + ' · fila ' + ref.fila + '</p>'
       : '<div class="error" style="margin-top:12px">Este contrato no está en las pestañas ' +
         'editables. Revisá la configuración de pestañas.</div>') +
@@ -4028,12 +4216,15 @@ function panelContrato() {
     '</aside>';
 }
 
-// Combo reutilizable: alta de contratos y edición usan el mismo.
-//
-// El desplegable vive en su propio contenedor con id fijo. Así, al tipear, se
-// regenera SOLO esa lista en vez de redibujar la pantalla entera: con 500
-// importadores y cientos de contratos de fondo, el redibujado completo por
-// cada tecla hacía que se trabara.
+// Marca en negrita la parte del texto que coincide con lo tipeado.
+function resaltar(texto, q) {
+  if (!q) return esc(texto);
+  var i = clave(texto).indexOf(q);
+  if (i < 0) return esc(texto);
+  return esc(texto.slice(0, i)) + '<b>' + esc(texto.slice(i, i + q.length)) + '</b>' +
+         esc(texto.slice(i + q.length));
+}
+
 function opcionesCombo(opciones, val) {
   var q = clave(val);
   if (!q) return (opciones || []).slice(0, 9);
@@ -4107,6 +4298,16 @@ function listaDeCampo(campo) {
   if (campo === 'tipo') return L.tipos || [];
   if (campo === 'formaPago') return (S.formasPago || []).map(function (f) { return f.texto; });
   return [];
+}
+
+// Escribir para ir acotando, en vez de buscar en una lista de 500. Si lo que
+// se escribe no está en la base, no se inventa: hay que darlo de alta ahí
+// primero, porque si no el nombre no cruza con nada.
+function comboAlta(campo, label, opciones, a) {
+  var ops = opciones || [];
+  var val = a[campo] || '';
+  var ok = ops.some(function (o) { return clave(o) === clave(val); });
+  return comboGen('a-' + campo, campo, label, ops, val, ok, 'alta');
 }
 
 function formAlta() {
@@ -4209,9 +4410,17 @@ function filaContrato(r) {
     (editable ? ' data-act="ctrabrir" data-k="' + esc(r.contrato) + '" tabindex="0"' : '') + '>' +
     '<div class="fila-top" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.3fr) minmax(0,1fr)">' +
       '<div>' +
-        '<div class="partes">' +
-          (r.exportador ? '<span class="exp">' + esc(r.exportador) + '</span><span class="fl">→</span>' : '') +
-          '<span class="imp">' + esc(r.importador || 'Sin cliente') + '</span></div>' +
+        '<div class="partes"><div class="via-partes">' +
+          (r.exportador
+            ? '<div class="parte"><span class="exp">' + esc(r.exportador) + '</span>' +
+              (function () { var f = bandera(paisDeEmpresa(r.exportador));
+                return f ? '<span class="rot-pais">' + f + '</span>' : ''; })() +
+              '</div><span class="fl">→</span>' : '') +
+          '<div class="parte"><span class="imp">' + esc(r.importador || 'Sin cliente') + '</span>' +
+            (function () { var f = bandera(paisDeEmpresa(r.importador));
+              return f ? '<span class="rot-pais">' + f + '</span>' : ''; })() +
+          '</div>' +
+        '</div></div>' +
         '<div class="ctr-cod">' + esc(r.contrato) + '</div>' +
         (function () {
           var ref = S.ctrEditables.get(r.contrato);
@@ -4403,9 +4612,11 @@ function vistaPanel(x) {
   var h = '<div class="velo" data-act="cerrar"></div>' +
     '<aside class="panel" role="dialog" aria-label="Embarque ' + esc(emb.contract) + '">' +
     '<button class="cerrar" data-act="cerrar">Cerrar</button>' +
-    '<h2>' + esc(emb.importer || emb.exporter || 'Sin cargar') + '</h2>' +
+    '<h2>' + esc(emb.importer || emb.exporter || 'Sin cargar') +
+      (bandera(paisDeEmpresa(emb.importer)) ? ' ' + bandera(paisDeEmpresa(emb.importer)) : '') + '</h2>' +
     (emb.exporter && emb.importer
-      ? '<p style="margin:0;font-size:13px;color:var(--tinta2)">desde ' + esc(emb.exporter) + '</p>'
+      ? '<p style="margin:2px 0 0;font-size:13.5px;color:var(--tinta2)">desde <b>' +
+        esc(emb.exporter) + '</b> ' + bandera(paisDeEmpresa(emb.exporter)) + '</p>'
       : '') +
     '<p style="margin:5px 0 0;font-family:var(--mono);font-size:12px;color:var(--tinta3)">' +
       esc(emb.contract) + ' · ' + esc(emb._tab) + '</p>' +
@@ -4755,7 +4966,7 @@ document.addEventListener('focusin', function (e) {
 document.addEventListener('click', function (ev) {
   // Elegir para el advice no debe abrir el panel. Se mira toda la píldora, no
   // solo el input: el clic suele caer en el texto o en el cuadradito.
-  if (ev.target.closest && ev.target.closest('.marcar')) {
+  if (ev.target.closest && ev.target.closest('.col-check')) {
     ev.stopPropagation();
     return;
   }
@@ -4802,6 +5013,9 @@ document.addEventListener('click', function (ev) {
     S.cfg.tabDB = S.setup.tabDB;
     S.cfg.adviceUrl = (S.setup.adviceUrl || '').trim();
     S.cfg.adviceToken = (S.setup.adviceToken || '').trim();
+    S.cfg.paisSheetId = extraerId(S.setup.paisSheet) || '';
+    S.cfg.tabPaisCli = (S.setup.tabPaisCli || '').trim();
+    S.cfg.tabPaisPro = (S.setup.tabPaisPro || '').trim();
     S.cfg.titulo = S.pestanas.titulo;
     guardarCfg(); S.pantalla = 'app'; S.error = null;
     return cargarTodo();
@@ -4916,12 +5130,6 @@ document.addEventListener('click', function (ev) {
     return pintar();
   }
 
-  if (act === 'combosel') {
-    S.alta = S.alta || {};
-    S.alta[el.getAttribute('data-c')] = el.getAttribute('data-v');
-    S.combo = null;
-    return pintar();
-  }
   if (act === 'altacerrar') { S.alta = null; S.altaError = null; S.topeContratos = 40; return pintar(); }
   if (act === 'altaguardar') return guardarAlta();
 
@@ -4953,6 +5161,8 @@ document.addEventListener('click', function (ev) {
       tabsCtrEdit: (S.cfg.tabsCtrEdit || []).slice(),
       tabAlta: S.cfg.tabAlta || '', tabDB: S.cfg.tabDB || '',
       adviceUrl: S.cfg.adviceUrl || '', adviceToken: S.cfg.adviceToken || '',
+      paisSheet: S.cfg.paisSheetId || '', tabPaisCli: S.cfg.tabPaisCli || '',
+      tabPaisPro: S.cfg.tabPaisPro || '',
       buscando: false, entrando: false, soloPestanas: true
     };
     S.pantalla = 'setup';
@@ -4963,7 +5173,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'salir') {
     S.cfg = { clientId: S.cfg.clientId };   // conserva el Client ID
     S.pestanas = null; S.datos = null; S.fuentes = null; S.pantalla = 'setup'; S.error = null;
-    S.setup = { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabsCtrEdit: [], tabAlta: '', tabDB: '', adviceUrl: '', adviceToken: '', buscando: false, entrando: false };
+    S.setup = { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabsCtrEdit: [], tabAlta: '', tabDB: '', adviceUrl: '', adviceToken: '', paisSheet: '', tabPaisCli: '', tabPaisPro: '', buscando: false, entrando: false };
     guardarCfg(); return pintar();
   }
 
@@ -4985,10 +5195,6 @@ document.addEventListener('click', function (ev) {
     return aplicarCambio(sid, sc, sv);
   }
 
-  if (act === 'sem') {
-    ev.stopPropagation();
-    return ciclarSemaforo(el.getAttribute('data-f'), el.getAttribute('data-c'));
-  }
 
   if (act === 'abrir') {
     var nuevoSel = el.getAttribute('data-f');
@@ -5004,6 +5210,9 @@ document.addEventListener('input', function (e) {
   if (e.target.getAttribute && e.target.getAttribute('data-advto')) { S.adviceTo = e.target.value; return; }
   if (e.target.id === 'advurl') { S.setup.adviceUrl = e.target.value; return; }
   if (e.target.id === 'advtok') { S.setup.adviceToken = e.target.value; return; }
+  if (e.target.id === 'psheet') { S.setup.paisSheet = e.target.value; return; }
+  if (e.target.id === 'pcli') { S.setup.tabPaisCli = e.target.value; return; }
+  if (e.target.id === 'ppro') { S.setup.tabPaisPro = e.target.value; return; }
   var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
   if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
   var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
