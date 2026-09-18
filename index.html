@@ -630,6 +630,88 @@ th.ord:hover{background:#ebebed}
 .tns-linea .de{color:var(--tinta3);font-weight:400}
 
 /* Setup y mensajes ---------------------------------------------------------- */
+/* Bienvenida y alta -------------------------------------------------------- */
+.bienvenida{max-width:520px;margin:0 auto;padding:7vh 22px 60px}
+.bv-cab{display:flex;align-items:center;gap:12px;margin-bottom:30px}
+.bv-logo .logo{width:34px;height:34px;color:var(--acento)}
+.bv-cab b{display:block;font-size:16px;font-weight:600;letter-spacing:-.02em}
+.bv-cab span{display:block;font-size:13px;color:var(--tinta3)}
+
+.pasos-alta{display:flex;gap:0;list-style:none;margin:0 0 22px;padding:0}
+.pasos-alta li{flex:1;display:flex;align-items:center;gap:8px;font-size:12.5px;
+  color:var(--tinta4);position:relative}
+.pasos-alta li + li{padding-left:12px}
+.pasos-alta li + li::before{content:'';position:absolute;left:0;top:11px;width:8px;
+  height:1px;background:var(--linea3)}
+.bolita{width:22px;height:22px;border-radius:50%;flex:none;display:inline-flex;
+  align-items:center;justify-content:center;font-size:11.5px;font-weight:600;
+  background:var(--sup3);color:var(--tinta4)}
+.pasos-alta .activo{color:var(--tinta);font-weight:600}
+.pasos-alta .activo .bolita{background:var(--acento);color:#fff}
+.pasos-alta .hecho{color:var(--tinta3)}
+.pasos-alta .hecho .bolita{background:var(--okbg);color:var(--ok)}
+.pasos-alta .hecho .bolita .ico{width:11px;height:11px;stroke-width:3}
+
+.bv-caja{background:var(--sup);border-radius:var(--r);padding:28px;box-shadow:var(--s2)}
+.bv-caja h1{font-size:26px;letter-spacing:-.028em;margin:0 0 8px}
+.bv-sub{margin:0 0 22px;font-size:14.5px;color:var(--tinta3);line-height:1.5}
+.bv-pie{text-align:center;margin-top:18px}
+.bv-pie button{background:none;border-color:transparent;color:var(--tinta3);font-size:13.5px}
+.bv-pie button:hover{background:var(--sup2);color:var(--tinta)}
+
+.que-hace{display:flex;flex-direction:column;gap:14px;margin-bottom:22px}
+.que-hace > div{display:flex;gap:13px;align-items:flex-start}
+.que-hace b{display:block;font-size:14.5px;font-weight:600}
+.que-hace span:not(.tile){display:block;font-size:13px;color:var(--tinta3);
+  margin-top:1px;line-height:1.45}
+
+.acordeon{border:1px solid var(--linea2);border-radius:var(--r2);padding:13px 15px}
+.acordeon summary{cursor:pointer;font-size:14px;font-weight:500;display:flex;
+  align-items:center;gap:9px;list-style:none}
+.acordeon summary::-webkit-details-marker{display:none}
+.acordeon summary::before{content:'›';font-size:17px;color:var(--tinta4);
+  transition:transform .18s;display:inline-block}
+.acordeon[open] summary::before{transform:rotate(90deg)}
+.acordeon[open] summary{margin-bottom:12px}
+.una-vez{margin-left:auto;font-size:11.5px;font-weight:500;color:var(--tinta3);
+  background:var(--sup2);padding:3px 9px;border-radius:980px}
+
+/* Configuración ------------------------------------------------------------ */
+.config{max-width:840px;margin:0 auto;padding:34px 22px 80px}
+.cfg-top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:28px}
+.cfg-tit{flex:1;min-width:200px}
+.cfg-top h1{font-size:30px;letter-spacing:-.028em}
+.cfg-top p{margin:5px 0 0;font-size:14px;color:var(--tinta3)}
+
+.cfg-sec{background:var(--sup);border-radius:var(--r);padding:22px 24px;
+  margin-bottom:14px;box-shadow:var(--s1)}
+.cfg-cab{display:flex;gap:13px;align-items:flex-start;margin-bottom:18px}
+.cfg-cab h2{font-size:16px;letter-spacing:-.016em}
+.cfg-cab p{margin:3px 0 0;font-size:13.5px;color:var(--tinta3);line-height:1.45}
+.cfg-cuerpo .campo:last-child{margin-bottom:0}
+.cfg-sub{font-size:13px;color:var(--tinta3);margin:18px 0 9px}
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));
+  gap:14px;margin-top:16px}
+.cfg-grid .campo{margin-bottom:0}
+
+.chk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.chk-caja{display:flex;align-items:center;gap:10px;padding:10px 13px;cursor:pointer;
+  border:1px solid var(--linea2);border-radius:var(--r3);font-size:14px;
+  transition:all .15s var(--ease);min-width:0}
+.chk-caja:hover{border-color:var(--linea3);background:var(--sup2)}
+.chk-caja.on{border-color:var(--acento);background:var(--acentobg)}
+.chk-caja input{position:absolute;opacity:0;width:0;height:0}
+.chk-caja .cbx{width:18px;height:18px;border-radius:5px;flex:none}
+.chk-caja .cbx .ico{width:11px;height:11px}
+.chk-caja.on .cbx{background:var(--acento);border-color:var(--acento)}
+.chk-caja.on .cbx .ico{opacity:1}
+.chk-caja .nom{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chk-caja input:focus-visible + .cbx{outline:2px solid var(--acento);outline-offset:2px}
+
+.cfg-pie{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:26px;
+  padding-top:22px;border-top:1px solid var(--linea2)}
+.cfg-pie .ayuda{margin:0;margin-left:auto}
+
 .setup{max-width:540px;margin:9vh auto;padding:0 22px}
 .setup h1{font-size:28px;margin:0 0 8px;letter-spacing:-.03em}
 .setup .sub{color:var(--tinta2);margin:0 0 28px;font-size:16px}
@@ -764,6 +846,21 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 
 @media(max-width:700px){
   body{font-size:16px}
+
+  .bienvenida{padding:4vh 16px 50px}
+  .bv-caja{padding:22px 18px;border-radius:var(--r)}
+  .bv-caja h1{font-size:23px}
+  .pasos-alta li span:not(.bolita){display:none}
+  .pasos-alta li{flex:none}
+  .pasos-alta{gap:10px;justify-content:center}
+  .pasos-alta li + li::before{width:14px;left:-12px}
+  .config{padding:22px 16px 70px}
+  .cfg-top h1{font-size:26px}
+  .cfg-top button{flex:1}
+  .cfg-sec{padding:18px;border-radius:var(--r2)}
+  .chk-grid{grid-template-columns:1fr}
+  .cfg-pie button{width:100%}
+  .cfg-pie .ayuda{margin-left:0}
 
   .titulo-vista{margin:2px 0 16px}
   .titulo-vista h1{font-size:30px}
@@ -2859,148 +2956,196 @@ function pintarCelda(v) {
 
 /* --- Alta: Client ID y planilla ------------------------------------------- */
 
+// Marco común de las pantallas previas: logo, pasos y la tarjeta del medio.
+function marcoAlta(paso, titulo, bajada, cuerpo, pie) {
+  var pasos = ['Conectar Google', 'Elegir la planilla', 'Configurar'];
+  return '<div class="bienvenida">' +
+    '<div class="bv-cab">' +
+      '<span class="bv-logo">' + LOGO_SVG + '</span>' +
+      '<div><b>Control de embarques</b><span>Latinut</span></div>' +
+    '</div>' +
+    '<ol class="pasos-alta">' +
+      pasos.map(function (t, i) {
+        var n = i + 1;
+        var estado = n < paso ? 'hecho' : (n === paso ? 'activo' : '');
+        return '<li class="' + estado + '"><span class="bolita">' +
+          (n < paso ? ico('check') : n) + '</span>' + t + '</li>';
+      }).join('') +
+    '</ol>' +
+    '<div class="bv-caja">' +
+      '<h1>' + titulo + '</h1>' +
+      (bajada ? '<p class="bv-sub">' + bajada + '</p>' : '') +
+      (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
+      cuerpo +
+    '</div>' +
+    (pie ? '<div class="bv-pie">' + pie + '</div>' : '') +
+    '</div>';
+}
+
 function vistaSetup() {
   var origen = location.origin;
   var cfg = S.cfg || {};
   var st = S.setup;
 
+  // --- 1. Primera vez: qué es esto y cómo se conecta ----------------------
   if (!cfg.clientId) {
-    return '<div class="setup">' +
-      '<h1>Conectar con Google</h1>' +
-      '<p class="sub">Una sola vez: creá un Client ID para que la app pueda pedirte permiso.</p>' +
-      (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
-      '<div class="caja">' +
-        '<div class="paso"><b>1.</b><span>Entrá a <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">console.cloud.google.com/apis/credentials</a> y creá un proyecto si no tenés.</span></div>' +
-        '<div class="paso"><b>2.</b><span>Habilitá la <b>Google Sheets API</b> en Biblioteca.</span></div>' +
-        '<div class="paso"><b>3.</b><span>Crear credenciales → <b>ID de cliente de OAuth</b> → Aplicación web.</span></div>' +
-        '<div class="paso"><b>4.</b><span>En <b>Orígenes autorizados de JavaScript</b> agregá exactamente:<br><code>' + esc(origen) + '</code></span></div>' +
-        '<div class="paso"><b>5.</b><span>Copiá el Client ID y pegalo acá abajo.</span></div>' +
-        '<div class="campo" style="margin-top:16px">' +
-          '<label for="cid">Client ID</label>' +
-          '<input id="cid" placeholder="123456-abc.apps.googleusercontent.com" value="' + esc(st.entrada) + '">' +
-          '<p class="ayuda">Queda guardado en este navegador. No es un secreto: solo funciona desde este dominio.</p>' +
-        '</div>' +
-        '<button class="primario" data-act="set-cid">Guardar y continuar</button>' +
-      '</div></div>';
+    return marcoAlta(1,
+      'Bienvenido',
+      'Esta app trabaja sobre tu planilla de embarques: la lee, avisa lo que ' +
+      'requiere atención y deja cargar sin salir de acá. Los datos siguen ' +
+      'viviendo en Google Sheets.',
+      '<div class="que-hace">' +
+        '<div><span class="tile t-azul">&#128674;</span><div><b>Cargas</b>' +
+          '<span>Los embarques, con su estado y sus documentos</span></div></div>' +
+        '<div><span class="tile t-naranja">&#128276;</span><div><b>Control</b>' +
+          '<span>Lo que está vencido, trabado o incompleto</span></div></div>' +
+        '<div><span class="tile t-violeta">&#128196;</span><div><b>Contratos</b>' +
+          '<span>Saldos, condiciones de pago y altas nuevas</span></div></div>' +
+      '</div>' +
+      '<details class="acordeon"><summary>Hace falta un Client ID de Google' +
+        '<span class="una-vez">una sola vez</span></summary>' +
+        '<div class="paso"><b>1</b><span>Entrá a <a href="https://console.cloud.google.com/apis/credentials" ' +
+          'target="_blank" rel="noopener">Google Cloud, Credenciales</a> y creá un proyecto.</span></div>' +
+        '<div class="paso"><b>2</b><span>Biblioteca, habilitar <b>Google Sheets API</b>.</span></div>' +
+        '<div class="paso"><b>3</b><span>Crear credenciales, <b>ID de cliente de OAuth</b>, Aplicación web.</span></div>' +
+        '<div class="paso"><b>4</b><span>En <b>Orígenes autorizados de JavaScript</b>, exactamente:' +
+          '<br><code>' + esc(origen) + '</code></span></div>' +
+      '</details>' +
+      '<div class="campo" style="margin-top:18px">' +
+        '<label for="cid">Client ID</label>' +
+        '<input id="cid" placeholder="123456-abc.apps.googleusercontent.com" value="' +
+          esc(st.entrada) + '">' +
+        '<p class="ayuda">Queda guardado en este navegador. No es un secreto: solo ' +
+          'funciona desde este dominio.</p>' +
+      '</div>' +
+      '<button class="primario grande ancho" data-act="set-cid">Continuar</button>');
   }
 
-  // Paso propio de login: el popup de Google solo se abre confiable si sale de
-  // un clic directo del usuario.
+  // --- 2. Entrar con la cuenta de Google ----------------------------------
   if (!S.token) {
-    return '<div class="setup">' +
-      '<h1>Entrar con Google</h1>' +
-      '<p class="sub">Vas a usar los permisos que ya tenés sobre la planilla.</p>' +
-      (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
-      '<div class="caja">' +
-        '<button class="primario" data-act="entrar"' + (st.entrando ? ' disabled' : '') + '>' +
-          (st.entrando ? 'Esperando a Google…' : 'Entrar con Google') + '</button>' +
-        ' <button data-act="reset-cid">Cambiar Client ID</button>' +
-        '<p class="ayuda" style="margin-top:14px">Se abre una ventana de Google. Si no aparece, ' +
-          'revisá que el navegador no esté bloqueando ventanas emergentes.</p>' +
-        '<p class="ayuda">Origen de este sitio: <code>' + esc(location.origin) + '</code><br>' +
-          'Tiene que estar igual en los orígenes autorizados del Client ID.</p>' +
-      '</div></div>';
+    return marcoAlta(1,
+      'Entrar con Google',
+      'Vas a usar los permisos que ya tenés sobre la planilla. La app no guarda ' +
+      'tu contraseña ni accede a nada más.',
+      '<button class="primario grande ancho" data-act="entrar"' +
+        (st.entrando ? ' disabled' : '') + '>' +
+        (st.entrando ? 'Esperando a Google…' : 'Entrar con Google') + '</button>' +
+      '<p class="ayuda" style="margin-top:14px">Se abre una ventana de Google. Si no ' +
+        'aparece, revisá que el navegador no bloquee ventanas emergentes.</p>' +
+      '<p class="ayuda">Origen de este sitio: <code>' + esc(origen) + '</code></p>',
+      '<button data-act="reset-cid">Cambiar el Client ID</button>');
   }
 
+  // --- 3. Qué planilla ----------------------------------------------------
   if (!S.pestanas) {
-    return '<div class="setup">' +
-      '<h1>Elegir la planilla</h1>' +
-      '<p class="sub">Pegá la URL de la hoja donde cargás los embarques.</p>' +
-      (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
-      '<div class="caja">' +
-        '<div class="campo">' +
-          '<label for="url">URL o id de la planilla</label>' +
-          '<input id="url" placeholder="https://docs.google.com/spreadsheets/d/…" value="' + esc(st.entrada) + '">' +
-        '</div>' +
-        '<button class="primario" data-act="buscar" ' + (st.buscando ? 'disabled' : '') + '>' +
-          (st.buscando ? 'Buscando pestañas…' : 'Buscar pestañas') + '</button>' +
-      '</div></div>';
+    return marcoAlta(2,
+      'Elegí la planilla',
+      'La de los embarques. Las otras se suman después.',
+      '<div class="campo">' +
+        '<label for="url">URL o id de la planilla</label>' +
+        '<input id="url" placeholder="https://docs.google.com/spreadsheets/d/…" value="' +
+          esc(st.entrada) + '">' +
+      '</div>' +
+      '<button class="primario grande ancho" data-act="buscar"' +
+        (st.buscando ? ' disabled' : '') + '>' +
+        (st.buscando ? 'Buscando…' : 'Continuar') + '</button>',
+      '<button data-act="salir">Empezar de nuevo</button>');
   }
+
+  return vistaConfig();
+}
+
+// Configuración: todo junto y agrupado por tema, en vez de una pila de cajas
+// sin jerarquía.
+function vistaConfig() {
+  var st = S.setup;
+  var yaConfigurado = !!(S.cfg.tabsEmb && S.cfg.tabsEmb.length);
 
   var lista = function (grupo, elegidas) {
-    return S.pestanas.pestanas.map(function (p) {
+    return '<div class="chk-grid">' + S.pestanas.pestanas.map(function (p) {
       var on = elegidas.indexOf(p.nombre) >= 0;
-      return '<label style="display:flex;gap:8px;align-items:center;padding:5px 0;cursor:pointer">' +
-        '<input type="checkbox" style="width:auto;margin:0" data-grupo="' + grupo + '" ' +
-        'value="' + esc(p.nombre) + '"' + (on ? ' checked' : '') + '>' +
-        '<span>' + esc(p.nombre) + '</span></label>';
-    }).join('');
+      return '<label class="chk-caja' + (on ? ' on' : '') + '">' +
+        '<input type="checkbox" data-grupo="' + grupo + '" value="' + esc(p.nombre) + '"' +
+        (on ? ' checked' : '') + '><span class="cbx">' + ico('check') + '</span>' +
+        '<span class="nom">' + esc(p.nombre) + '</span></label>';
+    }).join('') + '</div>';
   };
 
-  return '<div class="setup">' +
-    '<h1>' + esc(S.pestanas.titulo) + '</h1>' +
-    '<p class="sub">Marcá todas las pestañas que correspondan.</p>' +
+  var opciones = function (id, sel, vacio) {
+    return '<select id="' + id + '"><option value="">' + vacio + '</option>' +
+      S.pestanas.pestanas.map(function (p) {
+        return '<option value="' + esc(p.nombre) + '"' +
+          (sel === p.nombre ? ' selected' : '') + '>' + esc(p.nombre) + '</option>';
+      }).join('') + '</select>';
+  };
+
+  function seccion(emoji, color, titulo, bajada, cuerpo) {
+    return '<section class="cfg-sec">' +
+      '<div class="cfg-cab"><span class="tile t-' + color + '">' + emoji + '</span>' +
+        '<div><h2>' + titulo + '</h2><p>' + bajada + '</p></div></div>' +
+      '<div class="cfg-cuerpo">' + cuerpo + '</div></section>';
+  }
+
+  return '<div class="config">' +
+    '<header class="cfg-top">' +
+      '<div class="cfg-tit"><h1>Configuración</h1>' +
+        '<p>' + esc(S.pestanas.titulo) + ' · ' + S.pestanas.pestanas.length + ' pestañas</p></div>' +
+      (yaConfigurado ? '<button data-act="cfg-cancelar">Cancelar</button>' : '') +
+      '<button class="primario" data-act="usar">' + ico('check') +
+        (yaConfigurado ? 'Guardar cambios' : 'Empezar a usar') + '</button>' +
+    '</header>' +
     (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
-    '<div class="caja">' +
-      '<h2>Embarques</h2>' +
-      '<p class="ayuda" style="margin:0 0 8px">Marítimas y terrestres si las dos tienen cargas vigentes.</p>' +
-      lista('emb', st.tabsEmb) +
-    '</div>' +
-    '<div class="caja">' +
-      '<h2>Países de las empresas</h2>' +
-      '<p class="ayuda" style="margin:0 0 10px">Planilla donde está la base con la ' +
-        'columna <b>Country</b>. Puede ser otra planilla: alcanza con que tu cuenta ' +
-        'tenga acceso. Las empresas se atan por nombre.</p>' +
+
+    seccion('&#128674;', 'azul', 'Embarques',
+      'Las pestañas con las cargas. Marcá marítimas y terrestres si las dos están activas.',
+      lista('emb', st.tabsEmb)) +
+
+    seccion('&#9989;', 'verde', 'A facturar',
+      'Adonde pasa un embarque cuando el cliente ya le pagó al exportador. Es la prueba de cobro.',
+      lista('fact', st.tabsFact)) +
+
+    seccion('&#128196;', 'violeta', 'Contratos',
+      'De acá salen la condición de pago y el saldo. Conviene una sola pestaña con todos.',
+      lista('ctr', st.tabsCtr) +
+      '<p class="cfg-sub">Pestañas donde se pueden <b>editar</b> (las reales, no un IMPORTRANGE)</p>' +
+      lista('edit', st.tabsCtrEdit) +
+      '<div class="cfg-grid">' +
+        '<div class="campo"><label for="talta">Dar de alta los contratos nuevos en</label>' +
+          opciones('talta', st.tabAlta, 'No dar de alta desde la app') + '</div>' +
+        '<div class="campo"><label for="tdb">Listas de empresas y productos</label>' +
+          opciones('tdb', st.tabDB, 'Sin listas') + '</div>' +
+      '</div>') +
+
+    seccion('&#127758;', 'naranja', 'Países de las empresas',
+      'Para las banderas. Están en la planilla comercial, en la columna Country.',
       '<div class="campo"><label for="psheet">URL de la planilla comercial</label>' +
         '<input id="psheet" value="' + esc(st.paisSheet || '') + '" ' +
         'placeholder="https://docs.google.com/spreadsheets/d/…"></div>' +
-      '<div class="campo"><label for="pcli">Hoja de clientes (opcional)</label>' +
-        '<input id="pcli" value="' + esc(st.tabPaisCli || '') + '" ' +
-        'placeholder="Database_old — vacío = se busca sola"></div>' +
-      '<div class="campo"><label for="ppro">Hoja de proveedores (opcional)</label>' +
-        '<input id="ppro" value="' + esc(st.tabPaisPro || '') + '" ' +
-        'placeholder="Database suppliers — vacío = se busca sola"></div>' +
-    '</div>' +
-    '<div class="caja">' +
-      '<h2>Shipment advice</h2>' +
-      '<p class="ayuda" style="margin:0 0 10px">URL del Apps Script publicado como ' +
-        'aplicación web. Si se deja vacío, el botón no aparece.</p>' +
-      '<div class="campo"><label for="advurl">URL del script</label>' +
+      '<div class="cfg-grid">' +
+        '<div class="campo"><label for="pcli">Hoja de clientes</label>' +
+          '<input id="pcli" value="' + esc(st.tabPaisCli || '') + '" ' +
+          'placeholder="vacío = se busca sola"></div>' +
+        '<div class="campo"><label for="ppro">Hoja de proveedores</label>' +
+          '<input id="ppro" value="' + esc(st.tabPaisPro || '') + '" ' +
+          'placeholder="vacío = se busca sola"></div>' +
+      '</div>') +
+
+    seccion('&#9993;', 'azul', 'Shipment advice',
+      'Usa el Apps Script de la planilla. Si queda vacío, el botón no aparece.',
+      '<div class="campo"><label for="advurl">URL del script publicado</label>' +
         '<input id="advurl" value="' + esc(st.adviceUrl || '') + '" ' +
         'placeholder="https://script.google.com/macros/s/…/exec"></div>' +
-      '<div class="campo"><label for="advtok">Clave compartida (opcional)</label>' +
+      '<div class="campo"><label for="advtok">Clave compartida</label>' +
         '<input id="advtok" value="' + esc(st.adviceToken || '') + '" ' +
-        'placeholder="una palabra que el script verifique"></div>' +
-    '</div>' +
-    '<div class="caja">' +
-      '<h2>Contratos editables</h2>' +
-      '<p class="ayuda" style="margin:0 0 8px">Las pestañas reales donde se pueden ' +
-        'modificar los contratos. Si la de lectura es un IMPORTRANGE no se puede ' +
-        'escribir ahí, por eso van aparte.</p>' +
-      lista('edit', st.tabsCtrEdit) +
-    '</div>' +
-    '<div class="caja">' +
-      '<h2>Alta de contratos</h2>' +
-      '<p class="ayuda" style="margin:0 0 10px">Dónde se insertan los contratos nuevos ' +
-        '(arriba de la fila TOTAL) y de dónde salen las listas de exportadores, ' +
-        'importadores y productos.</p>' +
-      '<div class="campo"><label for="talta">Pestaña donde dar de alta</label>' +
-        '<select id="talta"><option value="">No dar de alta desde la app</option>' +
-        S.pestanas.pestanas.map(function (p) {
-          return '<option value="' + esc(p.nombre) + '"' +
-            (st.tabAlta === p.nombre ? ' selected' : '') + '>' + esc(p.nombre) + '</option>';
-        }).join('') + '</select></div>' +
-      '<div class="campo"><label for="tdb">Pestaña con las listas</label>' +
-        '<select id="tdb"><option value="">Sin listas</option>' +
-        S.pestanas.pestanas.map(function (p) {
-          return '<option value="' + esc(p.nombre) + '"' +
-            (st.tabDB === p.nombre ? ' selected' : '') + '>' + esc(p.nombre) + '</option>';
-        }).join('') + '</select></div>' +
-    '</div>' +
-    '<div class="caja">' +
-      '<h2>A facturar</h2>' +
-      '<p class="ayuda" style="margin:0 0 8px">La pestaña adonde pasa un embarque ' +
-        'cuando el cliente ya le pagó al exportador. Sirve como prueba de cobro.</p>' +
-      lista('fact', st.tabsFact) +
-    '</div>' +
-    '<div class="caja">' +
-      '<h2>Contratos</h2>' +
-      '<p class="ayuda" style="margin:0 0 8px">De acá sale la condición de pago y el saldo. ' +
-        'Si existe una pestaña con todos juntos conviene esa; si no, marcá abiertos y cerrados.</p>' +
-      lista('ctr', st.tabsCtr) +
-    '</div>' +
-    '<button class="primario" data-act="usar">Usar esta planilla</button>' +
-    '</div>';
+        'placeholder="la misma que está en WEBAPP_CLAVE"></div>') +
+
+    '<div class="cfg-pie">' +
+      '<button data-act="usar" class="primario grande">' + ico('check') +
+        (yaConfigurado ? 'Guardar cambios' : 'Empezar a usar') + '</button>' +
+      '<button data-act="reset-cid">Desconectar la cuenta</button>' +
+      (S.usuario ? '<span class="ayuda">Conectado como ' +
+        esc(nombreCortoAutor(S.usuario.email)) + '</span>' : '') +
+    '</div></div>';
 }
 
 /* --- Tablero --------------------------------------------------------------- */
@@ -5150,6 +5295,11 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'recargar') return cargarTodo();
   if (act === 'cerrar') { S.sel = null; return pintar(); }
+
+  if (act === 'cfg-cancelar') {
+    S.pestanas = null; S.error = null; S.pantalla = 'app';
+    return pintar();
+  }
 
   if (act === 'pestanas') {
     S.pestanas = null; S.error = null;
