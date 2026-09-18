@@ -739,8 +739,11 @@ th.ord:hover{background:#ebebed}
 .chk-caja input:focus-visible + .cbx{outline:2px solid var(--acento);outline-offset:2px}
 
 .compartir{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
-.compartir input{flex:1;min-width:220px;font-family:var(--mono);font-size:12.5px;
-  background:var(--sup2);color:var(--tinta3)}
+.compartir input,.compartir textarea{flex:1;min-width:220px;font-family:var(--mono);
+  font-size:12px;background:var(--sup2);color:var(--tinta3);line-height:1.4;
+  word-break:break-all;min-height:0}
+.compartir{margin-bottom:6px;align-items:flex-start}
+.compartir button{flex:none;margin-top:1px}
 .compartir button{flex:none}
 .cfg-pie{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:26px;
   padding-top:22px;border-top:1px solid var(--linea2)}
@@ -1051,6 +1054,8 @@ var S = {
   combo: null,
   creando: false,
   copiado: false,
+  pegado: '',
+  pegadoMsg: null,
   altaEmb: null,
   altaEmbError: null,
   creandoEmb: false,
@@ -3542,7 +3547,7 @@ function vistaSetup() {
       '<button class="primario grande ancho" data-act="buscar"' +
         (st.buscando ? ' disabled' : '') + '>' +
         (st.buscando ? 'Buscando…' : 'Continuar') + '</button>',
-      '<button data-act="salir">Empezar de nuevo</button>');
+      '<button data-act="reset-cid">Empezar de nuevo</button>');
   }
 
   return vistaConfig();
@@ -3567,6 +3572,27 @@ function configExportable() {
     paisSheetId: c.paisSheetId || '', tabPaisCli: c.tabPaisCli || '',
     tabPaisPro: c.tabPaisPro || ''
   };
+}
+
+// El mismo contenido que el enlace, en una línea para copiar y pegar.
+function codigoConfig() {
+  try { return b64url(JSON.stringify(configExportable())); } catch (e) { return ''; }
+}
+
+function aplicarCodigo(txt) {
+  var t = String(txt || '').trim();
+  if (!t) return null;
+  // Acepta el código pelado o el enlace entero.
+  var m = t.match(/#cfg=([^&\s]+)/);
+  if (m) t = decodeURIComponent(m[1]);
+  try {
+    var b = t.replace(/-/g, '+').replace(/_/g, '/');
+    var bin = atob(b);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    var obj = JSON.parse(new TextDecoder().decode(bytes));
+    return obj && obj.sheetId ? obj : null;
+  } catch (e) { return null; }
 }
 
 function enlaceConfig() {
@@ -3676,11 +3702,26 @@ function vistaConfig() {
       ? seccion('&#128279;', 'verde', 'Compartir con el equipo',
           'Un enlace con esta configuración. Quien lo abra ya la tiene cargada y ' +
           'solo entra con su cuenta. No lleva contraseñas: cada uno usa sus permisos.',
+          '<p class="cfg-sub" style="margin-top:0">1. Enlace directo — lo abren y ya está</p>' +
           '<div class="compartir">' +
             '<input id="linkcfg" readonly value="' + esc(enlaceConfig()) + '">' +
-            '<button data-act="copiarcfg">' + ico('down') +
-              (S.copiado ? '¡Copiado!' : 'Copiar enlace') + '</button>' +
-          '</div>')
+            '<button data-act="copiarcfg" data-q="linkcfg">' + ico('down') +
+              (S.copiado === 'linkcfg' ? '¡Copiado!' : 'Copiar') + '</button>' +
+          '</div>' +
+          '<p class="cfg-sub">2. O el código, para pegar acá abajo en la otra máquina</p>' +
+          '<div class="compartir">' +
+            '<textarea id="codcfg" readonly rows="3">' + esc(codigoConfig()) + '</textarea>' +
+            '<button data-act="copiarcfg" data-q="codcfg">' + ico('down') +
+              (S.copiado === 'codcfg' ? '¡Copiado!' : 'Copiar') + '</button>' +
+          '</div>' +
+          '<p class="cfg-sub">Pegar un código recibido</p>' +
+          '<div class="compartir">' +
+            '<textarea id="pegarcfg" rows="2" placeholder="Pegá acá el código que te pasaron">' +
+              esc(S.pegado || '') + '</textarea>' +
+            '<button data-act="aplicarcfg">Aplicar</button>' +
+          '</div>' +
+          (S.pegadoMsg ? '<p class="ayuda" style="color:var(--acento)">' +
+            esc(S.pegadoMsg) + '</p>' : ''))
       : '') +
 
     '<div class="cfg-pie">' +
@@ -4045,8 +4086,7 @@ function navLateral(evs) {
       (S.guardando > 0 ? '<p class="lat-estado">Guardando…</p>' : '') +
       '<button class="nav-acc" data-act="recargar"' + (S.cargando ? ' disabled' : '') + '>' +
         ico('refresh') + (S.cargando ? 'Actualizando…' : 'Actualizar') + '</button>' +
-      '<button class="nav-acc" data-act="pestanas">' + ico('tabs') + 'Pestañas</button>' +
-      '<button class="nav-acc" data-act="salir">' + ico('gear') + 'Configurar</button>' +
+      '<button class="nav-acc" data-act="pestanas">' + ico('gear') + 'Configuración</button>' +
       (S.usuario ? '<p class="lat-user">' + esc(nombreCortoAutor(S.usuario.email)) + '</p>' : '') +
     '</div></nav>';
 }
@@ -4060,8 +4100,7 @@ function barraMobile() {
       (S.guardando > 0 ? '<span class="tm-guardando">Guardando…</span>' : '') +
       '<button data-act="recargar" aria-label="Actualizar"' +
         (S.cargando ? ' disabled' : '') + '>' + ico('refresh') + '</button>' +
-      '<button data-act="pestanas" aria-label="Pestañas">' + ico('tabs') + '</button>' +
-      '<button data-act="salir" aria-label="Configurar">' + ico('gear') + '</button>' +
+      '<button data-act="pestanas" aria-label="Configuración">' + ico('gear') + '</button>' +
     '</span></div></header>';
 }
 
@@ -5985,14 +6024,26 @@ document.addEventListener('click', function (ev) {
   if (act === 'recargar') return cargarTodo();
   if (act === 'cerrar') { S.sel = null; return pintar(); }
 
+  if (act === 'aplicarcfg') {
+    var ta = document.getElementById('pegarcfg');
+    var obj = aplicarCodigo(ta ? ta.value : '');
+    if (!obj) { S.pegadoMsg = 'Ese código no se entiende. Copialo completo.'; return pintar(); }
+    S.cfg = Object.assign({}, S.cfg || {}, obj);
+    guardarCfg();
+    S.pegadoMsg = 'Listo, configuración cargada. Guardá para entrar.';
+    S.pestanas = null; S.pegado = '';
+    return pintar();
+  }
+
   if (act === 'copiarcfg') {
-    var inp = document.getElementById('linkcfg');
+    var cual = el.getAttribute('data-q') || 'linkcfg';
+    var inp = document.getElementById(cual);
     if (inp) {
       inp.select();
       try { document.execCommand('copy'); } catch (e) {}
       if (navigator.clipboard) navigator.clipboard.writeText(inp.value).catch(function () {});
     }
-    S.copiado = true;
+    S.copiado = cual;
     pintar();
     setTimeout(function () { S.copiado = false; pintar(); }, 2200);
     return;
@@ -6003,7 +6054,9 @@ document.addEventListener('click', function (ev) {
     return pintar();
   }
 
-  if (act === 'pestanas') {
+  // Abrir la configuración NO borra nada: se precarga lo guardado y se puede
+  // cancelar. Antes este botón reseteaba la config y había que rehacerla.
+  if (act === 'pestanas' || act === 'salir') {
     S.pestanas = null; S.error = null;
     S.setup = {
       entrada: S.cfg.sheetId,
@@ -6015,6 +6068,7 @@ document.addEventListener('click', function (ev) {
       adviceUrl: S.cfg.adviceUrl || '', adviceToken: S.cfg.adviceToken || '',
       paisSheet: S.cfg.paisSheetId || '', tabPaisCli: S.cfg.tabPaisCli || '',
       tabPaisPro: S.cfg.tabPaisPro || '',
+      adviceUrl: S.cfg.adviceUrl || '', adviceToken: S.cfg.adviceToken || '',
       buscando: false, entrando: false, soloPestanas: true
     };
     S.pantalla = 'setup';
@@ -6022,12 +6076,6 @@ document.addEventListener('click', function (ev) {
     return buscarPlanilla();
   }
 
-  if (act === 'salir') {
-    S.cfg = { clientId: S.cfg.clientId };   // conserva el Client ID
-    S.pestanas = null; S.datos = null; S.fuentes = null; S.pantalla = 'setup'; S.error = null;
-    S.setup = { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabsCtrEdit: [], tabAlta: '', tabDB: '', adviceUrl: '', adviceToken: '', paisSheet: '', tabPaisCli: '', tabPaisPro: '', buscando: false, entrando: false };
-    guardarCfg(); return pintar();
-  }
 
   if (act === 'menusem') {
     ev.stopPropagation();
@@ -6059,6 +6107,7 @@ document.addEventListener('click', function (ev) {
 document.addEventListener('input', function (e) {
   if (e.target.id === 'busca') { S.busca = e.target.value; pintar(); }
   if (e.target.id === 'nuevo-com') S.borrador = e.target.value;   // sin redibujar
+  if (e.target.id === 'pegarcfg') { S.pegado = e.target.value; return; }
   if (e.target.getAttribute && e.target.getAttribute('data-advto')) { S.adviceTo = e.target.value; return; }
   if (e.target.id === 'advurl') { S.setup.adviceUrl = e.target.value; return; }
   if (e.target.id === 'advtok') { S.setup.adviceToken = e.target.value; return; }
