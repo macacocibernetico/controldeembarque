@@ -169,7 +169,8 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* En escritorio no hay barra superior ni inferior */
-.top-movil,.tabbar,.solo-movil{display:none}
+.top-movil,.tabbar{display:none}
+.segmento.solo-movil{display:none}   /* en escritorio el origen está en la lateral */
 
 /* Pestañas ----/* Pestañas ----------------------------------------------------------------- */
 .titulo-vista{margin:6px 0 20px}
@@ -190,24 +191,41 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
   font-weight:600}
 
 /* Segmentado --------------------------------------------------------------- */
-.segmento{display:inline-flex;gap:3px;background:var(--sup2);padding:3px;
-  border-radius:var(--r2);margin-bottom:22px;max-width:100%;overflow-x:auto;
-  scrollbar-width:none}
-.segmento::-webkit-scrollbar{display:none}
-.segmento button{background:none;border-radius:8px;min-height:32px;padding:0 16px;
-  color:var(--tinta2);font-size:14px;gap:7px;white-space:nowrap}
-.segmento button:hover{background:rgba(255,255,255,.55)}
-.segmento button[aria-pressed=true]{background:var(--sup);color:var(--tinta);
-  font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.segmento.sub{margin-top:-12px;margin-bottom:22px;background:none;padding:0;gap:7px}
-.segmento.sub button{background:var(--sup);border-radius:980px;min-height:33px;
-  padding:0 15px;font-size:13.5px;box-shadow:0 0 0 1px var(--linea2);font-weight:500}
-.segmento.sub button:hover{background:var(--sup2)}
-.segmento.sub button[aria-pressed=true]{background:var(--acento);color:#fff;
-  box-shadow:none;font-weight:600}
-.segmento.sub button[aria-pressed=true] .cnt{color:rgba(255,255,255,.75)}
-.segmento .cnt{font-size:12.5px;color:var(--tinta3)}
-.segmento button[aria-pressed=true] .cnt{color:var(--acento)}
+/* Segmented control: un contenedor gris claro con las opciones unidas por una
+   divisoria tenue. El activo es un bloque blanco con sombra, no un color
+   saturado: menos ruido y la misma información. */
+.segmento,.chips{display:inline-flex;background:var(--sup2);padding:3px;
+  border-radius:var(--r3);margin-bottom:22px;max-width:100%;overflow-x:auto;
+  scrollbar-width:none;gap:0}
+.segmento::-webkit-scrollbar,.chips::-webkit-scrollbar{display:none}
+
+.segmento button,.chips button{position:relative;background:none;border:none;
+  box-shadow:none;border-radius:6px;min-height:32px;padding:0 15px;
+  color:var(--tinta2);font-size:13.5px;font-weight:500;white-space:nowrap;gap:7px}
+.segmento button:hover,.chips button:hover{background:rgba(17,24,39,.035);color:var(--tinta)}
+.segmento button:active,.chips button:active{transform:none}
+
+/* Divisoria entre opciones, que se esconde junto al activo */
+.segmento button + button::before,.chips button + button::before{
+  content:'';position:absolute;left:0;top:7px;bottom:7px;width:1px;
+  background:var(--linea3);opacity:.55}
+.segmento button:hover::before,.chips button:hover::before,
+.segmento button[aria-pressed=true]::before,.chips button[aria-pressed=true]::before,
+.segmento button[aria-pressed=true] + button::before,
+.chips button[aria-pressed=true] + button::before{opacity:0}
+
+.segmento button[aria-pressed=true],.chips button[aria-pressed=true]{
+  background:var(--sup);color:var(--tinta);font-weight:600;
+  box-shadow:0 1px 2px rgba(17,24,39,.08),0 0 0 1px rgba(17,24,39,.04)}
+.segmento button[aria-pressed=true]:hover,.chips button[aria-pressed=true]:hover{
+  background:var(--sup)}
+
+.segmento .cnt,.chips .cnt{font-size:12.5px;color:var(--tinta4);font-weight:400}
+.segmento button[aria-pressed=true] .cnt{color:var(--tinta3)}
+
+/* El filtro de tipo usa el mismo control, apenas más chico */
+.segmento.sub{margin-top:-10px;margin-bottom:22px}
+.segmento.sub button{min-height:30px;padding:0 14px;font-size:13px}
 
 /* Resumen ------------------------------------------------------------------ */
 .tira{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
@@ -377,15 +395,17 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
   flex-wrap:wrap;align-items:center}
 .filtros input{max-width:310px}
 .filtros select{width:auto}
-.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:22px}
-.chips button{font-size:13.5px;min-height:34px;padding:0 16px;color:var(--tinta2);
-  background:var(--sup);box-shadow:0 0 0 1px var(--linea2);font-weight:500}
-.chips button:hover{background:var(--sup2);box-shadow:0 0 0 1px var(--linea3)}
-.chips button[aria-pressed=true]{background:var(--acento);color:#fff;box-shadow:none}
-.chips button[aria-pressed=true]:hover{background:var(--acento-d)}
-.filtros button[aria-pressed=true],.hoja-barra button[aria-pressed=true]{
-  background:var(--acento);color:#fff}
 .conteo{font-size:13px;color:var(--tinta3);margin:0 0 14px}
+/* Acción principal con su texto de ayuda debajo, como un bloque */
+.accion-bloque{display:inline-flex;flex-direction:column;align-items:flex-start;gap:8px}
+.ayuda-accion{margin:0;font-size:12px;color:var(--tinta4);line-height:1.4;padding-left:2px}
+.barra-alta{align-items:flex-start}
+
+/* Datos del contrato: etiqueta y valor alineados en cuadrícula */
+.ctr-refs{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px 32px}
+.ctr-refs .ref b.txt{font-family:inherit;font-weight:500;font-size:14px;
+  color:var(--tinta);letter-spacing:-.006em}
+
 .ver-mas{display:flex;gap:13px;align-items:center;justify-content:center;margin-top:16px}
 .ver-mas .ayuda{margin:0}
 .caja-filtros{background:var(--sup);border-radius:var(--r);padding:20px 22px;
@@ -593,15 +613,20 @@ th.ord:hover{background:#ebebed}
 
 /* Contratos ----------------------------------------------------------------- */
 .ctr-fila{cursor:default}
+/* Las columnas de la tarjeta de contrato separadas por una línea muy tenue,
+   no por espacio a ojo. */
+.ctr-fila .fila-top{grid-template-columns:minmax(0,1.35fr) minmax(0,1.3fr) minmax(0,.95fr)}
+.ctr-fila .fila-top > div + div{padding-left:28px;border-left:1px solid var(--linea2)}
+.ctr-fila .estados{align-content:flex-start}
 .ctr-fila.editable{cursor:pointer}
 .ctr-fila.editable:hover .ed{opacity:1}
 .ctr-cod{font-family:var(--mono);font-size:13.5px;color:var(--tinta);margin-top:4px}
-.barra{height:6px;background:var(--sup3);border-radius:4px;overflow:hidden;margin-bottom:9px}
+.barra{height:6px;background:var(--sup3);border-radius:980px;overflow:hidden;margin-bottom:10px}
 .barra i{display:block;height:100%;background:var(--acento);opacity:.5;border-radius:4px}
 .barra i.full{background:var(--ok);opacity:1}
 .barra i.exc{background:var(--nar);opacity:1}
-.tns-linea{font-size:14px;color:var(--tinta)}
-.tns-linea .de{color:var(--tinta2)}
+.tns-linea{font-size:14px;color:var(--tinta);font-weight:600}
+.tns-linea .de{color:var(--tinta3);font-weight:400}
 
 /* Setup y mensajes ---------------------------------------------------------- */
 .setup{max-width:540px;margin:9vh auto;padding:0 22px}
@@ -643,7 +668,9 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
    =========================================================================== */
 
 @media(max-width:900px){
-  .fila-top{grid-template-columns:1fr;gap:12px}
+  .fila-top,.ctr-fila .fila-top{grid-template-columns:1fr;gap:16px}
+  .ctr-fila .fila-top > div + div{padding-left:0;border-left:none;
+    padding-top:16px;border-top:1px solid var(--linea2)}
   .estados{justify-content:flex-start}
   .refs{gap:16px}
 
@@ -667,7 +694,7 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .marco-app{display:block}
   .top-movil{display:block}
   .tabbar{display:flex}
-  .solo-movil{display:inline-flex}
+  .segmento.solo-movil{display:flex}
   .barra-flota{left:0}
   .full{width:100vw;margin-left:calc(50% - 50vw);padding:0 16px}
   .app{padding:14px 16px calc(96px + var(--safe));max-width:none}
@@ -710,7 +737,9 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
     display:flex;align-items:center;justify-content:center;padding:0 4px;
     box-shadow:0 0 0 2px var(--sup)}
 
-  .fila-top{grid-template-columns:1fr;gap:12px}
+  .fila-top,.ctr-fila .fila-top{grid-template-columns:1fr;gap:16px}
+  .ctr-fila .fila-top > div + div{padding-left:0;border-left:none;
+    padding-top:16px;border-top:1px solid var(--linea2)}
   .estados{justify-content:flex-start}
   .refs{gap:16px}
 
@@ -3755,12 +3784,16 @@ function vistaContratos() {
   if (!S.alta) {
     h += '<div class="barra-alta">' +
       (S.cfg.tabAlta
-        ? '<button class="primario grande" data-act="altaabrir">' +
-          ico('plus') + 'Cargar contrato nuevo</button>' +
-          '<span class="ayuda">Se agrega en "' + esc(S.cfg.tabAlta) +
-            '", arriba de la fila TOTAL</span>'
-        : '<span class="ayuda">Para cargar contratos desde acá, elegí en qué pestaña ' +
-          'insertarlos.</span><button data-act="pestanas">Configurar pestañas</button>') +
+        ? '<div class="accion-bloque">' +
+            '<button class="primario grande" data-act="altaabrir">' +
+              ico('plus') + 'Cargar contrato nuevo</button>' +
+            '<p class="ayuda-accion">Se agrega en «' + esc(S.cfg.tabAlta) +
+              '», arriba de la fila TOTAL</p>' +
+          '</div>'
+        : '<div class="accion-bloque">' +
+            '<button data-act="pestanas">' + ico('tabs') + 'Configurar pestañas</button>' +
+            '<p class="ayuda-accion">Elegí en qué pestaña insertar los contratos nuevos</p>' +
+          '</div>') +
       '</div>';
   }
 
@@ -4218,9 +4251,9 @@ function filaContrato(r) {
           ' tn, más de lo que dice la columna de entregado']);
       }
       if (!items.length) return '';
-      return '<div class="refs">' + items.map(function (i) {
+      return '<div class="refs ctr-refs">' + items.map(function (i) {
         return '<span class="ref"><em>' + esc(i[0]) + '</em>' +
-          '<b style="font-family:inherit;font-weight:400">' + esc(i[1]) + '</b></span>';
+          '<b class="txt">' + esc(i[1]) + '</b></span>';
       }).join('') + '</div>';
     })() +
     '</article>';
