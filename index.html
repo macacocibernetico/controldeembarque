@@ -738,6 +738,10 @@ th.ord:hover{background:#ebebed}
 .chk-caja .nom{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chk-caja input:focus-visible + .cbx{outline:2px solid var(--acento);outline-offset:2px}
 
+.compartir{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.compartir input{flex:1;min-width:220px;font-family:var(--mono);font-size:12.5px;
+  background:var(--sup2);color:var(--tinta3)}
+.compartir button{flex:none}
 .cfg-pie{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:26px;
   padding-top:22px;border-top:1px solid var(--linea2)}
 .cfg-pie .ayuda{margin:0;margin-left:auto}
@@ -977,9 +981,13 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 
 // userinfo.email para saber quién comenta: el portal lo usan varias personas y
 // un comentario sin autor no sirve de nada.
+// gmail.compose deja que CADA persona cree el borrador en SU propio Gmail: la
+// app nunca manda desde otra cuenta. settings.basic es solo para leer la firma.
 var SCOPE = 'https://www.googleapis.com/auth/spreadsheets ' +
             'https://www.googleapis.com/auth/userinfo.email ' +
-            'https://www.googleapis.com/auth/userinfo.profile';
+            'https://www.googleapis.com/auth/userinfo.profile ' +
+            'https://www.googleapis.com/auth/gmail.compose ' +
+            'https://www.googleapis.com/auth/gmail.settings.basic';
 
 var HOJA_COMENTARIOS = 'Comentarios app';
 var ENC_COMENTARIOS = ['Fecha', 'Autor', 'Pestaña', 'Contrato', 'BL', 'Comentario', 'Sobre'];
@@ -1042,6 +1050,7 @@ var S = {
   alta: null,
   combo: null,
   creando: false,
+  copiado: false,
   altaEmb: null,
   altaEmbError: null,
   creandoEmb: false,
@@ -2048,6 +2057,197 @@ async function crearContrato(datos) {
   return n;
 }
 
+/* --- Shipment advice, armado acá -------------------------------------------
+   El borrador se crea con la cuenta de quien aprieta el botón, en su propio
+   Gmail. El Apps Script quedaba publicado como "ejecutar como yo", así que
+   todos los borradores caían en la misma casilla.
+
+   El texto es el mismo que el del script: si allá se cambia una frase, hay que
+   cambiarla acá también. Es el precio de que cada uno use su cuenta.
+   -------------------------------------------------------------------------- */
+
+var ADV = {
+  ccFijo: 'export@latinutsa.com',
+  peter: 'p.kommene@bluewin.ch',
+  umbralParcial: 15,        // saldo mayor a esto => cumplimiento parcial
+  separador: ' / ',
+  asuntoSiempreEnIngles: true
+};
+
+function unirLista(items, conector) {
+  if (!items.length) return '';
+  if (items.length === 1) return items[0];
+  return items.slice(0, -1).join(', ') + ' ' + conector + ' ' + items[items.length - 1];
+}
+
+// Junta las filas elegidas en un solo advice y valida que sean del mismo
+// embarque, igual que el script.
+function datosAdvice(sel) {
+  var f = function (d) { return esFecha(d) ? fmtFecha(d) : ''; };
+  var base = sel[0];
+
+  var errores = [];
+  [['exporter', 'Exporter'], ['importer', 'Importer'], ['vessel', 'Vessel'],
+   ['port', 'Port'], ['bl', 'BL']].forEach(function (c) {
+    if (sel.some(function (o) { return clave(o[c[0]]) !== clave(base[c[0]]); })) {
+      errores.push(c[1] + ' no coincide entre las filas');
+    }
+  });
+  [['etd', 'ETD'], ['eta', 'ETA']].forEach(function (c) {
+    var v = function (o) { return esFecha(o[c[0]]) ? o[c[0]].getTime() : String(o[c[0]] || ''); };
+    if (sel.some(function (o) { return v(o) !== v(base); })) {
+      errores.push(c[1] + ' no coincide entre las filas');
+    }
+  });
+  if (errores.length) return { errores: errores };
+
+  var goods = sel.map(function (o) {
+    return (o.tns || '') + ' Tns ' + (o.product || '');
+  }).join(ADV.separador);
+
+  var contratos = [], vistos = {};
+  sel.forEach(function (o) {
+    var num = String(o.contract || '').trim() || '(sin contrato)';
+    if (vistos[num]) return;
+    vistos[num] = 1;
+    var ctr = S.contratos.get(num);
+    var saldo = ctr && ctr.saldo != null ? normNum(ctr.saldo) : null;
+    if (saldo === null && ctr) saldo = ctr.saldoHoja;
+    contratos.push({ num: num, parcial: (saldo || 0) > ADV.umbralParcial });
+  });
+
+  return {
+    errores: [], exporter: base.exporter, importer: base.importer,
+    etd: f(base.etd), eta: f(base.eta), port: base.port, vessel: base.vessel,
+    bl: base.bl, goods: goods, contratos: contratos,
+    emailTo: base.mailsCC || ''
+  };
+}
+
+function textosAdvice(d, idioma) {
+  var es = (idioma === 'es');
+  var varios = d.contratos.length > 1;
+  var nums = d.contratos.map(function (c) { return c.num; }).join(', ');
+  var todosIgual = d.contratos.every(function (c) { return c.parcial === d.contratos[0].parcial; });
+
+  var estadoEn = function (c) { return c.parcial ? 'in part fulfillment' : 'in full fulfillment'; };
+  var estadoEs = function (c) { return c.parcial ? 'en cumplimiento parcial' : 'en cumplimiento total'; };
+
+  var refEn, refEs;
+  if (!varios) {
+    refEn = 'Re the above contract, we herewith tender ' + estadoEn(d.contratos[0]) + ':';
+    refEs = 'En referencia al contrato mencionado, embarcamos ' + estadoEs(d.contratos[0]) + ':';
+  } else if (todosIgual) {
+    var cEn = d.contratos.length === 2 ? 'both contracts' : 'all contracts';
+    var cEs = d.contratos.length === 2 ? 'ambos contratos' : 'todos los contratos';
+    refEn = 'Re the above contracts, we herewith tender ' + estadoEn(d.contratos[0]) + ' of ' + cEn + ':';
+    refEs = 'En referencia a los contratos mencionados, embarcamos ' + estadoEs(d.contratos[0]) + ' de ' + cEs + ':';
+  } else {
+    refEn = 'Re the above contracts, we herewith tender ' +
+      unirLista(d.contratos.map(function (c) { return estadoEn(c) + ' of contract ' + c.num; }), 'and') + ':';
+    refEs = 'En referencia a los contratos mencionados, embarcamos ' +
+      unirLista(d.contratos.map(function (c) { return estadoEs(c) + ' del contrato ' + c.num; }), 'y') + ':';
+  }
+
+  var asuntoEn = 'Shipment advice - ' + d.importer + ' - ' + d.exporter + ' - ' + d.goods +
+    ' - ETD ' + d.etd + ' - ETA ' + d.eta + ' - BL: ' + d.bl;
+
+  if (es) {
+    return {
+      subject: ADV.asuntoSiempreEnIngles ? asuntoEn
+        : 'Aviso de embarque - ' + d.importer + ' - ' + d.exporter + ' - ' + d.goods +
+          ' - ETD ' + d.etd + ' - ETA ' + d.eta + ' - BL: ' + d.bl,
+      saludo: 'Estimados,',
+      intro: 'Les informamos sobre el siguiente embarque de ' + d.exporter + ' a ' + d.importer,
+      cabecera: [['Para', d.importer], [varios ? 'Contratos' : 'Contrato', nums]],
+      referencia: refEs,
+      campos: [['Buque', d.vessel], ['Puerto de descarga', d.port], ['ETD', d.etd],
+               ['ETA', d.eta], ['Embarcador', d.exporter], ['Mercadería', d.goods]],
+      adjunto: 'Adjunto encontrarán las fotos de los lotes y el draft del B/L de este embarque.',
+      cierre: 'Por favor, confírmenlos.'
+    };
+  }
+  return {
+    subject: asuntoEn,
+    saludo: 'Dear,',
+    intro: 'Let me inform you about the following shipment from ' + d.exporter + ' to ' + d.importer,
+    cabecera: [['To', d.importer], [varios ? 'Contracts' : 'Contract', nums]],
+    referencia: refEn,
+    campos: [['Vessel', d.vessel], ['P.O.D.', d.port], ['ETD', d.etd],
+             ['ETA', d.eta], ['Shipper', d.exporter], ['Goods', d.goods]],
+    adjunto: 'In the attachment you can check the picture of the lots and B/L Draft for this shipment',
+    cierre: 'Please, confirm them!'
+  };
+}
+
+function cuerpoPlano(t) {
+  var bloque = function (pares) {
+    return pares.map(function (p) { return p[0] + ': ' + p[1]; }).join('\n');
+  };
+  return t.saludo + '\n\n' + t.intro + '\n\n' + bloque(t.cabecera) + '\n\n' +
+    t.referencia + '\n\n' + bloque(t.campos) + '\n\n' + t.adjunto + '\n\n' + t.cierre;
+}
+
+function cuerpoHtml(t, firma) {
+  var bloque = function (pares) {
+    return pares.map(function (p) {
+      return '<b>' + esc(p[0]) + ':</b> ' + esc(p[1]);
+    }).join('<br>');
+  };
+  return esc(t.saludo) + '<br><br>' + esc(t.intro) + '<br><br>' +
+    bloque(t.cabecera) + '<br><br>' + esc(t.referencia) + '<br><br>' +
+    bloque(t.campos) + '<br><br>' + esc(t.adjunto) + '<br><br>' + esc(t.cierre) +
+    (firma ? '<br><br>' + firma : '');
+}
+
+// La firma que cada uno tiene puesta en su Gmail.
+async function firmaDelUsuario() {
+  try {
+    var r = await api('https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs');
+    var d = (r.sendAs || []).filter(function (x) { return x.isDefault; })[0];
+    return (d && d.signature) || '';
+  } catch (e) { return ''; }
+}
+
+// base64url con soporte de acentos.
+function b64url(str) {
+  var bytes = new TextEncoder().encode(str);
+  var bin = '';
+  for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function armarMime(para, cc, asunto, texto, html) {
+  var lim = 'b' + Date.now();
+  var enc = function (v) {
+    // Asunto con acentos: se codifica para que no se rompa en ningún cliente.
+    return /[^\x00-\x7F]/.test(v)
+      ? '=?UTF-8?B?' + btoa(String.fromCharCode.apply(null,
+          new TextEncoder().encode(v))) + '?=' : v;
+  };
+  return [
+    'To: ' + para,
+    cc ? 'Cc: ' + cc : '',
+    'Subject: ' + enc(asunto),
+    'MIME-Version: 1.0',
+    'Content-Type: multipart/alternative; boundary="' + lim + '"',
+    '',
+    '--' + lim,
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    btoa(String.fromCharCode.apply(null, new TextEncoder().encode(texto))),
+    '',
+    '--' + lim,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    btoa(String.fromCharCode.apply(null, new TextEncoder().encode(html))),
+    '',
+    '--' + lim + '--'
+  ].filter(function (l, i) { return l !== '' || i > 3; }).join('\r\n');
+}
+
 /* --- Alta de embarques -----------------------------------------------------
    Se agrega una fila al final de la pestaña elegida, escribiendo solo las
    columnas que esa pestaña tiene. Los contratos salen de los ya cargados, así
@@ -2495,90 +2695,116 @@ async function enviarAdvice(ids, desdeBarra) {
   if (!sel.length) return;
 
   var marca = desdeBarra ? { barra: true } : { id: sel[0]._id };
+  var fallar = function (msg) {
+    S.adviceMsg = Object.assign({ error: msg }, marca);
+    S.adviceEnviando = null;
+    pintar();
+  };
 
-  if (!S.cfg.adviceUrl) {
-    S.adviceMsg = Object.assign({ error: 'Falta la URL del script. Se carga en Pestañas.' }, marca);
-    return pintar();
-  }
+  var d = datosAdvice(sel);
+  if (d.errores.length) return fallar('No se pueden combinar: ' + d.errores.join('; ') + '.');
 
-  var destino = (S.adviceTo !== null && S.adviceTo !== undefined)
-    ? S.adviceTo : (sel[0].mailsCC || '');
-  if (!String(destino).trim()) {
-    S.adviceMsg = Object.assign({
-      error: 'Falta el destinatario. La columna Mails CC de esa fila está vacía.'
-    }, marca);
-    return pintar();
-  }
+  var destino = (S.adviceTo !== null && S.adviceTo !== undefined) ? S.adviceTo : d.emailTo;
+  destino = String(destino || '').trim();
+  if (!destino) return fallar('Falta el destinatario. La columna Mails CC de esa fila está vacía.');
 
   S.adviceEnviando = desdeBarra ? 'barra' : sel[0]._id;
   S.adviceMsg = null; pintar();
 
-  var cuerpo = {
-    accion: 'shipment_advice',
-    token: S.cfg.adviceToken || '',
-    pestana: sel[0]._tab,
-    filas: sel.map(function (o) { return o._fila; }),
-    contratos: sel.map(function (o) { return o.contract || ''; }),
-    toEmail: String(destino).trim(),
-    idioma: S.adviceIdioma || 'en',
-    conPeter: !!S.advicePeter,
-    solicitadoPor: S.usuario ? S.usuario.email : ''
-  };
-
   try {
-    var r = await fetch(S.cfg.adviceUrl, {
-      method: 'POST',
-      // text/plain a propósito: con application/json el navegador manda un
-      // preflight OPTIONS que Apps Script no contesta y falla por CORS.
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(cuerpo),
-      redirect: 'follow'
-    });
-    var txt = await r.text();
-    var data = null;
-    try { data = JSON.parse(txt); } catch (e) {}
+    var t = textosAdvice(d, S.adviceIdioma || 'en');
+    var firma = await firmaDelUsuario();
+    var cc = [ADV.ccFijo];
+    if (S.advicePeter) cc.push(ADV.peter);
 
-    if (!r.ok) throw new Error('El script respondió ' + r.status);
-    if (!data) throw new Error('Respuesta inesperada. ¿Está publicado como aplicación web con acceso "Cualquier usuario"?');
-    if (data.error) throw new Error(data.error);
+    var mime = armarMime(destino, cc.join(', '), t.subject,
+                         cuerpoPlano(t), cuerpoHtml(t, firma));
+
+    // El borrador se crea en la cuenta de quien apretó el botón.
+    var r = await api('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: { raw: b64url(mime) } })
+    });
+
+    var url = r && r.id
+      ? 'https://mail.google.com/mail/u/0/#drafts'
+      : 'https://mail.google.com/mail/u/0/#drafts';
 
     S.adviceMsg = Object.assign({
-      ok: true, texto: data.mensaje || 'Borrador creado.', url: data.draftUrl
+      ok: true,
+      texto: 'Borrador creado en tu Gmail.\n' +
+        'Filas: ' + sel.map(function (o) { return o._fila; }).join(', ') + '\n' +
+        'Goods: ' + d.goods + '\n' +
+        'Para: ' + destino + '\nCC: ' + cc.join(', '),
+      url: url
     }, marca);
 
-    // Marcar en el acto, sin esperar a releer la planilla.
+    // Queda anotado para todos, en la planilla.
+    await registrarAdvice(sel, destino, cc.join(', '));
+
     var ahora = new Date();
-    var reg = {
-      fecha: ahora.toLocaleDateString('es-AR'),
-      quien: S.usuario ? S.usuario.email : '',
-      pestana: sel[0]._tab
-    };
+    var reg = { fecha: ahora.toLocaleDateString('es-AR'),
+                quien: S.usuario ? S.usuario.email : '', pestana: sel[0]._tab };
     sel.forEach(function (o) {
       if (o.bl) S.advices.set('b|' + clave(o.bl), reg);
       if (o.contract) S.advices.set('c|' + clave(o.contract), reg);
     });
-
     if (desdeBarra) S.marcados = {};
   } catch (e) {
-    var qs = '?accion=shipment_advice&token=' + encodeURIComponent(S.cfg.adviceToken || '') +
-      '&pestana=' + encodeURIComponent(sel[0]._tab) +
-      '&filas=' + sel.map(function (o) { return o._fila; }).join(',') +
-      '&contratos=' + encodeURIComponent(sel.map(function (o) { return o.contract || ''; }).join('|')) +
-      '&toEmail=' + encodeURIComponent(String(destino).trim()) +
-      '&idioma=' + (S.adviceIdioma || 'en') +
-      '&conPeter=' + (S.advicePeter ? 'true' : 'false');
-    S.adviceMsg = Object.assign({
-      error: e.message,
-      fallback: S.cfg.adviceUrl.replace(/\?.*$/, '') + qs
-    }, marca);
+    var msg = e.message || String(e);
+    if (/insufficient|scope|permission/i.test(msg)) {
+      msg = 'Falta el permiso para crear borradores. Cerrá sesión con "Configurar" ' +
+            'y volvé a entrar: Google va a pedir el permiso nuevo de Gmail.';
+    }
+    return fallar(msg);
   } finally {
     S.adviceEnviando = null; pintar();
   }
 }
 
+// Deja constancia en la pestaña de registro, para que el resto vea qué se mandó.
+async function registrarAdvice(sel, destino, cc) {
+  try {
+    var hoja = HOJA_ADVICES;
+    var meta = await api(BASE + S.cfg.sheetId +
+      '?fields=' + encodeURIComponent('sheets(properties(title))'));
+    var existe = (meta.sheets || []).some(function (h) {
+      return clave(h.properties.title) === clave(hoja);
+    });
+    if (!existe) {
+      await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: [{ addSheet: { properties: { title: hoja } } }] })
+      });
+      await api(BASE + S.cfg.sheetId + '/values/' +
+        encodeURIComponent("'" + hoja + "'!A1") + ':append?valueInputOption=USER_ENTERED', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [['Fecha', 'Pestaña', 'Filas', 'Contratos', 'BLs',
+                                         'Para', 'CC Peter', 'Idioma', 'Solicitado por']] })
+      });
+    }
+    var ahora = new Date();
+    await api(BASE + S.cfg.sheetId + '/values/' +
+      encodeURIComponent("'" + hoja + "'!A1") +
+      ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [[
+        ahora.toLocaleDateString('es-AR') + ' ' +
+          ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+        sel[0]._tab,
+        sel.map(function (o) { return o._fila; }).join(', '),
+        sel.map(function (o) { return o.contract || ''; }).join(', '),
+        sel.map(function (o) { return o.bl || ''; }).join(', '),
+        destino, S.advicePeter ? 'sí' : 'no', S.adviceIdioma || 'en',
+        S.usuario ? S.usuario.email : ''
+      ]] })
+    });
+  } catch (e) { /* el registro no debe voltear el borrador */ }
+}
+
 // Bloque del panel.
 function bloqueAdvice(emb, ev) {
-  if (!S.cfg.adviceUrl) return '';
 
   var falta = faltantesAdvice(emb);
   var msg = (S.adviceMsg && S.adviceMsg.id === emb._id) ? S.adviceMsg : null;
@@ -3324,6 +3550,46 @@ function vistaSetup() {
 
 // Configuración: todo junto y agrupado por tema, en vez de una pila de cajas
 // sin jerarquía.
+/* Compartir la configuración: el que la arma una vez genera un enlace, y el
+   resto lo abre y ya tiene todo cargado. Solo lleva ids de planillas y nombres
+   de pestañas, nada sensible: cada uno entra con su propia cuenta y ve lo que
+   sus permisos le permiten. */
+function configExportable() {
+  var c = S.cfg || {};
+  return {
+    v: 1,
+    clientId: c.clientId || '',
+    sheetId: c.sheetId || '',
+    titulo: c.titulo || '',
+    tabsEmb: c.tabsEmb || [], tabsFact: c.tabsFact || [],
+    tabsCtr: c.tabsCtr || [], tabsCtrEdit: c.tabsCtrEdit || [],
+    tabAlta: c.tabAlta || '', tabDB: c.tabDB || '',
+    paisSheetId: c.paisSheetId || '', tabPaisCli: c.tabPaisCli || '',
+    tabPaisPro: c.tabPaisPro || ''
+  };
+}
+
+function enlaceConfig() {
+  try {
+    var json = JSON.stringify(configExportable());
+    return location.origin + location.pathname + '#cfg=' + encodeURIComponent(b64url(json));
+  } catch (e) { return ''; }
+}
+
+function leerConfigDeEnlace() {
+  var h = location.hash || '';
+  var m = h.match(/#cfg=([^&]+)/);
+  if (!m) return null;
+  try {
+    var b = decodeURIComponent(m[1]).replace(/-/g, '+').replace(/_/g, '/');
+    var bin = atob(b);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    var obj = JSON.parse(new TextDecoder().decode(bytes));
+    return (obj && obj.sheetId) ? obj : null;
+  } catch (e) { return null; }
+}
+
 function vistaConfig() {
   var st = S.setup;
   var yaConfigurado = !!(S.cfg.tabsEmb && S.cfg.tabsEmb.length);
@@ -3406,6 +3672,17 @@ function vistaConfig() {
         '<input id="advtok" value="' + esc(st.adviceToken || '') + '" ' +
         'placeholder="la misma que está en WEBAPP_CLAVE"></div>') +
 
+    (yaConfigurado
+      ? seccion('&#128279;', 'verde', 'Compartir con el equipo',
+          'Un enlace con esta configuración. Quien lo abra ya la tiene cargada y ' +
+          'solo entra con su cuenta. No lleva contraseñas: cada uno usa sus permisos.',
+          '<div class="compartir">' +
+            '<input id="linkcfg" readonly value="' + esc(enlaceConfig()) + '">' +
+            '<button data-act="copiarcfg">' + ico('down') +
+              (S.copiado ? '¡Copiado!' : 'Copiar enlace') + '</button>' +
+          '</div>')
+      : '') +
+
     '<div class="cfg-pie">' +
       '<button data-act="usar" class="primario grande">' + ico('check') +
         (yaConfigurado ? 'Guardar cambios' : 'Empezar a usar') + '</button>' +
@@ -3481,7 +3758,6 @@ function vistaApp() {
 
    Se mira lo que la planilla ya dice, no hace falta cargar nada nuevo. */
 function sugerenciaAdvice(emb, ev) {
-  if (!S.cfg.adviceUrl) return null;
   if (adviceDe(emb)) return null;                 // ya se mandó
   var src = fuenteDe(emb);
   if (src.mapa.bl === undefined || src.noAplica.bl) return null;  // terrestres
@@ -3531,7 +3807,6 @@ function togglePeter() {
 }
 
 function barraAdvice(evs) {
-  if (!S.cfg.adviceUrl) return '';
   var ids = Object.keys(S.marcados || {}).filter(function (k) { return S.marcados[k]; });
   if (!ids.length) return '';
 
@@ -4035,7 +4310,7 @@ function filaEmbarque(x, opts) {
 
   // El selector vive en su propia columna, discreto, como en cualquier lista
   // que se puede seleccionar. No compite con los datos.
-  var seleccionable = !!S.cfg.adviceUrl;
+  var seleccionable = true;
   var marcado = !!(S.marcados && S.marcados[emb._id]);
 
   return '<article class="emb' + (emb._id === S.sel ? ' sel' : '') +
@@ -5710,6 +5985,19 @@ document.addEventListener('click', function (ev) {
   if (act === 'recargar') return cargarTodo();
   if (act === 'cerrar') { S.sel = null; return pintar(); }
 
+  if (act === 'copiarcfg') {
+    var inp = document.getElementById('linkcfg');
+    if (inp) {
+      inp.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      if (navigator.clipboard) navigator.clipboard.writeText(inp.value).catch(function () {});
+    }
+    S.copiado = true;
+    pintar();
+    setTimeout(function () { S.copiado = false; pintar(); }, 2200);
+    return;
+  }
+
   if (act === 'cfg-cancelar') {
     S.pestanas = null; S.error = null; S.pantalla = 'app';
     return pintar();
@@ -5959,6 +6247,17 @@ async function buscarPlanilla() {
 /* --- Arranque -------------------------------------------------------------- */
 
 function arrancar() {
+  // Config compartida por enlace: se toma una vez y queda guardada, así el
+  // resto del equipo no repite el alta.
+  var deEnlace = leerConfigDeEnlace();
+  if (deEnlace) {
+    S.cfg = Object.assign({}, S.cfg || {}, deEnlace);
+    guardarCfg();
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    S.avisoOk = 'Configuración recibida' +
+      (deEnlace.titulo ? ' para «' + deEnlace.titulo + '»' : '') + '. Entrá con tu cuenta.';
+  }
+
   // OAuth necesita un origen http(s). Abierto con doble clic (file://) no anda,
   // y el error de Google en ese caso no explica nada.
   if (location.protocol === 'file:') {
