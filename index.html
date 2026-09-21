@@ -580,6 +580,37 @@ th.ord:hover{background:#ebebed}
   background:var(--pend);border-radius:980px;padding:2px 0}
 .cli-al.vacio{background:none}
 
+/* Cliente desplegable con sus cargas */
+.cli-bloque{border-radius:var(--r3)}
+.cli-bloque.on{background:var(--sup2);padding-bottom:6px}
+.cli-fl{display:inline-flex;color:var(--tinta4);transition:transform .18s var(--ease)}
+.cli-fl .ico{width:13px;height:13px}
+.cli-bloque.on .cli-fl{transform:rotate(90deg);color:var(--acento)}
+.cli-bloque.on .exp-cli{font-weight:600}
+.exp-cli{grid-template-columns:auto minmax(0,1.6fr) minmax(70px,1fr) auto auto auto}
+
+.cargas-det{display:flex;flex-direction:column;gap:7px;padding:4px 10px 6px 30px}
+.cd-fila{background:var(--sup);border-radius:var(--r3);padding:12px 14px;cursor:pointer;
+  box-shadow:0 0 0 1px var(--linea2);transition:box-shadow .18s var(--ease)}
+.cd-fila:hover{box-shadow:0 0 0 1px var(--linea3),var(--s1)}
+.cd-fila:focus-visible{outline:2px solid var(--acento);outline-offset:1px}
+.cd-fila.n-critico{box-shadow:0 0 0 1px rgba(220,38,38,.3)}
+.cd-cab{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.cd-ctr{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--tinta)}
+.cd-prod{font-size:13px;color:var(--tinta3);flex:1;min-width:0}
+.cd-etapa{font-size:12px;color:var(--tinta2);background:var(--sup2);
+  padding:3px 9px;border-radius:980px;white-space:nowrap}
+.cd-refs{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+  gap:10px 16px;margin-bottom:10px}
+.cd-ref{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cd-ref em{font-style:normal;font-size:11px;color:var(--tinta4);font-weight:500}
+.cd-ref b{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--tinta);
+  overflow-wrap:anywhere;line-height:1.3}
+.cd-ref u{text-decoration:none;font-size:12.5px;color:var(--tinta4);font-style:italic}
+.cd-sem{display:flex;gap:10px;flex-wrap:wrap;padding-top:9px;
+  border-top:1px solid var(--linea)}
+.cd-sem .pill{font-size:12px}
+
 .bloque{border-top:1px solid var(--linea);margin-top:26px;padding-top:20px}
 .bloque:first-of-type{border-top:none}
 .kv{display:flex;justify-content:space-between;gap:16px;padding:7px 0;font-size:14.5px}
@@ -937,8 +968,10 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .panel{inset:auto 0 0 0;width:100%;max-height:92vh;border-radius:22px 22px 0 0;
     padding:10px 22px calc(60px + var(--safe));animation:subir .34s var(--ease)}
   .pe-top{margin:0 -22px;padding:12px 22px}
-  .exp-cli{grid-template-columns:minmax(0,1fr) auto auto;gap:9px}
+  .exp-cli{grid-template-columns:auto minmax(0,1fr) auto auto;gap:9px}
   .exp-cli .cli-barra{display:none}
+  .cargas-det{padding-left:10px}
+  .cd-refs{grid-template-columns:1fr 1fr}
   .panel::before{content:'';display:block;width:38px;height:5px;border-radius:3px;
     background:var(--linea3);margin:0 auto 16px;opacity:.45}
   .panel h2{padding-right:0;margin-top:6px}
@@ -1011,8 +1044,10 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .panel{inset:auto 0 0 0;width:100%;max-height:92vh;border-radius:22px 22px 0 0;
     padding:10px 22px calc(60px + var(--safe));animation:subir .34s var(--ease)}
   .pe-top{margin:0 -22px;padding:12px 22px}
-  .exp-cli{grid-template-columns:minmax(0,1fr) auto auto;gap:9px}
+  .exp-cli{grid-template-columns:auto minmax(0,1fr) auto auto;gap:9px}
   .exp-cli .cli-barra{display:none}
+  .cargas-det{padding-left:10px}
+  .cd-refs{grid-template-columns:1fr 1fr}
   .panel::before{content:'';display:block;width:38px;height:5px;border-radius:3px;
     background:var(--linea3);margin:0 auto 16px;opacity:.45}
   .panel h2{padding-right:0;margin-top:6px}
@@ -1153,6 +1188,7 @@ var S = {
   soloSug: false,
   expSoloActivas: true,
   expDesde: '',
+  expAbierto: null,
   fuentesFact: [],
   guardadoOk: false,
   pasar: null,
@@ -4007,7 +4043,8 @@ var ICONOS = {
   cal:    'M2.5 4h11v10h-11zM2.5 7h11M5.5 2v3M10.5 2v3',
   lapiz:  'M11.5 2.5l2 2L6 12l-3 1 1-3zM10 4l2 2',
   mover:  'M2 8h10M9 5l3 3-3 3M14 2v12',
-  volver: 'M6 3L2.5 6.5 6 10M2.5 6.5h7a4 4 0 0 1 0 8H6'
+  volver: 'M6 3L2.5 6.5 6 10M2.5 6.5h7a4 4 0 0 1 0 8H6',
+  flecha: 'M6 3.5l5 4.5-5 4.5'
 };
 
 function ico(nombre) {
@@ -5602,11 +5639,14 @@ function vistaExportadores(evs) {
     var tn = normNum(x.emb.tns) || 0;
     g.tn += tn; g.n++;
     if (x.ev.nivelMax === 'critico' || x.ev.nivelMax === 'alto') g.alertas++;
-    if (!g.clientes.has(i)) g.clientes.set(i, { nombre: i, tn: 0, n: 0, alertas: 0, etapas: {} });
+    if (!g.clientes.has(i)) {
+      g.clientes.set(i, { nombre: i, tn: 0, n: 0, alertas: 0, etapas: {}, cargas: [] });
+    }
     var c = g.clientes.get(i);
     c.tn += tn; c.n++;
     if (x.ev.nivelMax === 'critico' || x.ev.nivelMax === 'alto') c.alertas++;
     c.etapas[x.ev.etapa] = (c.etapas[x.ev.etapa] || 0) + 1;
+    c.cargas.push(x);
   });
 
   var lista = [];
@@ -5660,22 +5700,96 @@ function vistaExportadores(evs) {
             return n ? '<i class="e-' + et.id + '" style="flex:' + n + '" title="' +
               esc(n + ' en ' + et.label) + '"></i>' : '';
           }).join('');
-          return '<button class="exp-cli" data-act="vercargas" data-e="' + esc(g.nombre) +
-            '" data-i="' + esc(c.nombre) + '">' +
-            '<span class="cli-nom">' + esc(c.nombre) +
-              (function () { var f = bandera(paisDeEmpresa(c.nombre));
-                return f ? ' ' + f : ''; })() + '</span>' +
-            '<span class="cli-barra">' + barra + '</span>' +
-            '<span class="cli-tn">' + fmtNum(c.tn) + ' tn</span>' +
-            '<span class="cli-n">' + c.n + '</span>' +
-            (c.alertas ? '<span class="cli-al" title="' + c.alertas + ' con alerta">' +
-              c.alertas + '</span>' : '<span class="cli-al vacio"></span>') +
-            '</button>';
+          var llave = g.nombre + '||' + c.nombre;
+          var abierto = S.expAbierto === llave;
+
+          return '<div class="cli-bloque' + (abierto ? ' on' : '') + '">' +
+            '<button class="exp-cli" data-act="expcli" data-k="' + esc(llave) + '" ' +
+              'aria-expanded="' + abierto + '">' +
+              '<span class="cli-fl">' + ico('flecha') + '</span>' +
+              '<span class="cli-nom">' + esc(c.nombre) +
+                (function () { var f = bandera(paisDeEmpresa(c.nombre));
+                  return f ? ' ' + f : ''; })() + '</span>' +
+              '<span class="cli-barra">' + barra + '</span>' +
+              '<span class="cli-tn">' + fmtNum(c.tn) + ' tn</span>' +
+              '<span class="cli-n">' + c.n + '</span>' +
+              (c.alertas ? '<span class="cli-al" title="' + c.alertas + ' con alerta">' +
+                c.alertas + '</span>' : '<span class="cli-al vacio"></span>') +
+            '</button>' +
+            (abierto ? detalleCargas(c.cargas) : '') +
+          '</div>';
         }).join('') + '</div>' +
       '</div></article>';
   }).join('') + '</div>';
 
   return h;
+}
+
+// El detalle de cada carga: lo que uno mira cuando abre un cliente. Las
+// referencias operativas (booking, contenedores, BL, factura) van a la vista,
+// no escondidas en el panel.
+function detalleCargas(cargas) {
+  var orden = cargas.slice().sort(function (a, b) {
+    var fa = esFecha(a.emb.eta) ? a.emb.eta.getTime() : Infinity;
+    var fb = esFecha(b.emb.eta) ? b.emb.eta.getTime() : Infinity;
+    return fa - fb;
+  });
+
+  return '<div class="cargas-det">' + orden.map(function (x) {
+    var e = x.emb, ev = x.ev;
+    var src = fuenteDe(e);
+    var ref = function (etq, campo, valor) {
+      if (src.mapa[campo] === undefined || src.noAplica[campo]) return '';
+      var v = valor !== undefined ? valor : e[campo];
+      return '<span class="cd-ref"><em>' + etq + '</em>' +
+        (v ? '<b>' + esc(v) + '</b>' : '<u>falta</u>') + '</span>';
+    };
+
+    return '<div class="cd-fila' + (ev.nivelMax ? ' n-' + ev.nivelMax : '') + '" ' +
+      'data-act="abrir" data-f="' + esc(e._id) + '" tabindex="0">' +
+
+      '<div class="cd-cab">' +
+        '<span class="cd-ctr">' + esc(e.contract || 'sin contrato') + '</span>' +
+        '<span class="cd-prod">' + esc(e.product || '') +
+          (e.tns ? ' · ' + fmtNum(normNum(e.tns)) + ' tn' : '') + '</span>' +
+        '<span class="cd-etapa">' + esc(etiquetaEtapa(ev.etapa)) + '</span>' +
+        (ev.nivelMax
+          ? '<span class="pill ' + (ev.nivelMax === 'critico' ? 'pend' : 'nar') +
+            '"><span class="pt"></span>' + ev.alertas.length +
+            (ev.alertas.length === 1 ? ' alerta' : ' alertas') + '</span>'
+          : '') +
+      '</div>' +
+
+      '<div class="cd-refs">' +
+        ref('Booking', 'booking') +
+        ref('Contenedores', 'containers') +
+        ref('BL', 'bl') +
+        ref('Factura', 'invoice') +
+        ref('Buque', 'vessel') +
+        '<span class="cd-ref"><em>ETD → ETA</em><b>' +
+          (esFecha(e.etd) ? fmtFecha(e.etd) : '··') + ' → ' +
+          (esFecha(e.eta) ? fmtFecha(e.eta) : '··') + '</b></span>' +
+        (e.port ? '<span class="cd-ref"><em>Destino</em><b>' + esc(e.port) + '</b></span>' : '') +
+      '</div>' +
+
+      '<div class="cd-sem">' + semaforosChicos(e, src) + '</div>' +
+      '</div>';
+  }).join('') + '</div>';
+}
+
+function etiquetaEtapa(id) {
+  var e = ETAPAS.filter(function (x) { return x.id === id; })[0];
+  return e ? e.label : id;
+}
+
+// Los tres semáforos, con la misma función que usa el resto de la app: color
+// y palabra, nunca color solo.
+function semaforosChicos(emb, src) {
+  return ['docs', 'pics', 'tr'].filter(function (c) {
+    return src.mapa[c] !== undefined && !src.noAplica[c];
+  }).map(function (c) {
+    return pill(c, emb[c] && emb[c].estado ? emb[c].estado : 'vacio');
+  }).join('');
 }
 
 function vistaContratos() {
@@ -6915,6 +7029,11 @@ document.addEventListener('click', function (ev) {
   if (act === 'desmarcar') { S.marcados = {}; S.adviceMsg = null; return pintar(); }
   if (act === 'advidioma') { S.adviceIdioma = el.getAttribute('data-v'); return pintar(); }
   if (act === 'expact') { S.expSoloActivas = el.getAttribute('data-v') === '1'; return pintar(); }
+  if (act === 'expcli') {
+    var kk2 = el.getAttribute('data-k');
+    S.expAbierto = (S.expAbierto === kk2) ? null : kk2;
+    return pintar();
+  }
   if (act === 'vercargas') {
     // Del resumen a las cargas de ese par exportador/cliente.
     S.vista = 'carga'; S.sel = null; S.soloSug = false;
