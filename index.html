@@ -510,6 +510,19 @@ th.ord:hover{background:#ebebed}
 .campo.falta input{border-color:rgba(208,52,44,.45);background:var(--pendbg)}
 .campo .av{color:var(--nar);font-size:12px}
 .campo .mal{color:var(--pend);font-size:12px}
+/* Campo de fecha: texto DD/MM/AAAA + botón que abre el calendario nativo */
+.fecha-caja{position:relative;display:flex}
+.f-txt{padding-right:40px;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.f-cal{position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  min-height:30px;width:32px;padding:0;background:none;border-color:transparent;
+  color:var(--tinta3);border-radius:6px}
+.f-cal:hover{background:var(--sup2);color:var(--acento)}
+.f-cal:active{transform:translateY(-50%) scale(.94)}
+.f-cal .ico{width:16px;height:16px}
+.f-nativo{position:absolute;right:8px;bottom:0;width:1px;height:1px;opacity:0;
+  border:0;padding:0;pointer-events:none}
+.campo-fecha.malo .f-txt{border-color:rgba(220,38,38,.5);background:var(--pendbg)}
+
 .fechas{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:13px}
 .fechas .campo{margin-bottom:0}
 .sems{display:flex;gap:10px;flex-wrap:wrap}
@@ -557,7 +570,7 @@ th.ord:hover{background:#ebebed}
 .com-acc .ayuda{margin:0}
 
 /* Barra flotante ------------------------------------------------------------ */
-.barra-flota{position:fixed;left:0;right:0;bottom:0;z-index:35;
+.barra-flota{position:fixed;left:0;right:0;bottom:0;z-index:37;
   animation:subirBarra .32s var(--ease);
   background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(20px);
   -webkit-backdrop-filter:saturate(180%) blur(20px);
@@ -568,6 +581,8 @@ th.ord:hover{background:#ebebed}
 .bf-fila1{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
 .bf-n{font-weight:600;font-size:14px;background:var(--acentobg);color:var(--acento);
   padding:5px 13px;border-radius:980px;white-space:nowrap}
+.bf-ocultos{font-size:12.5px;color:var(--nar);background:var(--narbg);
+  padding:4px 10px;border-radius:980px;white-space:nowrap}
 .bf-goods{font-size:14px;color:var(--tinta2);flex:1;min-width:0;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .bf-fila1 button{min-height:30px;padding:0 13px;font-size:13px}
@@ -719,6 +734,8 @@ th.ord:hover{background:#ebebed}
 .cfg-cab h2{font-size:16px;letter-spacing:-.016em}
 .cfg-cab p{margin:3px 0 0;font-size:13.5px;color:var(--tinta3);line-height:1.45}
 .cfg-cuerpo .campo:last-child{margin-bottom:0}
+.cfg-info p{margin:0 0 7px;font-size:13.5px}
+.cfg-info p:last-child{margin-bottom:0}
 .cfg-sub{font-size:13px;color:var(--tinta3);margin:18px 0 9px}
 .cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));
   gap:14px;margin-top:16px}
@@ -743,6 +760,8 @@ th.ord:hover{background:#ebebed}
   font-size:12px;background:var(--sup2);color:var(--tinta3);line-height:1.4;
   word-break:break-all;min-height:0}
 .compartir{margin-bottom:6px;align-items:flex-start}
+.sr-solo{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .compartir button{flex:none;margin-top:1px}
 .compartir button{flex:none}
 .cfg-pie{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:26px;
@@ -986,6 +1005,7 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 // un comentario sin autor no sirve de nada.
 // gmail.compose deja que CADA persona cree el borrador en SU propio Gmail: la
 // app nunca manda desde otra cuenta. settings.basic es solo para leer la firma.
+var GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.compose';
 var SCOPE = 'https://www.googleapis.com/auth/spreadsheets ' +
             'https://www.googleapis.com/auth/userinfo.email ' +
             'https://www.googleapis.com/auth/userinfo.profile ' +
@@ -1056,6 +1076,7 @@ var S = {
   copiado: false,
   pegado: '',
   pegadoMsg: null,
+  faltaGmail: false,
   altaEmb: null,
   altaEmbError: null,
   creandoEmb: false,
@@ -1064,7 +1085,7 @@ var S = {
   cargando: false,
   guardando: 0,
   pantalla: 'setup',
-  setup: { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabsCtrEdit: [], tabAlta: '', tabDB: '', adviceUrl: '', adviceToken: '', paisSheet: '', tabPaisCli: '', tabPaisPro: '', buscando: false, entrando: false }
+  setup: { entrada: '', tabsEmb: [], tabsCtr: [], tabsFact: [], tabsCtrEdit: [], tabAlta: '', tabDB: '', paisSheet: '', tabPaisCli: '', tabPaisPro: '', buscando: false, entrando: false }
 };
 
 try { S.cfg = JSON.parse(localStorage.getItem(LS)) || null; } catch (e) {}
@@ -1251,7 +1272,13 @@ function normFecha(v) {
   if (m) {
     var d = +m[1], mes = +m[2], a = +m[3]; if (a < 100) a += 2000;
     var f = new Date(Date.UTC(a, mes - 1, d));
-    return isNaN(f) ? { invalida: true, crudo: s } : f;
+    // Date desborda en silencio: 31/31 da otro mes y 31/02 se vuelve marzo.
+    // Si los números no vuelven iguales, la fecha no existe.
+    if (isNaN(f) || f.getUTCDate() !== d || f.getUTCMonth() !== mes - 1 ||
+        f.getUTCFullYear() !== a) {
+      return { invalida: true, crudo: s };
+    }
+    return f;
   }
   // "28/09" sin año. Es un dato incompleto, no una fecha imposible: se asume el
   // año en curso y después se ajusta contra el ETD si hiciera falta.
@@ -1673,6 +1700,15 @@ function pedirToken(interactivo) {
 
     tokenClient.callback = function (resp) {
       if (listo) return;
+      // Quien ya había entrado antes tiene un permiso viejo sin Gmail. Si falta,
+      // se vuelve a pedir mostrando el consentimiento, una sola vez.
+      try {
+        if (!interactivo && resp.access_token && google.accounts.oauth2.hasGrantedAllScopes &&
+            !google.accounts.oauth2.hasGrantedAllScopes(resp, GMAIL_SCOPE)) {
+          listo = true;
+          return pedirToken(true).then(resolve, reject);
+        }
+      } catch (e) {}
       if (resp.error) {
         return fallar(resp.error === 'access_denied'
           ? 'No diste permiso a la app.'
@@ -2380,6 +2416,11 @@ async function crearEmbarque() {
       if (idx === undefined) return;
       var val = a[campo];
       if (c[2] === 'number') val = parseFloat(val);
+      if (c[2] === 'date') {
+        var dv = normFecha(val);
+        if (!esFecha(dv)) return;      // fecha ilegible: mejor no escribir nada
+        val = dv;
+      }
       reqs.push({
         updateCells: {
           range: { sheetId: src.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
@@ -2447,9 +2488,10 @@ function formAltaEmb() {
       var libre = (tipo === 'combo-ctr' || tipo === 'combo-prod');
       return comboGen('e-' + campo, campo, label, ops, val, ok, 'emb', libre);
     }
+    if (tipo === 'date') return campoFecha('e-' + campo, 'data-aemb', campo, label, val);
     return '<div class="campo"><label for="e-' + campo + '">' + label + '</label>' +
       '<input id="e-' + campo + '" data-aemb="' + campo + '" type="' +
-      (tipo === 'number' ? 'number' : tipo === 'date' ? 'date' : 'text') +
+      (tipo === 'number' ? 'number' : 'text') +
       '" value="' + esc(val) + '"></div>';
   }).join('');
 
@@ -2479,6 +2521,92 @@ function formAltaEmb() {
       '<span class="ayuda">Se inserta arriba de la fila TOTAL de «' + esc(a.tab) +
         '». Docs, Fotos y T.R. arrancan en rojo.</span>' +
     '</div></div>';
+}
+
+/* --- Campo de fecha --------------------------------------------------------
+   Un input type="date" muestra el formato del sistema operativo, que en varias
+   máquinas es MM/DD/AAAA, y además dispara "change" apenas se completa el año:
+   la pantalla se redibujaba en medio del tipeo y el campo perdía el foco.
+
+   Acá se escribe en un campo de texto común, siempre DD/MM/AAAA, que se va
+   formateando solo y NO redibuja mientras se tipea. Al lado, un botón abre el
+   calendario nativo.
+   -------------------------------------------------------------------------- */
+
+// Cualquier cosa que venga de la planilla, mostrada como DD/MM/AAAA.
+function aTextoFecha(v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (esFecha(v)) {
+    return String(v.getUTCDate()).padStart(2, '0') + '/' +
+           String(v.getUTCMonth() + 1).padStart(2, '0') + '/' + v.getUTCFullYear();
+  }
+  var d = normFecha(v);
+  if (esFecha(d)) {
+    return String(d.getUTCDate()).padStart(2, '0') + '/' +
+           String(d.getUTCMonth() + 1).padStart(2, '0') + '/' + d.getUTCFullYear();
+  }
+  return String(v);
+}
+
+// DD/MM/AAAA -> AAAA-MM-DD, que es lo que entiende el calendario nativo.
+function aISO(txt) {
+  var d = normFecha(txt);
+  if (!esFecha(d)) return '';
+  return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') +
+         '-' + String(d.getUTCDate()).padStart(2, '0');
+}
+
+// Va poniendo las barras mientras se escribe, sin pelear con el borrado.
+function formatearFecha(txt, borrando) {
+  var d = String(txt || '').replace(/[^\d]/g, '').slice(0, 8);
+  if (borrando) return txt;
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return d.slice(0, 2) + '/' + d.slice(2);
+  return d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4);
+}
+
+// Guarda la fecha del panel. Solo si cambió de verdad: así escribir y salir
+// sin tocar nada no dispara una escritura en la planilla.
+function guardarFechaPanel(input, campo, texto) {
+  var caja = input.parentNode;
+  var duenio = caja && caja.parentNode ? caja.parentNode.querySelector('[data-duenio]') : null;
+  var id = duenio ? duenio.getAttribute('data-duenio') : S.sel;
+  var emb = filaPorId(id);
+  if (!emb) return;
+
+  var txt = String(texto || '').trim();
+  if (!txt) return;
+  var d = normFecha(txt);
+  if (!esFecha(d)) return pintar();   // muestra el aviso de fecha ilegible
+
+  var iso = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') +
+            '-' + String(d.getUTCDate()).padStart(2, '0');
+  var actual = esFecha(emb[campo])
+    ? emb[campo].getUTCFullYear() + '-' +
+      String(emb[campo].getUTCMonth() + 1).padStart(2, '0') + '-' +
+      String(emb[campo].getUTCDate()).padStart(2, '0')
+    : '';
+  if (iso === actual) return;
+  aplicarCambio(id, campo, iso);
+}
+
+function campoFecha(id, attr, campo, label, valor, extra) {
+  var txt = aTextoFecha(valor);
+  var d = normFecha(txt);
+  var mala = txt && !esFecha(d);
+  return '<div class="campo campo-fecha' + (mala ? ' malo' : '') + '">' +
+    '<label for="' + id + '">' + label + '</label>' +
+    '<div class="fecha-caja">' +
+      '<input id="' + id + '" ' + attr + '="' + campo + '" class="f-txt" ' +
+        'inputmode="numeric" autocomplete="off" maxlength="10" ' +
+        'placeholder="DD/MM/AAAA" value="' + esc(txt) + '">' +
+      '<button type="button" class="f-cal" data-act="calendario" data-p="' + id + '" ' +
+        'aria-label="Abrir calendario">' + ico('cal') + '</button>' +
+      '<input type="date" class="f-nativo" id="' + id + '-cal" data-parafecha="' + id + '" ' +
+        'value="' + esc(aISO(txt)) + '" tabindex="-1" aria-hidden="true">' +
+    '</div>' +
+    (mala ? '<span class="mal">No se entiende esa fecha</span>' : '') +
+    (extra || '') + '</div>';
 }
 
 /* --- Banderas --------------------------------------------------------------
@@ -2758,9 +2886,9 @@ async function enviarAdvice(ids, desdeBarra) {
     if (desdeBarra) S.marcados = {};
   } catch (e) {
     var msg = e.message || String(e);
-    if (/insufficient|scope|permission/i.test(msg)) {
-      msg = 'Falta el permiso para crear borradores. Cerrá sesión con "Configurar" ' +
-            'y volvé a entrar: Google va a pedir el permiso nuevo de Gmail.';
+    if (/insufficient|scope|permission|403|401/i.test(msg)) {
+      S.faltaGmail = true;
+      msg = 'Falta el permiso de Gmail para crear borradores.';
     }
     return fallar(msg);
   } finally {
@@ -2838,8 +2966,9 @@ function bloqueAdvice(emb, ev) {
   }
   if (msg && msg.error) {
     h += '<div class="error" style="margin:0 0 12px;white-space:pre-line">' + esc(msg.error) +
-      (msg.fallback ? '<br><a href="' + esc(msg.fallback) + '" target="_blank" ' +
-        'rel="noopener">Probar abriéndolo en una pestaña</a>' : '') + '</div>';
+      (S.faltaGmail
+        ? '<br><button data-act="permiso-gmail" style="margin-top:9px">Autorizar Gmail</button>'
+        : '') + '</div>';
   }
 
   if (falta.length) {
@@ -2861,8 +2990,8 @@ function bloqueAdvice(emb, ev) {
   }
 
   h += '<div class="campo" style="margin-top:12px">' +
-    '<label for="adv-to">Destinatarios</label>' +
-    '<input id="adv-to" data-advto="1" value="' + esc(destino) + '" ' +
+    '<label for="adv-to-panel">Destinatarios</label>' +
+    '<input id="adv-to-panel" data-advto="1" value="' + esc(destino) + '" ' +
     'placeholder="cliente@empresa.com"></div>' +
     '<p class="ayuda" style="margin:-8px 0 12px">Separar con coma. Se precarga de Mails CC. ' +
     'La copia fija la agrega el script.</p>';
@@ -3418,7 +3547,8 @@ var ICONOS = {
   check:  'M3 8.5l3.5 3.5L13 5',
   send:   'M14 2L7 9M14 2l-4.5 12L7 9 2 6.5z',
   gear:   'M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2',
-  tabs:   'M2 4h5v10H2zM9 4h5v10H9zM2 2h12'
+  tabs:   'M2 4h5v10H2zM9 4h5v10H9zM2 2h12',
+  cal:    'M2.5 4h11v10h-11zM2.5 7h11M5.5 2v3M10.5 2v3'
 };
 
 function ico(nombre) {
@@ -3690,13 +3820,14 @@ function vistaConfig() {
       '</div>') +
 
     seccion('&#9993;', 'azul', 'Shipment advice',
-      'Usa el Apps Script de la planilla. Si queda vacío, el botón no aparece.',
-      '<div class="campo"><label for="advurl">URL del script publicado</label>' +
-        '<input id="advurl" value="' + esc(st.adviceUrl || '') + '" ' +
-        'placeholder="https://script.google.com/macros/s/…/exec"></div>' +
-      '<div class="campo"><label for="advtok">Clave compartida</label>' +
-        '<input id="advtok" value="' + esc(st.adviceToken || '') + '" ' +
-        'placeholder="la misma que está en WEBAPP_CLAVE"></div>') +
+      'Cada persona crea el borrador en su propio Gmail, con su firma. No hay ' +
+      'nada que configurar.',
+      '<div class="cfg-info">' +
+        '<p><b>Copia fija:</b> <code>' + esc(ADV.ccFijo) + '</code></p>' +
+        '<p><b>Copia opcional (Peter):</b> <code>' + esc(ADV.peter) + '</code></p>' +
+        '<p class="ayuda">Si alguno de estos mails cambia, se edita en el código, ' +
+          'en <code>ADV</code>. El texto del aviso es el mismo del Apps Script.</p>' +
+      '</div>') +
 
     (yaConfigurado
       ? seccion('&#128279;', 'verde', 'Compartir con el equipo',
@@ -3704,6 +3835,7 @@ function vistaConfig() {
           'solo entra con su cuenta. No lleva contraseñas: cada uno usa sus permisos.',
           '<p class="cfg-sub" style="margin-top:0">1. Enlace directo — lo abren y ya está</p>' +
           '<div class="compartir">' +
+            '<label class="sr-solo" for="linkcfg">Enlace con la configuración</label>' +
             '<input id="linkcfg" readonly value="' + esc(enlaceConfig()) + '">' +
             '<button data-act="copiarcfg" data-q="linkcfg">' + ico('down') +
               (S.copiado === 'linkcfg' ? '¡Copiado!' : 'Copiar') + '</button>' +
@@ -3886,12 +4018,23 @@ function barraAdvice(evs) {
   }
   if (msg && msg.error) {
     h += '<div class="error" style="margin:0 0 10px;white-space:pre-line">' + esc(msg.error) +
-      (msg.fallback ? '<br><a href="' + esc(msg.fallback) + '" target="_blank" rel="noopener">' +
-        'Probar en una pestaña</a>' : '') + '</div>';
+      (S.faltaGmail
+        ? ' <button data-act="permiso-gmail" style="margin-top:8px">Autorizar Gmail</button>'
+        : '') + '</div>';
   }
+
+  // Se puede marcar en una pestaña y después filtrar por otra: conviene
+  // decirlo, si no parece que la barra cuenta cosas que no están.
+  var ocultos = sel.filter(function (o) {
+    if (S.filtroTab && o._tab !== S.filtroTab) return true;
+    if (S.filtroTipo && clave(o.tipo) !== S.filtroTipo) return true;
+    return false;
+  }).length;
 
   h += '<div class="bf-fila1">' +
     '<span class="bf-n">' + sel.length + (sel.length === 1 ? ' embarque' : ' embarques') + '</span>' +
+    (ocultos ? '<span class="bf-ocultos">' + ocultos +
+      (ocultos === 1 ? ' fuera del filtro actual' : ' fuera del filtro actual') + '</span>' : '') +
     '<span class="bf-goods">' + esc(goods) + '</span>' +
     '<button data-act="desmarcar">Quitar selección</button>' +
     '</div>';
@@ -3902,7 +4045,8 @@ function barraAdvice(evs) {
   }
 
   h += '<div class="bf-fila2">' +
-    '<input id="adv-to" data-advto="1" value="' + esc(destino) + '" ' +
+    '<label class="sr-solo" for="adv-to-barra">Destinatarios</label>' +
+    '<input id="adv-to-barra" data-advto="1" value="' + esc(destino) + '" ' +
       'placeholder="destinatarios, separados por coma">' +
     '<span class="modos">' +
       [['en', 'EN'], ['es', 'ES']].map(function (o) {
@@ -4586,7 +4730,7 @@ function vistaGrilla(evs) {
   }
 
   h += '<div class="filtros">' +
-    '<input id="busca" placeholder="Buscar cliente, contrato, BL, factura, anotaciones" value="' +
+    '<input id="busca-cargas" placeholder="Buscar cliente, contrato, BL, factura, anotaciones" value="' +
       esc(S.busca) + '" aria-label="Buscar">' +
     '<select id="orden" aria-label="Ordenar por">' +
       Object.keys(ORDENES).map(function (k) {
@@ -4875,7 +5019,7 @@ function vistaContratos() {
 
   h += (S.alta ? formAlta() : '') +
     '<div class="filtros">' +
-    '<input id="busca" placeholder="Buscar contrato, cliente" value="' + esc(S.busca) + '" aria-label="Buscar">' +
+    '<input id="busca-ctr" placeholder="Buscar contrato, cliente" value="' + esc(S.busca) + '" aria-label="Buscar">' +
     '<button data-act="csv" style="margin-left:auto">' + ico('down') + 'Exportar CSV</button></div>' +
     '<div class="chips">' +
     [['', 'Con movimiento'], ['abiertos', 'Con saldo'], ['completos', 'Completos'],
@@ -4938,6 +5082,11 @@ async function guardarContrato() {
     if (idx === undefined) return;
     var val = e.cambios[campo];
     if (c[2] === 'number') val = val === '' ? '' : parseFloat(val);
+    if (c[2] === 'date' && val !== '') {
+      var dc = normFecha(val);
+      if (!esFecha(dc)) throw new Error('La fecha "' + val + '" no se entiende. Usá DD/MM/AAAA.');
+      val = dc;
+    }
     reqs.push({
       updateCells: {
         range: { sheetId: ref.sheetId, startRowIndex: ref.fila - 1, endRowIndex: ref.fila,
@@ -4998,17 +5147,7 @@ function panelContrato() {
       var ops2 = S.formasPago.map(function (f) { return f.texto; });
       return comboGen('c-' + campo, campo, label, ops2, val, true, 'ctr', true);
     }
-    if (tipo === 'date') {
-      var iso = val;
-      var d = normFecha(val);
-      if (esFecha(d)) {
-        iso = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') +
-              '-' + String(d.getUTCDate()).padStart(2, '0');
-      }
-      return '<div class="campo"><label for="c-' + campo + '">' + label + '</label>' +
-        '<input type="date" id="c-' + campo + '" data-ectr="' + campo + '" value="' +
-        esc(iso) + '"></div>';
-    }
+    if (tipo === 'date') return campoFecha('c-' + campo, 'data-ectr', campo, label, val);
     return '<div class="campo"><label for="c-' + campo + '">' + label + '</label>' +
       '<input id="c-' + campo + '" data-ectr="' + campo + '" type="' +
       (tipo === 'number' ? 'number' : 'text') + '" value="' + esc(val) + '"></div>';
@@ -5596,13 +5735,11 @@ function vistaPanel(x) {
             String(v.getUTCMonth() + 1).padStart(2, '0') + '-' +
             String(v.getUTCDate()).padStart(2, '0')
           : '';
-        return '<div class="campo' + (falta[c] ? ' falta' : '') + '">' +
-          '<label for="d-' + c + '">' + CAMPOS[c].label +
+        var etq = CAMPOS[c].label +
           (v && v.anioAsumido ? ' <span class="av">año asumido</span>' : '') +
-          (v && v.invalida ? ' <span class="mal">dato inválido: ' + esc(v.crudo) + '</span>' : '') +
-          '</label>' +
-          '<input type="date" id="d-' + c + '" data-fecha="' + c + '" ' +
-          'data-f="' + esc(emb._id) + '" value="' + iso + '"></div>';
+          (v && v.invalida ? ' <span class="mal">dato inválido: ' + esc(v.crudo) + '</span>' : '');
+        return campoFecha('d-' + c, 'data-fecha', c, etq, v,
+          '<input type="hidden" data-duenio="' + esc(emb._id) + '">');
       }).join('') + '</div>';
 
     if (esFecha(emb.etd) && esFecha(emb.eta)) {
@@ -5784,6 +5921,28 @@ function pintar() {
 }
 
 document.addEventListener('focusin', function (e) {
+  // Fechas: se formatean en el propio input, sin redibujar, para no perder el
+  // foco justo cuando se está escribiendo el año.
+  if (e.target.classList && e.target.classList.contains('f-txt')) {
+    var borrando = e.inputType === 'deleteContentBackward' ||
+                   e.inputType === 'deleteContentForward';
+    var antes = e.target.value;
+    var fmt = formatearFecha(antes, borrando);
+    if (fmt !== antes) {
+      var fin = e.target.selectionStart === antes.length;
+      e.target.value = fmt;
+      if (fin) { try { e.target.setSelectionRange(fmt.length, fmt.length); } catch (er) {} }
+    }
+    var nat = document.getElementById(e.target.id + '-cal');
+    if (nat) nat.value = aISO(fmt);
+
+    var cF = e.target.getAttribute('data-aemb');
+    if (cF && S.altaEmb) { S.altaEmb[cF] = fmt; return; }
+    var cE = e.target.getAttribute('data-ectr');
+    if (cE && S.editCtr) { S.editCtr.cambios[cE] = fmt; return; }
+    return;   // el panel guarda al salir del campo, no en cada tecla
+  }
+
   var ae = e.target.getAttribute && e.target.getAttribute('data-aemb');
   if (ae && S.altaEmb) { S.altaEmb[ae] = e.target.value; return; }
   var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
@@ -5851,8 +6010,6 @@ document.addEventListener('click', function (ev) {
     S.cfg.tabsCtrEdit = S.setup.tabsCtrEdit.slice();
     S.cfg.tabAlta = S.setup.tabAlta;
     S.cfg.tabDB = S.setup.tabDB;
-    S.cfg.adviceUrl = (S.setup.adviceUrl || '').trim();
-    S.cfg.adviceToken = (S.setup.adviceToken || '').trim();
     S.cfg.paisSheetId = extraerId(S.setup.paisSheet) || '';
     S.cfg.tabPaisCli = (S.setup.tabPaisCli || '').trim();
     S.cfg.tabPaisPro = (S.setup.tabPaisPro || '').trim();
@@ -5861,7 +6018,13 @@ document.addEventListener('click', function (ev) {
     return cargarTodo();
   }
 
-  if (act === 'tab') { S.vista = el.getAttribute('data-v'); return pintar(); }
+  if (act === 'tab') {
+    S.vista = el.getAttribute('data-v');
+    // Nada se arrastra entre secciones: ni el panel abierto ni los filtros.
+    S.sel = null; S.editCtr = null; S.altaEmb = null; S.alta = null;
+    S.soloSug = false; S.busca = ''; S.combo = null; S.menuSem = null;
+    return pintar();
+  }
   if (act === 'csv') return exportarCSV();
   if (act === 'comentar') {
     var ta = document.getElementById('nuevo-com');
@@ -5897,6 +6060,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'ftab') {
     S.filtroTab = el.getAttribute('data-t') || '';
     S.filtroTipo = '';   // los tipos cambian según la pestaña
+    S.soloSug = false;   // y los sugeridos también
     return pintar();
   }
   if (act === 'ftipo') { S.filtroTipo = el.getAttribute('data-t') || ''; return pintar(); }
@@ -5931,7 +6095,25 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'desmarcar') { S.marcados = {}; S.adviceMsg = null; return pintar(); }
   if (act === 'advidioma') { S.adviceIdioma = el.getAttribute('data-v'); return pintar(); }
+  if (act === 'calendario') {
+    var idTxt = el.getAttribute('data-p');
+    var nativo = document.getElementById(idTxt + '-cal');
+    var visible = document.getElementById(idTxt);
+    if (nativo) {
+      if (visible) nativo.value = aISO(visible.value);
+      try {
+        if (nativo.showPicker) nativo.showPicker();
+        else { nativo.focus(); nativo.click(); }
+      } catch (er) { nativo.focus(); }
+    }
+    return;
+  }
   if (act === 'advpeter') { S.advicePeter = !S.advicePeter; return pintar(); }
+  if (act === 'permiso-gmail') {
+    S.faltaGmail = false; S.token = null;
+    return pedirToken(true).then(function () { S.adviceMsg = null; pintar(); })
+      .catch(function (e) { S.error = e.message; pintar(); });
+  }
   if (act === 'fsug') { S.soloSug = !S.soloSug; return pintar(); }
   if (act === 'altaemb') {
     var hoyE = new Date();
@@ -6065,10 +6247,8 @@ document.addEventListener('click', function (ev) {
       tabsFact: (S.cfg.tabsFact || []).slice(),
       tabsCtrEdit: (S.cfg.tabsCtrEdit || []).slice(),
       tabAlta: S.cfg.tabAlta || '', tabDB: S.cfg.tabDB || '',
-      adviceUrl: S.cfg.adviceUrl || '', adviceToken: S.cfg.adviceToken || '',
       paisSheet: S.cfg.paisSheetId || '', tabPaisCli: S.cfg.tabPaisCli || '',
       tabPaisPro: S.cfg.tabPaisPro || '',
-      adviceUrl: S.cfg.adviceUrl || '', adviceToken: S.cfg.adviceToken || '',
       buscando: false, entrando: false, soloPestanas: true
     };
     S.pantalla = 'setup';
@@ -6105,15 +6285,37 @@ document.addEventListener('click', function (ev) {
 });
 
 document.addEventListener('input', function (e) {
-  if (e.target.id === 'busca') { S.busca = e.target.value; pintar(); }
+  if (e.target.id === 'busca-cargas' || e.target.id === 'busca-ctr') {
+    S.busca = e.target.value; pintar();
+  }
   if (e.target.id === 'nuevo-com') S.borrador = e.target.value;   // sin redibujar
   if (e.target.id === 'pegarcfg') { S.pegado = e.target.value; return; }
   if (e.target.getAttribute && e.target.getAttribute('data-advto')) { S.adviceTo = e.target.value; return; }
-  if (e.target.id === 'advurl') { S.setup.adviceUrl = e.target.value; return; }
-  if (e.target.id === 'advtok') { S.setup.adviceToken = e.target.value; return; }
   if (e.target.id === 'psheet') { S.setup.paisSheet = e.target.value; return; }
   if (e.target.id === 'pcli') { S.setup.tabPaisCli = e.target.value; return; }
   if (e.target.id === 'ppro') { S.setup.tabPaisPro = e.target.value; return; }
+  // Fechas: se formatean en el propio input, sin redibujar, para no perder el
+  // foco justo cuando se está escribiendo el año.
+  if (e.target.classList && e.target.classList.contains('f-txt')) {
+    var borrando = e.inputType === 'deleteContentBackward' ||
+                   e.inputType === 'deleteContentForward';
+    var antes = e.target.value;
+    var fmt = formatearFecha(antes, borrando);
+    if (fmt !== antes) {
+      var fin = e.target.selectionStart === antes.length;
+      e.target.value = fmt;
+      if (fin) { try { e.target.setSelectionRange(fmt.length, fmt.length); } catch (er) {} }
+    }
+    var nat = document.getElementById(e.target.id + '-cal');
+    if (nat) nat.value = aISO(fmt);
+
+    var cF = e.target.getAttribute('data-aemb');
+    if (cF && S.altaEmb) { S.altaEmb[cF] = fmt; return; }
+    var cE = e.target.getAttribute('data-ectr');
+    if (cE && S.editCtr) { S.editCtr.cambios[cE] = fmt; return; }
+    return;   // el panel guarda al salir del campo, no en cada tecla
+  }
+
   var ae = e.target.getAttribute && e.target.getAttribute('data-aemb');
   if (ae && S.altaEmb) { S.altaEmb[ae] = e.target.value; return; }
   var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
@@ -6190,6 +6392,30 @@ document.addEventListener('change', function (e) {
 });
 
 document.addEventListener('change', function (e) {
+  // El calendario nativo devuelve AAAA-MM-DD: se pasa al campo visible.
+  var destinoCal = e.target.getAttribute && e.target.getAttribute('data-parafecha');
+  if (destinoCal) {
+    var txtIn = document.getElementById(destinoCal);
+    var comoTxt = aTextoFecha(e.target.value);
+    if (txtIn) {
+      txtIn.value = comoTxt;
+      var c1 = txtIn.getAttribute('data-aemb');
+      if (c1 && S.altaEmb) { S.altaEmb[c1] = comoTxt; return; }
+      var c2 = txtIn.getAttribute('data-ectr');
+      if (c2 && S.editCtr) { S.editCtr.cambios[c2] = comoTxt; return pintar(); }
+      var c3 = txtIn.getAttribute('data-fecha');
+      if (c3) return guardarFechaPanel(txtIn, c3, comoTxt);
+    }
+    return;
+  }
+
+  // Fecha escrita a mano: se guarda al salir del campo.
+  if (e.target.classList && e.target.classList.contains('f-txt')) {
+    var cp = e.target.getAttribute('data-fecha');
+    if (cp) return guardarFechaPanel(e.target, cp, e.target.value);
+    return;
+  }
+
   var aed = e.target.getAttribute && e.target.getAttribute('data-aemb');
   if (aed && S.altaEmb) { S.altaEmb[aed] = e.target.value; return pintar(); }
   var ecd = e.target.getAttribute && e.target.getAttribute('data-ectr');
