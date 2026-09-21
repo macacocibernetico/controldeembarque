@@ -626,6 +626,9 @@ th.ord:hover{background:#ebebed}
 .alta-cab h3{font-size:18px;letter-spacing:-.022em}
 .alta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:15px}
 .alta-grid .campo{margin-bottom:0}
+.total-calc{margin:4px 0 0;font-size:14.5px;color:var(--tinta)}
+.total-calc b{font-weight:600;font-variant-numeric:tabular-nums}
+.total-calc span{color:var(--tinta3);font-size:13px;font-weight:400}
 .alta-nota{display:flex;gap:8px;align-items:center;margin:0 0 18px;font-size:13.5px;
   color:var(--acento);background:var(--acentobg);padding:10px 13px;border-radius:var(--r3)}
 .alta-nota .ico{width:15px;height:15px;flex:none;stroke-width:2.2}
@@ -2322,6 +2325,26 @@ var CAMPOS_ALTA_EMB = [
    - elegido el contrato, solo sus productos (el del contrato más los que ya se
      hayan embarcado contra él). */
 
+/* El contrato no tiene columna de puerto, pero el incoterm lo lleva adentro:
+   "CIF Qingdao" es incoterm + destino. Se separa por la lista de incoterms
+   conocidos, no por "las tres primeras letras": si no, "Los Angeles" quedaría
+   como "Angeles". */
+var INCOTERMS = ['EXW','FCA','FAS','FOB','CFR','CIF','CPT','CIP','DAP','DPU',
+                 'DDP','DAT','DES','DEQ','DAF','DDU','CNF'];
+
+function partirIncoterm(txt) {
+  var t = String(txt || '').trim();
+  if (!t) return null;
+  var m = t.match(/^([A-Za-z&]{3})[\s.\-]+(.+)$/);
+  if (m && INCOTERMS.indexOf(m[1].toUpperCase()) >= 0) {
+    return { codigo: m[1].toUpperCase(), lugar: m[2].trim() };
+  }
+  // Solo el código, sin lugar ("FAS").
+  if (INCOTERMS.indexOf(t.toUpperCase()) >= 0) return { codigo: t.toUpperCase(), lugar: '' };
+  // Sin código: es todo destino ("ANTWERP", "Puesto El Espinillal").
+  return { codigo: '', lugar: t };
+}
+
 function contratosDe(exp, imp) {
   var out = [];
   var kExp = clave(exp), kImp = clave(imp);
@@ -2361,6 +2384,13 @@ function aplicarContrato(nombre) {
   if (!a.importer && c.importador) a.importer = String(c.importador).trim();
   if (!a.tipo && c.tipo) a.tipo = String(c.tipo).trim();
   if (!a.price && c.precio) a.price = c.precio;
+
+  // El destino y el incoterm salen de la columna Incoterm del contrato.
+  var inc = partirIncoterm(c.incoterm);
+  if (inc) {
+    if (!a.port && inc.lugar) a.port = inc.lugar;
+    if (!a.incoterm && inc.codigo) a.incoterm = inc.codigo;
+  }
   var prods = productosDe(nombre);
   if (!a.product && prods && prods.length === 1) a.product = prods[0];
   a._desdeContrato = true;
@@ -2409,6 +2439,23 @@ async function crearEmbarque() {
     }
 
     var reqs = [];
+
+    // El Total de la planilla es una fórmula (=Precio*Toneladas), no un número.
+    // Se escribe la fórmula, no el resultado: así, cuando llega la factura y
+    // las toneladas cambian, el total se recalcula solo.
+    if (src.mapa.total !== undefined && src.mapa.price !== undefined &&
+        src.mapa.tns !== undefined) {
+      reqs.push({
+        updateCells: {
+          range: { sheetId: src.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
+                   startColumnIndex: src.mapa.total, endColumnIndex: src.mapa.total + 1 },
+          rows: [{ values: [{ userEnteredValue: { formulaValue:
+            '=' + letraCol(src.mapa.price) + fila + '*' + letraCol(src.mapa.tns) + fila } }] }],
+          fields: 'userEnteredValue'
+        }
+      });
+    }
+
     CAMPOS_ALTA_EMB.forEach(function (c) {
       var campo = c[0];
       if (a[campo] === undefined || a[campo] === '') return;
@@ -3316,6 +3363,7 @@ async function cargarTodo() {
           importador: g('importador'),
           producto: g('producto'),
           tipo: g('tipo'),
+          incoterm: g('incoterm'),
           precio: normNum(g('precio')),
           tns: normNum(g('tns')),
           comision: normNum(g('comision')),
@@ -3561,6 +3609,13 @@ function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Números con separadores, y sin decimales inútiles.
+function fmtNum(v) {
+  var n = Number(v);
+  if (!isFinite(n)) return '';
+  return n.toLocaleString('es-AR', { maximumFractionDigits: 2 });
 }
 
 function fmtFecha(f) {
@@ -5548,6 +5603,10 @@ function vistaPlanilla(filas) {
 
 var EDITABLES = ['vessel', 'shippingLine', 'booking', 'containers', 'bl', 'invoice', 'tracking', 'nota'];
 
+// Las toneladas y el precio se editan aparte: son números, y tocarlos mueve el
+// total. Pasa seguido: llega la factura y el peso neto no es el que se cargó.
+var EDITABLES_NUM = ['tns', 'price'];
+
 // Desplegable con los estados a la vista. Antes había que ir clickeando hasta
 // dar con el que se buscaba, que con cuatro opciones es incómodo y propenso a
 // pasarse de largo (y cada clic escribe en la planilla).
@@ -5748,6 +5807,33 @@ function vistaPanel(x) {
         (tt < 0 ? ' — la ETA quedó antes del ETD' : '') + '.</p>';
     }
     h += '</div>';
+  }
+
+  // Toneladas y precio. El total de la planilla es una fórmula, así que se
+  // recalcula solo al cambiar cualquiera de los dos: acá solo se muestra.
+  var nums = EDITABLES_NUM.filter(function (c) {
+    return src.mapa[c] !== undefined && !src.noAplica[c];
+  });
+  if (nums.length) {
+    var tnsA = normNum(emb.tns), preA = normNum(emb.price);
+    var totalA = (tnsA && preA) ? tnsA * preA : normNum(emb.total);
+
+    h += '<div class="bloque"><h3 class="gt">Cantidad y precio</h3>' +
+      '<div class="fechas">' +
+      nums.map(function (c) {
+        return '<div class="campo"><label for="n-' + c + '">' + CAMPOS[c].label + '</label>' +
+          '<input id="n-' + c + '" type="number" step="any" data-num="' + c + '" ' +
+          'data-f="' + esc(emb._id) + '" value="' +
+          esc(emb[c] === null || emb[c] === undefined ? '' : emb[c]) + '"></div>';
+      }).join('') + '</div>' +
+      (totalA
+        ? '<p class="total-calc">Total: <b>' + fmtNum(totalA) + '</b>' +
+          (tnsA && preA ? ' <span>= ' + fmtNum(tnsA) + ' tn × ' + fmtNum(preA) + '</span>' : '') +
+          '</p>'
+        : '') +
+      '<p class="ayuda">Si la factura vino con otro peso neto, cambiá las toneladas: ' +
+      'el total de la planilla se recalcula solo, porque es una fórmula.</p>' +
+      '</div>';
   }
 
   // Campos editables.
@@ -6420,6 +6506,17 @@ document.addEventListener('change', function (e) {
   if (aed && S.altaEmb) { S.altaEmb[aed] = e.target.value; return pintar(); }
   var ecd = e.target.getAttribute && e.target.getAttribute('data-ectr');
   if (ecd && S.editCtr) { S.editCtr.cambios[ecd] = e.target.value; return pintar(); }
+  var cn = e.target.getAttribute && e.target.getAttribute('data-num');
+  if (cn) {
+    var idn2 = e.target.getAttribute('data-f');
+    var fn = filaPorId(idn2);
+    if (!fn) return;
+    var nuevo = e.target.value === '' ? '' : parseFloat(e.target.value);
+    if (nuevo !== '' && isNaN(nuevo)) return;
+    if (String(nuevo) === String(fn[cn] === null || fn[cn] === undefined ? '' : fn[cn])) return;
+    return aplicarCambio(idn2, cn, nuevo);
+  }
+
   var cf = e.target.getAttribute && e.target.getAttribute('data-fecha');
   if (!cf) return;
   var idf = e.target.getAttribute('data-f');
