@@ -326,6 +326,10 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .pill.hueco .pt{background:none;box-shadow:inset 0 0 0 1.5px var(--linea3)}
 .pill.coment{color:var(--acento)}
 .pill.coment .pt{background:var(--acento)}
+.ir-fact{min-height:28px;padding:0 11px;font-size:12.5px;background:none;
+  border-color:var(--linea2);color:var(--tinta3);gap:5px}
+.ir-fact:hover{background:var(--acentobg);border-color:var(--acento);color:var(--acento)}
+.ir-fact .ico{width:13px;height:13px}
 .pill.adv{color:var(--acento);gap:5px}
 .pill.adv .ico{width:13px;height:13px}
 
@@ -518,6 +522,17 @@ th.ord:hover{background:#ebebed}
 .pe-estado.guardando{color:var(--tinta3)}
 .pe-estado.ok{color:var(--ok);font-weight:500}
 .pe-estado .ico{width:13px;height:13px;stroke-width:2.6}
+/* La acción que mueve la fila: color propio, no se confunde con el resto */
+.btn-fact{min-height:32px;padding:0 13px;font-size:13px;font-weight:600;
+  background:var(--narbg);border-color:rgba(217,119,6,.35);color:var(--nar);gap:6px}
+.btn-fact:hover{background:#fef3c7;border-color:var(--nar);color:var(--nar-d,#b45309)}
+.btn-fact.on{background:var(--nar);border-color:var(--nar);color:#fff}
+.btn-fact .ico{width:14px;height:14px;stroke-width:2}
+.primario.peligro{background:var(--nar);border-color:var(--nar)}
+.primario.peligro:hover{background:#b45309;border-color:#b45309}
+.chk.entiendo{background:rgba(217,119,6,.09);border-radius:var(--r3);padding:9px 12px;
+  margin-bottom:4px;font-weight:500}
+
 .panel-edit .cerrar{position:static;min-height:32px;padding:0 13px;font-size:13px}
 
 .pe-quien{padding:20px 0 0}
@@ -1149,6 +1164,7 @@ var S = {
   devolver: null,
   devolverTab: null,
   ultimoMov: null,
+  entiendo: false,
   avisarPia: true,
   enviarPia: false,
   tGuardado: null,
@@ -3334,6 +3350,27 @@ async function registrarAdvice(sel, destino, cc) {
 }
 
 // Bloque del panel.
+/* La acción de mandar a facturar vive en la cabecera, separada del resto y con
+   otro color: mueve la fila de pestaña y borra la original, así que no tiene
+   que parecerse a los botones de todos los días.
+
+   Si la pestaña no está configurada, el botón igual aparece y dice por qué no
+   se puede: esconderlo deja a la persona buscando algo que no existe. */
+function botonFacturar(emb) {
+  if (emb._aFacturar) {
+    return '<span class="pe-estado ok" title="Ya figura en A facturar">' +
+      ico('check') + 'Ya facturada</span>';
+  }
+  if (!(S.fuentesFact || []).length) {
+    return '<button class="btn-fact" data-act="faltafact" title="Falta configurar la pestaña">' +
+      ico('mover') + 'A facturar</button>';
+  }
+  var abierto = S.pasar === emb._id;
+  return '<button class="btn-fact' + (abierto ? ' on' : '') + '" data-act="pasar" ' +
+    'data-f="' + esc(emb._id) + '" aria-expanded="' + abierto + '">' +
+    ico('mover') + 'Enviar a facturar</button>';
+}
+
 function bloqueAdvice(emb, ev) {
 
   var falta = faltantesAdvice(emb);
@@ -5094,6 +5131,11 @@ function filaEmbarque(x, opts) {
           return '<span class="pill sug" title="' + esc(sg.texto) + '">' +
             ico('mail') + 'Conviene el advice</span>';
         })() +
+        ((S.fuentesFact || []).length && !emb._aFacturar && opts.acciones !== false
+          ? '<button class="ir-fact" data-act="abrirpasar" data-f="' + esc(emb._id) + '" ' +
+            'title="Pasar a ' + esc(S.fuentesFact[0].tab) + '">' + ico('mover') +
+            'A facturar</button>'
+          : '') +
         (function () {
           var a = adviceDe(emb);
           if (!a) return '';
@@ -6263,6 +6305,7 @@ function vistaPanel(x) {
         (S.guardando > 0
           ? '<span class="pe-estado guardando">Guardando…</span>'
           : (S.guardadoOk ? '<span class="pe-estado ok">' + ico('check') + 'Guardado</span>' : '')) +
+        botonFacturar(emb) +
         '<button class="cerrar" data-act="cerrar">' + ico('x') + 'Cerrar</button>' +
       '</div>' +
     '</header>' +
@@ -6280,6 +6323,60 @@ function vistaPanel(x) {
 
     '<div class="pe-etapa">' + pasosEtapa(ev.etapa) + '</div>' +
     '<p class="pe-aviso">' + ico('check') + 'Cada cambio se guarda solo en la planilla.</p>';
+
+  // Pasar a "A facturar": la mudanza que hoy se hace a mano.
+  if ((S.fuentesFact || []).length && !emb._aFacturar) {
+    var destinoNom = S.fuentesFact[0].tab;
+    h += '<div class="bloque"><h3 class="gt">Pasar a ' + esc(destinoNom) + '</h3>';
+
+    if (S.factError) h += '<div class="error">' + esc(S.factError) + '</div>';
+
+    if (S.pasar === emb._id) {
+      var r0 = resumenMudanza(emb);
+      h += '<div class="confirmar">' +
+        '<p class="cf-tit">' + ico('mover') + 'Se va a mover esta fila</p>' +
+        '<dl class="cf-datos">' +
+          '<div><dt>Qué</dt><dd>' + esc(r0.quien) + '</dd></div>' +
+          '<div><dt>Contrato</dt><dd>' + esc(r0.contrato || '—') + '</dd></div>' +
+          (r0.bl ? '<div><dt>BL</dt><dd>' + esc(r0.bl) + '</dd></div>' : '') +
+          '<div><dt>Toneladas</dt><dd>' + (r0.tns ? fmtNum(r0.tns) : '—') + '</dd></div>' +
+          (r0.total ? '<div><dt>Total</dt><dd>USD ' + fmtNum(r0.total) + '</dd></div>' : '') +
+          '<div><dt>De</dt><dd>' + esc(r0.desde) + ', fila ' + r0.fila + '</dd></div>' +
+          '<div><dt>A</dt><dd>' + esc(destinoNom) + ', arriba del TOTAL</dd></div>' +
+        '</dl>' +
+        '<p class="cf-ojo">La fila se borra de «' + esc(r0.desde) + '». No se puede deshacer ' +
+          'desde acá: si algo sale mal, se recupera con el historial de versiones de Sheets.</p>' +
+
+        '<label class="chk entiendo"><input type="checkbox" data-entiendo="1"' +
+          (S.entiendo ? ' checked' : '') + '>' +
+          '<span>Entiendo que la fila se borra de «' + esc(r0.desde) + '»</span></label>' +
+
+        '<label class="chk"><input type="checkbox" data-avisar="1"' +
+          (S.avisarPia !== false ? ' checked' : '') + '>' +
+          '<span>Avisar a ' + esc(AVISO_FACTURAR) + '</span></label>' +
+        (S.avisarPia !== false
+          ? '<div class="modos" style="margin:8px 0 0">' +
+            '<button data-act="avmodo" data-v="0" aria-pressed="' + (!S.enviarPia) + '">' +
+              'Dejar borrador</button>' +
+            '<button data-act="avmodo" data-v="1" aria-pressed="' + (!!S.enviarPia) + '">' +
+              'Enviar ahora</button></div>'
+          : '') +
+
+        '<div class="alta-acc">' +
+          '<button class="primario peligro" data-act="pasarok" data-f="' + esc(emb._id) + '"' +
+            (S.pasando || !S.entiendo ? ' disabled' : '') + '>' +
+            (S.pasando ? 'Moviendo…' : ico('mover') + 'Sí, enviarla a facturar') + '</button>' +
+          '<button data-act="pasarno">Cancelar</button>' +
+        '</div></div>';
+    } else {
+      h += '<button data-act="pasar" data-f="' + esc(emb._id) + '">' +
+        ico('mover') + 'Pasar a ' + esc(destinoNom) + '</button>' +
+        '<p class="ayuda">Mueve la fila arriba del TOTAL y la saca de «' +
+        esc(emb._tab) + '», como el cortar y pegar de siempre.</p>';
+    }
+    h += '</div>';
+  }
+
 
   // Lo que hay que hacer, arriba de todo.
   if (ev.alertas.length) {
@@ -6375,55 +6472,6 @@ function vistaPanel(x) {
   h += '</div>';
 
   h += bloqueAdvice(emb, ev);
-
-  // Pasar a "A facturar": la mudanza que hoy se hace a mano.
-  if ((S.fuentesFact || []).length && !emb._aFacturar) {
-    var destinoNom = S.fuentesFact[0].tab;
-    h += '<div class="bloque"><h3 class="gt">Pasar a ' + esc(destinoNom) + '</h3>';
-
-    if (S.factError) h += '<div class="error">' + esc(S.factError) + '</div>';
-
-    if (S.pasar === emb._id) {
-      var r0 = resumenMudanza(emb);
-      h += '<div class="confirmar">' +
-        '<p class="cf-tit">' + ico('mover') + 'Se va a mover esta fila</p>' +
-        '<dl class="cf-datos">' +
-          '<div><dt>Qué</dt><dd>' + esc(r0.quien) + '</dd></div>' +
-          '<div><dt>Contrato</dt><dd>' + esc(r0.contrato || '—') + '</dd></div>' +
-          (r0.bl ? '<div><dt>BL</dt><dd>' + esc(r0.bl) + '</dd></div>' : '') +
-          '<div><dt>Toneladas</dt><dd>' + (r0.tns ? fmtNum(r0.tns) : '—') + '</dd></div>' +
-          (r0.total ? '<div><dt>Total</dt><dd>USD ' + fmtNum(r0.total) + '</dd></div>' : '') +
-          '<div><dt>De</dt><dd>' + esc(r0.desde) + ', fila ' + r0.fila + '</dd></div>' +
-          '<div><dt>A</dt><dd>' + esc(destinoNom) + ', arriba del TOTAL</dd></div>' +
-        '</dl>' +
-        '<p class="cf-ojo">La fila se borra de «' + esc(r0.desde) + '». No se puede deshacer ' +
-          'desde acá: si algo sale mal, se recupera con el historial de versiones de Sheets.</p>' +
-
-        '<label class="chk"><input type="checkbox" data-avisar="1"' +
-          (S.avisarPia !== false ? ' checked' : '') + '>' +
-          '<span>Avisar a ' + esc(AVISO_FACTURAR) + '</span></label>' +
-        (S.avisarPia !== false
-          ? '<div class="modos" style="margin:8px 0 0">' +
-            '<button data-act="avmodo" data-v="0" aria-pressed="' + (!S.enviarPia) + '">' +
-              'Dejar borrador</button>' +
-            '<button data-act="avmodo" data-v="1" aria-pressed="' + (!!S.enviarPia) + '">' +
-              'Enviar ahora</button></div>'
-          : '') +
-
-        '<div class="alta-acc">' +
-          '<button class="primario" data-act="pasarok" data-f="' + esc(emb._id) + '"' +
-            (S.pasando ? ' disabled' : '') + '>' +
-            (S.pasando ? 'Moviendo…' : ico('check') + 'Sí, pasarla') + '</button>' +
-          '<button data-act="pasarno">Cancelar</button>' +
-        '</div></div>';
-    } else {
-      h += '<button data-act="pasar" data-f="' + esc(emb._id) + '">' +
-        ico('mover') + 'Pasar a ' + esc(destinoNom) + '</button>' +
-        '<p class="ayuda">Mueve la fila arriba del TOTAL y la saca de «' +
-        esc(emb._tab) + '», como el cortar y pegar de siempre.</p>';
-    }
-    h += '</div>';
-  }
 
   // Comentarios: lo que el equipo se dice sobre este embarque.
   var cs = comentariosDe(emb);
@@ -6724,6 +6772,13 @@ document.addEventListener('focusin', function (e) {
 document.addEventListener('click', function (ev) {
   // Elegir para el advice no debe abrir el panel. Se mira toda la píldora, no
   // solo el input: el clic suele caer en el texto o en el cuadradito.
+  if (ev.target.closest && ev.target.closest('.ir-fact')) {
+    ev.stopPropagation();
+    var bf2 = ev.target.closest('.ir-fact');
+    S.sel = bf2.getAttribute('data-f'); S.pasar = S.sel;
+    S.entiendo = false; S.factError = null;
+    return pintar();
+  }
   if (ev.target.closest && ev.target.closest('.col-check')) {
     ev.stopPropagation();
     return;
@@ -6900,8 +6955,24 @@ document.addEventListener('click', function (ev) {
     S.devolver = null;
     return devolverDeFacturar(nro, tabD);
   }
-  if (act === 'pasar') { S.pasar = el.getAttribute('data-f'); S.factError = null; return pintar(); }
-  if (act === 'pasarno') { S.pasar = null; S.factError = null; return pintar(); }
+  if (act === 'abrirpasar') {
+    // Desde la tarjeta: abre el panel ya en la confirmación.
+    var idp = el.getAttribute('data-f');
+    S.sel = idp; S.pasar = idp; S.entiendo = false; S.factError = null;
+    return pintar();
+  }
+  if (act === 'pasar') {
+    var idP = el.getAttribute('data-f');
+    S.pasar = (S.pasar === idP) ? null : idP;   // el mismo botón lo cierra
+    S.entiendo = false; S.factError = null;
+    return pintar();
+  }
+  if (act === 'faltafact') {
+    S.factError = 'Todavía no está configurada la pestaña de "A facturar". ' +
+      'Se elige en Configuración, en la sección A facturar.';
+    return pintar();
+  }
+  if (act === 'pasarno') { S.pasar = null; S.entiendo = false; S.factError = null; return pintar(); }
   if (act === 'avmodo') { S.enviarPia = el.getAttribute('data-v') === '1'; return pintar(); }
   if (act === 'pasarok') {
     return pasarAFacturar(el.getAttribute('data-f'), S.avisarPia !== false, !!S.enviarPia);
@@ -7169,6 +7240,9 @@ document.addEventListener('change', function (e) {
   if (alS) { S.alta = S.alta || {}; S.alta[alS] = e.target.value; return pintar(); }
   var fcs = e.target.getAttribute && e.target.getAttribute('data-fcol');
   if (fcs && e.target.tagName === 'SELECT') { S.fCol[fcs] = e.target.value; return pintar(); }
+  if (e.target.getAttribute && e.target.getAttribute('data-entiendo')) {
+    S.entiendo = e.target.checked; return pintar();
+  }
   if (e.target.getAttribute && e.target.getAttribute('data-avisar')) {
     S.avisarPia = e.target.checked; return pintar();
   }
