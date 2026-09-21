@@ -4367,7 +4367,6 @@ function vistaApp() {
   var cuerpo = S.vista === 'control' ? vistaControl(evs, cuenta)
              : S.vista === 'contratos' ? vistaContratos()
              : S.verFact ? vistaFacturadas()
-             : S.vista === 'exportadores' ? vistaExportadores(evs)
              : vistaGrilla(evs);
   var panel = '';
   if (S.editCtr) panel = panelContrato();
@@ -4714,18 +4713,17 @@ function tiposDisponibles(evs) {
 // Título grande, como el "Large Title" de iOS: ancla la pantalla y hace que
 // el contenido respire antes de empezar.
 function tituloVista() {
-  var t = { control: 'Control', carga: 'Cargas', contratos: 'Contratos',
-            exportadores: 'Exportadores' }[S.vista] || '';
+  var t = { control: 'Control', carga: 'Cargas', contratos: 'Contratos' }[S.vista] || '';
   var sub = '';
   if (S.vista === 'carga' && S.datos) {
-    sub = S.datos.filas.length + ' embarques';
+    sub = S.modo === 'exportadores'
+      ? 'Quién está embarcando y para quién'
+      : S.datos.filas.length + ' embarques';
     if (S.filtroTab) sub += ' · ' + nombreCorto(S.filtroTab);
   } else if (S.vista === 'contratos') {
     sub = S.contratos.size + ' contratos';
   } else if (S.vista === 'control' && S.datos) {
     sub = 'Lo que necesita atención';
-  } else if (S.vista === 'exportadores' && S.datos) {
-    sub = 'Quién está embarcando y para quién';
   }
   var v = VISTAS.filter(function (x) { return x.id === S.vista; })[0];
   return '<div class="titulo-vista"><h1>' +
@@ -4767,7 +4765,6 @@ var LOGO_SVG =
 var VISTAS = [
   { id: 'carga',       label: 'Cargas',       emoji: '🚢', color: 'azul' },
   { id: 'control',     label: 'Control',      emoji: '🔔', color: 'naranja' },
-  { id: 'exportadores',label: 'Exportadores', emoji: '🏭', color: 'verde' },
   { id: 'contratos',   label: 'Contratos',    emoji: '📄', color: 'violeta' }
 ];
 
@@ -5346,16 +5343,22 @@ function vistaGrilla(evs) {
     '<button data-act="pfiltros" aria-pressed="' + S.panelFiltros + '">Filtros' +
       (nf ? ' · ' + nf : '') + '</button>' +
     '<span class="modos" style="margin-left:auto">' +
-      [['tarjetas', 'Tarjetas'], ['tabla', 'Tabla'], ['planilla', 'Planilla']]
+      [['tarjetas', 'Tarjetas'], ['tabla', 'Tabla'], ['planilla', 'Planilla'],
+       ['exportadores', 'Por exportador']]
         .map(function (m) {
           return '<button data-act="modo" data-m="' + m[0] + '" aria-pressed="' +
             (S.modo === m[0]) + '">' + m[1] + '</button>';
         }).join('') +
     '</span>' +
-    '<button data-act="csv">' + ico('down') + 'Exportar CSV</button>' +
+    (S.modo === 'exportadores' ? ''
+      : '<button data-act="csv">' + ico('down') + 'Exportar CSV</button>') +
     '</div>';
 
   if (S.panelFiltros) h += panelFiltros(evs);
+
+  // "Por exportador" agrupa las mismas cargas, así que respeta el buscador y
+  // los filtros, pero no tiene sentido ordenarlas ni contarlas una por una.
+  if (S.modo === 'exportadores') return h + vistaExportadores(aplicarFiltros(evs));
 
   // Etapas: siempre visibles, es el filtro que más se usa.
   var cuentaEtapa = {};
