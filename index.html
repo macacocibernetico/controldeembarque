@@ -500,6 +500,71 @@ th.ord:hover{background:#ebebed}
 .panel h2 .bnd{font-size:19px}
 .panel .cerrar{position:absolute;top:20px;right:22px;font-size:13.5px;min-height:32px;
   padding:0 14px}
+/* Panel de edición: cabecera fija que deja claro dónde estás y que lo que
+   tocás se escribe en la planilla. */
+.panel-edit{padding-top:0}
+.pe-top{position:sticky;top:0;z-index:2;background:var(--sup);
+  margin:0 -30px 0;padding:14px 30px;border-bottom:1px solid var(--linea2);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pe-tit{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.pe-chip{display:inline-flex;align-items:center;gap:6px;background:var(--acentobg);
+  color:var(--acento);font-size:12.5px;font-weight:600;padding:5px 11px;
+  border-radius:980px;white-space:nowrap}
+.pe-chip .ico{width:13px;height:13px;stroke-width:1.9}
+.pe-donde{font-size:12.5px;color:var(--tinta4);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.pe-acc{display:flex;align-items:center;gap:9px}
+.pe-estado{font-size:12.5px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.pe-estado.guardando{color:var(--tinta3)}
+.pe-estado.ok{color:var(--ok);font-weight:500}
+.pe-estado .ico{width:13px;height:13px;stroke-width:2.6}
+.panel-edit .cerrar{position:static;min-height:32px;padding:0 13px;font-size:13px}
+
+.pe-quien{padding:20px 0 0}
+.pe-quien h2{font-size:22px;margin:0;padding:0;letter-spacing:-.026em;
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.pe-desde{margin:4px 0 0;font-size:14px;color:var(--tinta3)}
+.pe-desde b{color:var(--tinta);font-weight:600}
+.pe-ref{margin:6px 0 0;font-family:var(--mono);font-size:12.5px;color:var(--tinta4)}
+.pe-etapa{margin:16px 0 14px}
+.pe-aviso{display:flex;align-items:center;gap:8px;margin:0;font-size:12.5px;
+  color:var(--tinta3);background:var(--sup2);padding:9px 13px;border-radius:var(--r3)}
+.pe-aviso .ico{width:14px;height:14px;flex:none;color:var(--ok);stroke-width:2.4}
+
+/* Vista de exportadores */
+.exp-card{cursor:default}
+.exp-cab{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;
+  padding-bottom:16px;border-bottom:1px solid var(--linea2)}
+.exp-ident{flex:1;min-width:0}
+.exp-ident h3{font-size:17px;letter-spacing:-.02em;margin:0}
+.exp-ident .rot-pais{margin-top:4px}
+.exp-tot{text-align:right}
+.exp-tot .n{display:block;font-size:19px;font-weight:600;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.exp-tot .l{display:block;font-size:12.5px;color:var(--tinta4);margin-top:2px}
+.exp-clientes{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.exp-cli{width:100%;display:grid;gap:12px;align-items:center;
+  grid-template-columns:minmax(0,1.6fr) minmax(70px,1fr) auto auto auto;
+  background:none;border-color:transparent;border-radius:var(--r3);
+  min-height:40px;padding:0 10px;text-align:left;font-weight:400}
+.exp-cli:hover{background:var(--sup2);border-color:transparent}
+.cli-nom{font-size:14px;color:var(--tinta);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;display:flex;align-items:center;gap:6px}
+.cli-barra{display:flex;gap:2px;height:6px}
+.cli-barra i{display:block;border-radius:2px;min-width:5px;background:var(--linea3)}
+.cli-barra .e-creado{background:#d1d5db}
+.cli-barra .e-pre_embarque{background:#fcd34d}
+.cli-barra .e-embarcado{background:#60a5fa}
+.cli-barra .e-en_transito{background:#3b82f6}
+.cli-barra .e-arribado{background:#34d399}
+.cli-barra .e-cobrado{background:var(--ok)}
+.cli-tn{font-size:13.5px;color:var(--tinta2);font-variant-numeric:tabular-nums;
+  white-space:nowrap;text-align:right;min-width:72px}
+.cli-n{font-size:12.5px;color:var(--tinta4);min-width:20px;text-align:right}
+.cli-al{min-width:22px;text-align:center;font-size:11.5px;font-weight:600;color:#fff;
+  background:var(--pend);border-radius:980px;padding:2px 0}
+.cli-al.vacio{background:none}
+
 .bloque{border-top:1px solid var(--linea);margin-top:26px;padding-top:20px}
 .bloque:first-of-type{border-top:none}
 .kv{display:flex;justify-content:space-between;gap:16px;padding:7px 0;font-size:14.5px}
@@ -626,6 +691,37 @@ th.ord:hover{background:#ebebed}
 .alta-cab h3{font-size:18px;letter-spacing:-.022em}
 .alta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:15px}
 .alta-grid .campo{margin-bottom:0}
+/* Confirmación de una acción que no se puede deshacer */
+.fact-fila{cursor:default}
+.ff-top{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.ff-quien{flex:1;min-width:0}
+.ff-refs{display:flex;gap:20px;flex-wrap:wrap}
+.ff-top > button{flex:none}
+.deshacer-barra{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:var(--sup);border-radius:var(--r2);padding:12px 16px;margin-bottom:18px;
+  box-shadow:var(--s1);font-size:13.5px;color:var(--tinta2)}
+.deshacer-barra .ico{width:16px;height:16px;flex:none;color:var(--tinta3)}
+.deshacer-barra > span{flex:1;min-width:180px}
+.deshacer-barra b{color:var(--tinta);font-weight:600}
+.deshacer-barra button{min-height:32px;font-size:13px}
+.deshacer-barra button:last-child{min-width:32px;padding:0;background:none;
+  border-color:transparent;color:var(--tinta4)}
+.deshacer-barra button:last-child:hover{background:var(--sup2);color:var(--tinta)}
+.dh-error{flex-basis:100%;color:var(--pend);font-size:12.5px}
+
+.confirmar{background:var(--narbg);border-radius:var(--r2);padding:16px 18px}
+.cf-tit{display:flex;align-items:center;gap:8px;margin:0 0 13px;font-size:14.5px;
+  font-weight:600;color:var(--nar)}
+.cf-tit .ico{width:16px;height:16px;stroke-width:2}
+.cf-datos{margin:0 0 13px;display:grid;gap:6px}
+.cf-datos > div{display:flex;gap:12px;font-size:13.5px}
+.cf-datos dt{color:var(--tinta3);min-width:78px;flex:none}
+.cf-datos dd{margin:0;color:var(--tinta);font-weight:500;overflow-wrap:anywhere}
+.cf-ojo{margin:0 0 14px;font-size:12.5px;color:var(--nar);line-height:1.45;
+  padding-top:12px;border-top:1px solid rgba(217,119,6,.2)}
+.confirmar .chk{font-size:13.5px}
+.confirmar .alta-acc{margin-top:16px}
+
 .total-calc{margin:4px 0 0;font-size:14.5px;color:var(--tinta)}
 .total-calc b{font-weight:600;font-variant-numeric:tabular-nums}
 .total-calc span{color:var(--tinta3);font-size:13px;font-weight:400}
@@ -825,6 +921,9 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   /* Y el panel deja de entrar por el costado: sube como hoja. */
   .panel{inset:auto 0 0 0;width:100%;max-height:92vh;border-radius:22px 22px 0 0;
     padding:10px 22px calc(60px + var(--safe));animation:subir .34s var(--ease)}
+  .pe-top{margin:0 -22px;padding:12px 22px}
+  .exp-cli{grid-template-columns:minmax(0,1fr) auto auto;gap:9px}
+  .exp-cli .cli-barra{display:none}
   .panel::before{content:'';display:block;width:38px;height:5px;border-radius:3px;
     background:var(--linea3);margin:0 auto 16px;opacity:.45}
   .panel h2{padding-right:0;margin-top:6px}
@@ -896,6 +995,9 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   /* Y el panel deja de entrar por el costado: sube como hoja. */
   .panel{inset:auto 0 0 0;width:100%;max-height:92vh;border-radius:22px 22px 0 0;
     padding:10px 22px calc(60px + var(--safe));animation:subir .34s var(--ease)}
+  .pe-top{margin:0 -22px;padding:12px 22px}
+  .exp-cli{grid-template-columns:minmax(0,1fr) auto auto;gap:9px}
+  .exp-cli .cli-barra{display:none}
   .panel::before{content:'';display:block;width:38px;height:5px;border-radius:3px;
     background:var(--linea3);margin:0 auto 16px;opacity:.45}
   .panel h2{padding-right:0;margin-top:6px}
@@ -1034,6 +1136,22 @@ var S = {
   filtroTab: '',
   filtroTipo: '',
   soloSug: false,
+  expSoloActivas: true,
+  expDesde: '',
+  fuentesFact: [],
+  guardadoOk: false,
+  pasar: null,
+  pasando: null,
+  factError: null,
+  verFact: false,
+  buscaFact: '',
+  topeFact: 25,
+  devolver: null,
+  devolverTab: null,
+  ultimoMov: null,
+  avisarPia: true,
+  enviarPia: false,
+  tGuardado: null,
   filtroEtapa: '',
   filtroNivel: '',
   modo: 'tarjetas',
@@ -2570,6 +2688,238 @@ function formAltaEmb() {
     '</div></div>';
 }
 
+/* --- Pasar una carga a "A facturar" ----------------------------------------
+   Es la mudanza que hoy se hace a mano con cortar y pegar: la fila sale de
+   Marítimos o Terrestres y entra arriba del TOTAL en "A facturar".
+
+   No se copia la fila cruda: los encabezados difieren entre pestañas
+   ("Exporter" vs "Exportador", "Port" vs "Destino"), así que se pasa campo por
+   campo usando el mapa de cada una. Si mañana alguien mueve una columna, sigue
+   entrando donde corresponde.
+   -------------------------------------------------------------------------- */
+
+var AVISO_FACTURAR = 'pia@latinutsa.com';
+
+/* Mover una fila de una pestaña a otra: lo mismo que cortar y pegar a mano.
+   No se guarda ninguna copia: la fila se escribe en destino y se borra de
+   origen, y para volverla se hace la operación inversa cuando uno quiera.
+
+   Los semáforos viven en el color de la celda, y "A facturar" también tiene
+   Docs, Fotos y T.R., así que los colores viajan con la fila. Sin eso el
+   movimiento perdería el estado. */
+var CAMPOS_MUDANZA = ['exporter', 'importer', 'contract', 'product', 'tipo',
+  'price', 'tns', 'etd', 'anio', 'eta', 'port', 'vessel', 'shippingLine',
+  'lots', 'containers', 'bl', 'booking', 'invoice', 'docs', 'pics', 'tr',
+  'guia', 'commission', 'status', 'incoterm', 'mailsCC', 'pagoEstimado', 'nota'];
+
+function resumenMudanza(emb) {
+  var tn = normNum(emb.tns), pr = normNum(emb.price);
+  return {
+    quien: (emb.exporter || '') + ' → ' + (emb.importer || ''),
+    contrato: emb.contract || '', bl: emb.bl || '',
+    tns: tn, precio: pr, total: (tn && pr) ? tn * pr : normNum(emb.total),
+    producto: emb.product || '', factura: emb.invoice || '',
+    desde: emb._tab, fila: emb._fila
+  };
+}
+
+/* El corazón: mueve una fila entre dos pestañas.
+   `origen`  = { tab, sheetId, mapa, fila, celdas, colores }
+   `destino` = nombre de la pestaña. */
+async function moverFila(origen, destinoTab) {
+  var hd = await leerHoja(S.cfg.sheetId, destinoTab);
+  var mapaD = detectar(hd.encabezados, CAMPOS).mapa;
+
+  var filaTotal = await filaTotalDe(destinoTab);
+  var fila = filaTotal || (hd.filas.length
+    ? Math.max.apply(null, hd.filas.map(function (f) { return f.fila; })) + 1
+    : (hd.filaEncabezado || 1) + 1);
+
+  // 1. Hueco arriba del TOTAL.
+  await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requests: [{
+      insertDimension: {
+        range: { sheetId: hd.sheetId, dimension: 'ROWS',
+                 startIndex: fila - 1, endIndex: fila },
+        inheritFromBefore: true
+      }
+    }] })
+  });
+
+  // 2. Campo por campo, porque los encabezados no se llaman igual en las dos
+  //    pestañas ("Exporter" / "Exportador", "Port" / "Destino").
+  var reqs = [];
+  CAMPOS_MUDANZA.forEach(function (campo) {
+    var iO = origen.mapa[campo], iD = mapaD[campo];
+    if (iO === undefined || iD === undefined) return;
+
+    var v = origen.celdas[iO];
+    if (v !== null && v !== undefined && v !== '') {
+      reqs.push({
+        updateCells: {
+          range: { sheetId: hd.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
+                   startColumnIndex: iD, endColumnIndex: iD + 1 },
+          rows: [{ values: [{ userEnteredValue: aValorSheets(v) }] }],
+          fields: 'userEnteredValue'
+        }
+      });
+    }
+    // El color, que en Docs, Fotos y T.R. ES el dato.
+    var bg = origen.colores ? origen.colores[iO] : null;
+    if (bg) {
+      reqs.push({
+        updateCells: {
+          range: { sheetId: hd.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
+                   startColumnIndex: iD, endColumnIndex: iD + 1 },
+          cell: { userEnteredFormat: { backgroundColor: bg } },
+          fields: 'userEnteredFormat.backgroundColor'
+        }
+      });
+    }
+  });
+
+  // 3. El Total, como fórmula.
+  if (mapaD.total !== undefined && mapaD.price !== undefined && mapaD.tns !== undefined) {
+    reqs.push({
+      updateCells: {
+        range: { sheetId: hd.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
+                 startColumnIndex: mapaD.total, endColumnIndex: mapaD.total + 1 },
+        rows: [{ values: [{ userEnteredValue: { formulaValue:
+          '=' + letraCol(mapaD.price) + fila + '*' + letraCol(mapaD.tns) + fila } }] }],
+        fields: 'userEnteredValue'
+      }
+    });
+  }
+
+  // 4. Borrar la de origen.
+  reqs.push({
+    deleteDimension: {
+      range: { sheetId: origen.sheetId, dimension: 'ROWS',
+               startIndex: origen.fila - 1, endIndex: origen.fila }
+    }
+  });
+
+  await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requests: reqs })
+  });
+
+  return { tab: destinoTab, fila: fila };
+}
+
+async function pasarAFacturar(id, avisar, enviar) {
+  var emb = filaPorId(id);
+  if (!emb) return;
+  var src = fuenteDe(emb);
+  var destino = (S.fuentesFact || [])[0];
+  if (!destino) { S.factError = 'No hay ninguna pestaña de "A facturar" configurada.'; return pintar(); }
+
+  S.pasando = id; S.factError = null; pintar();
+  try {
+    var res = resumenMudanza(emb);
+    await moverFila({
+      tab: emb._tab, sheetId: emb._sheetId, mapa: src.mapa,
+      fila: emb._fila, celdas: emb._celdas, colores: emb._colores
+    }, destino.tab);
+
+    var aviso = '';
+    if (avisar) {
+      try { aviso = await avisarFacturar(res, destino.tab, enviar); }
+      catch (e2) { aviso = ' El mail no salió: ' + e2.message; }
+    }
+
+    S.avisoOk = 'Pasada a "' + destino.tab + '" y quitada de "' + res.desde + '".' + aviso;
+    S.ultimoMov = { desde: res.desde, quien: res.quien, contrato: res.contrato, bl: res.bl };
+    S.sel = null; S.pasar = null;
+    await cargarTodo();
+  } catch (e) {
+    S.factError = 'No se pudo pasar: ' + e.message;
+  } finally {
+    S.pasando = null; pintar();
+  }
+}
+
+// La vuelta: la misma operación, al revés. Se puede hacer cuando sea.
+async function devolverDeFacturar(nroFila, destinoTab) {
+  var fact = (S.fuentesFact || [])[0];
+  if (!fact) return;
+  S.pasando = 'f' + nroFila; S.factError = null; pintar();
+  try {
+    // Se relee: la fila pudo haberse movido desde la última carga.
+    var hf = await leerHoja(S.cfg.sheetId, fact.tab);
+    var mapaF = detectar(hf.encabezados, CAMPOS).mapa;
+    var cruda = hf.filas.filter(function (f) { return f.fila === nroFila; })[0];
+    if (!cruda) throw new Error('Esa fila ya no está donde estaba. Actualizá y probá de nuevo.');
+
+    await moverFila({
+      tab: fact.tab, sheetId: hf.sheetId, mapa: mapaF,
+      fila: nroFila, celdas: cruda.celdas, colores: cruda.colores
+    }, destinoTab);
+
+    S.avisoOk = 'Devuelta a "' + destinoTab + '".';
+    S.ultimoMov = null;
+    await cargarTodo();
+  } catch (e) {
+    S.factError = 'No se pudo devolver: ' + e.message;
+  } finally {
+    S.pasando = null; pintar();
+  }
+}
+
+// Aviso a quien factura. Por defecto queda como borrador: el mail sale cuando
+// la persona lo decide, no por apretar un botón de la app.
+async function avisarFacturar(res, tabDestino, enviar) {
+  var asunto = 'A facturar: ' + res.quien + ' — ' + res.contrato +
+    (res.bl ? ' — BL ' + res.bl : '');
+
+  var lineas = [
+    'Se pasó a "' + tabDestino + '" el siguiente embarque:',
+    '',
+    'Exportador y cliente: ' + res.quien,
+    'Contrato: ' + res.contrato,
+    'Producto: ' + res.producto,
+    'Toneladas: ' + (res.tns ? fmtNum(res.tns) : '—'),
+    'Precio: ' + (res.precio ? 'USD ' + fmtNum(res.precio) + '/tn' : '—'),
+    'Total: ' + (res.total ? 'USD ' + fmtNum(res.total) : '—'),
+    res.bl ? 'BL: ' + res.bl : '',
+    res.factura ? 'Factura: ' + res.factura : '',
+    '',
+    'Venía de "' + res.desde + '".',
+    'Lo pasó ' + (S.usuario ? S.usuario.email : 'alguien') + ' desde el control de embarques.'
+  ];
+
+  var texto = lineas.join('\n');
+  var html = lineas.map(function (l) { return l === '' ? '<br>' : esc(l); }).join('<br>');
+
+  var firma = await firmaDelUsuario();
+  var mime = armarMime(AVISO_FACTURAR, '', asunto, texto,
+                       html + (firma ? '<br><br>' + firma : ''));
+
+  if (enviar) {
+    await api('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raw: b64url(mime) })
+    });
+    return ' Aviso enviado a ' + AVISO_FACTURAR + '.';
+  }
+  await api('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: { raw: b64url(mime) } })
+  });
+  return ' Borrador del aviso a ' + AVISO_FACTURAR + ' listo en tu Gmail.';
+}
+
+// De dónde vino, para proponer el destino: si tiene BL o contenedores es
+// marítima; si no, terrestre.
+function tabProbable(o) {
+  var tabs = (S.fuentes || []).map(function (f) { return f.tab; });
+  if (!tabs.length) return '';
+  var maritima = !!(o.bl || o.containers || o.vessel);
+  var buscar = maritima ? 'mariti' : 'terrestre';
+  return tabs.filter(function (t) { return clave(t).indexOf(buscar) >= 0; })[0] || tabs[0];
+}
+
 /* --- Campo de fecha --------------------------------------------------------
    Un input type="date" muestra el formato del sistema operativo, que en varias
    máquinas es MM/DD/AAAA, y además dispara "change" apenas se completa el año:
@@ -3263,7 +3613,10 @@ async function cargarTodo() {
       var det = detectar(h.encabezados, CAMPOS);
 
       var filas = h.filas.map(function (f) {
-        var o = { _fila: f.fila, _tab: tab, _sheetId: h.sheetId, _id: tab + ':' + f.fila };
+        // Se conserva la fila cruda: hace falta para poder devolverla exacta,
+        // con sus colores, si alguien la pasa a facturar por error.
+        var o = { _fila: f.fila, _tab: tab, _sheetId: h.sheetId, _id: tab + ':' + f.fila,
+                  _celdas: f.celdas, _colores: f.colores };
         Object.keys(det.mapa).forEach(function (campo) {
           var idx = det.mapa[campo];
           o[campo] = CAMPOS[campo].tipo === 'semaforo'
@@ -3382,6 +3735,7 @@ async function cargarTodo() {
     // exportador. Estar en esa pestaña ES la prueba de cobro que falta en la
     // columna Inv Commission.
     S.facturar = new Map();
+    S.fuentesFact = [];
     for (var k = 0; k < (S.cfg.tabsFact || []).length; k++) {
       var tf = S.cfg.tabsFact[k], hf;
       try {
@@ -3391,6 +3745,10 @@ async function cargarTodo() {
         continue;
       }
       var df = detectar(hf.encabezados, CAMPOS);
+      // Se guarda la fuente para poder escribir después: pasar una carga a
+      // facturar necesita el id de hoja y el mapa de columnas.
+      S.fuentesFact.push({ tab: tf, sheetId: hf.sheetId, mapa: df.mapa,
+                           noAplica: df.noAplica, filas: hf.filas });
       if (df.mapa.contract === undefined) {
         avisos.push('En "' + tf + '" no encontré la columna de contrato.');
         continue;
@@ -3524,6 +3882,7 @@ function filaPorId(id) {
 }
 
 async function aplicarCambio(id, campo, valor) {
+  S.guardadoOk = false;
   var f = filaPorId(id);
   if (!f) return;
   var src = fuenteDe(f);
@@ -3549,7 +3908,13 @@ async function aplicarCambio(id, campo, valor) {
     f[campo] = antes;
     S.error = 'No se pudo guardar: ' + e.message;
   } finally {
-    S.guardando--; pintar();
+    S.guardando--;
+    if (!S.guardando) {
+      S.guardadoOk = true;
+      clearTimeout(S.tGuardado);
+      S.tGuardado = setTimeout(function () { S.guardadoOk = false; pintar(); }, 2500);
+    }
+    pintar();
   }
 }
 
@@ -3574,7 +3939,13 @@ async function aplicarNota(id, campo, texto) {
     f._notas[campo] = antes;
     S.error = 'No se pudo guardar la anotación: ' + e.message;
   } finally {
-    S.guardando--; pintar();
+    S.guardando--;
+    if (!S.guardando) {
+      S.guardadoOk = true;
+      clearTimeout(S.tGuardado);
+      S.tGuardado = setTimeout(function () { S.guardadoOk = false; pintar(); }, 2500);
+    }
+    pintar();
   }
 }
 
@@ -3596,7 +3967,10 @@ var ICONOS = {
   send:   'M14 2L7 9M14 2l-4.5 12L7 9 2 6.5z',
   gear:   'M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2',
   tabs:   'M2 4h5v10H2zM9 4h5v10H9zM2 2h12',
-  cal:    'M2.5 4h11v10h-11zM2.5 7h11M5.5 2v3M10.5 2v3'
+  cal:    'M2.5 4h11v10h-11zM2.5 7h11M5.5 2v3M10.5 2v3',
+  lapiz:  'M11.5 2.5l2 2L6 12l-3 1 1-3zM10 4l2 2',
+  mover:  'M2 8h10M9 5l3 3-3 3M14 2v12',
+  volver: 'M6 3L2.5 6.5 6 10M2.5 6.5h7a4 4 0 0 1 0 8H6'
 };
 
 function ico(nombre) {
@@ -3955,6 +4329,8 @@ function vistaApp() {
   var segmentado = segmentoPestanas(todosEvs) + segmentoTipos(todosEvs);
   var cuerpo = S.vista === 'control' ? vistaControl(evs, cuenta)
              : S.vista === 'contratos' ? vistaContratos()
+             : S.verFact ? vistaFacturadas()
+             : S.vista === 'exportadores' ? vistaExportadores(evs)
              : vistaGrilla(evs);
   var panel = '';
   if (S.editCtr) panel = panelContrato();
@@ -3969,6 +4345,7 @@ function vistaApp() {
       (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
       (S.avisoOk ? '<div class="ok-aviso">' + esc(S.avisoOk) +
         ' <button data-act="cerraviso">Cerrar</button></div>' : '') +
+      barraDeshacer() +
       tituloVista() +
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs);
@@ -4032,6 +4409,129 @@ function togglePeter() {
     'aria-pressed="' + on + '">' +
     '<span class="riel"><span class="bolita"></span></span>' +
     '<span class="et">Copia a Peter</span></button>';
+}
+
+// Mientras haya algo para deshacer, se ofrece. Dura un día: pasado eso la
+// planilla ya se movió y volver atrás sería peor que dejarlo.
+// Atajo justo después de mover una carga: devolverla sin ir a buscarla.
+// No guarda copia de nada; abre la lista de "A facturar" con esa fila filtrada.
+function barraDeshacer() {
+  var m = S.ultimoMov;
+  if (!m || S.verFact) return '';
+  return '<div class="deshacer-barra">' +
+    ico('volver') +
+    '<span><b>' + esc(m.quien || m.contrato) + '</b> pasó a facturar.</span>' +
+    '<button data-act="irdevolver">Devolverla</button>' +
+    '<button data-act="movok" aria-label="Listo">' + ico('x') + '</button>' +
+    '</div>';
+}
+
+function vistaFacturadas() {
+  var fact = (S.fuentesFact || [])[0];
+  if (!fact) return '<p class="centro">No hay pestaña de "A facturar" configurada.</p>';
+
+  var mapa = fact.mapa;
+  var g = function (f, campo) {
+    var i = mapa[campo];
+    return i === undefined ? '' : (f.celdas[i] === null || f.celdas[i] === undefined ? '' : f.celdas[i]);
+  };
+
+  var filas = fact.filas.map(function (f) {
+    return {
+      fila: f.fila,
+      exporter: String(g(f, 'exporter') || '').trim(),
+      importer: String(g(f, 'importer') || '').trim(),
+      contract: String(g(f, 'contract') || '').trim(),
+      product: String(g(f, 'product') || '').trim(),
+      bl: String(g(f, 'bl') || '').trim(),
+      containers: String(g(f, 'containers') || '').trim(),
+      vessel: String(g(f, 'vessel') || '').trim(),
+      invoice: String(g(f, 'invoice') || '').trim(),
+      tns: normNum(g(f, 'tns')),
+      etd: normFecha(g(f, 'etd'))
+    };
+  }).filter(function (o) { return o.exporter || o.importer || o.contract; });
+
+  var q = clave(S.buscaFact || '');
+  if (q) {
+    filas = filas.filter(function (o) {
+      return clave([o.exporter, o.importer, o.contract, o.bl, o.invoice, o.product]
+        .join(' ')).indexOf(q) >= 0;
+    });
+  }
+
+  // Las últimas cargadas primero: es lo que uno acaba de mover.
+  filas.sort(function (a, b) { return b.fila - a.fila; });
+  var total = filas.length;
+  var tope = S.topeFact || 25;
+  var vis = filas.slice(0, tope);
+
+  var h = '<div class="filtros">' +
+    '<input id="busca-fact" placeholder="Buscar cliente, contrato, BL, factura" value="' +
+      esc(S.buscaFact || '') + '" aria-label="Buscar en A facturar">' +
+    '</div>' +
+    '<p class="conteo">' + total + (total === 1 ? ' fila' : ' filas') + ' en «' +
+      esc(fact.tab) + '»' + (q ? ' que coinciden' : ', de la más reciente a la más vieja') +
+    '</p>';
+
+  if (S.factError) h += '<div class="error">' + esc(S.factError) + '</div>';
+  if (!vis.length) return h + '<p class="centro">Nada coincide.</p>';
+
+  h += '<div class="lista">' + vis.map(function (o) {
+    var destino = tabProbable(o);
+    var abierta = S.devolver === o.fila;
+    return '<article class="emb fact-fila">' +
+      '<div class="emb-cuerpo">' +
+        '<div class="ff-top">' +
+          '<div class="ff-quien">' +
+            '<div class="partes"><div class="via-partes">' +
+              '<div class="parte"><span class="exp">' + esc(o.exporter || '—') + '</span></div>' +
+              '<span class="fl">→</span>' +
+              '<div class="parte"><span class="imp">' + esc(o.importer || '—') + '</span></div>' +
+            '</div></div>' +
+            '<div class="sub">' + esc(o.product) +
+              (o.tns ? ' · ' + fmtNum(o.tns) + ' tn' : '') + '</div>' +
+            '<div class="ctr">' + esc(o.contract || 'sin contrato') +
+              ' · fila ' + o.fila + '</div>' +
+          '</div>' +
+          '<div class="ff-refs">' +
+            (o.bl ? '<span class="ref"><em>BL</em><b>' + esc(o.bl) + '</b></span>' : '') +
+            (o.invoice ? '<span class="ref"><em>Factura</em><b>' + esc(o.invoice) + '</b></span>' : '') +
+            (esFecha(o.etd) ? '<span class="ref"><em>ETD</em><b>' + fmtFecha(o.etd) + '</b></span>' : '') +
+          '</div>' +
+          (abierta ? '' :
+            '<button data-act="devolver" data-r="' + o.fila + '">' + ico('volver') +
+            'Devolver</button>') +
+        '</div>' +
+
+        (abierta
+          ? '<div class="confirmar" style="margin-top:14px">' +
+            '<p class="cf-tit">' + ico('volver') + '¿A qué pestaña la devolvemos?</p>' +
+            '<div class="chips" style="margin:0 0 14px">' +
+              (S.fuentes || []).map(function (f) {
+                var sel = (S.devolverTab || destino) === f.tab;
+                return '<button data-act="devolvertab" data-t="' + esc(f.tab) + '" ' +
+                  'aria-pressed="' + sel + '">' + esc(nombreCorto(f.tab)) + '</button>';
+              }).join('') +
+            '</div>' +
+            '<p class="cf-ojo">Se mueve la fila con sus datos y sus colores, y se borra de «' +
+              esc(fact.tab) + '». Es el mismo cortar y pegar de siempre.</p>' +
+            '<div class="alta-acc">' +
+              '<button class="primario" data-act="devolverok" data-r="' + o.fila + '"' +
+                (S.pasando ? ' disabled' : '') + '>' +
+                (S.pasando === 'f' + o.fila ? 'Moviendo…' : ico('check') + 'Devolver') + '</button>' +
+              '<button data-act="devolverno">Cancelar</button>' +
+            '</div></div>'
+          : '') +
+      '</div></article>';
+  }).join('') + '</div>';
+
+  if (total > vis.length) {
+    h += '<div class="ver-mas"><button data-act="masfact">Ver ' +
+      Math.min(total - vis.length, 25) + ' más</button>' +
+      '<span class="ayuda">' + (total - vis.length) + ' sin mostrar</span></div>';
+  }
+  return h;
 }
 
 function barraAdvice(evs) {
@@ -4177,7 +4677,8 @@ function tiposDisponibles(evs) {
 // Título grande, como el "Large Title" de iOS: ancla la pantalla y hace que
 // el contenido respire antes de empezar.
 function tituloVista() {
-  var t = { control: 'Control', carga: 'Cargas', contratos: 'Contratos' }[S.vista] || '';
+  var t = { control: 'Control', carga: 'Cargas', contratos: 'Contratos',
+            exportadores: 'Exportadores' }[S.vista] || '';
   var sub = '';
   if (S.vista === 'carga' && S.datos) {
     sub = S.datos.filas.length + ' embarques';
@@ -4186,6 +4687,8 @@ function tituloVista() {
     sub = S.contratos.size + ' contratos';
   } else if (S.vista === 'control' && S.datos) {
     sub = 'Lo que necesita atención';
+  } else if (S.vista === 'exportadores' && S.datos) {
+    sub = 'Quién está embarcando y para quién';
   }
   var v = VISTAS.filter(function (x) { return x.id === S.vista; })[0];
   return '<div class="titulo-vista"><h1>' +
@@ -4225,9 +4728,10 @@ var LOGO_SVG =
   '<path d="M11 32h42l-6 13a5 5 0 0 1-4.5 3H21.5a5 5 0 0 1-4.5-3z"/></g></svg>';
 
 var VISTAS = [
-  { id: 'carga',     label: 'Cargas',    emoji: '🚢', color: 'azul' },
-  { id: 'control',   label: 'Control',   emoji: '🔔', color: 'naranja' },
-  { id: 'contratos', label: 'Contratos', emoji: '📄', color: 'violeta' }
+  { id: 'carga',       label: 'Cargas',       emoji: '🚢', color: 'azul' },
+  { id: 'control',     label: 'Control',      emoji: '🔔', color: 'naranja' },
+  { id: 'exportadores',label: 'Exportadores', emoji: '🏭', color: 'verde' },
+  { id: 'contratos',   label: 'Contratos',    emoji: '📄', color: 'violeta' }
 ];
 
 function colorDeVista(id) {
@@ -4271,9 +4775,14 @@ function navLateral(evs) {
         'Todo<span class="n">' + (evs || []).length + '</span></button>' +
       S.fuentes.map(function (f) {
         return '<button class="nav-sub" data-act="ftab" data-t="' + esc(f.tab) + '" ' +
-          'aria-current="' + (S.filtroTab === f.tab) + '">' + esc(nombreCorto(f.tab)) +
+          'aria-current="' + (S.filtroTab === f.tab && !S.verFact) + '">' + esc(nombreCorto(f.tab)) +
           '<span class="n">' + (cuenta[f.tab] || 0) + '</span></button>';
-      }).join('');
+      }).join('') +
+      ((S.fuentesFact || []).length
+        ? '<button class="nav-sub" data-act="vfact" aria-current="' + (!!S.verFact) + '">' +
+          esc(nombreCorto(S.fuentesFact[0].tab)) +
+          '<span class="n">' + S.fuentesFact[0].filas.length + '</span></button>'
+        : '');
   }
 
   return '<nav class="lateral" aria-label="Navegación">' +
@@ -5029,6 +5538,101 @@ function calcularContratos() {
   return lista;
 }
 
+/* Quién está embarcando y para quién.
+   "Activa" es toda carga que todavía no llegó a "A facturar": ahí el cliente ya
+   le pagó al exportador y el embarque dejó de requerir seguimiento. */
+function esActiva(ev) { return ev.etapa !== 'cobrado'; }
+
+function vistaExportadores(evs) {
+  var soloActivas = S.expSoloActivas !== false;
+  var usados = evs.filter(function (x) { return soloActivas ? esActiva(x.ev) : true; });
+
+  // exportador -> importador -> cargas
+  var grupos = new Map();
+  usados.forEach(function (x) {
+    var e = String(x.emb.exporter || '').trim() || 'Sin exportador';
+    var i = String(x.emb.importer || '').trim() || 'Sin cliente';
+    if (!grupos.has(e)) grupos.set(e, { nombre: e, tn: 0, n: 0, alertas: 0, clientes: new Map() });
+    var g = grupos.get(e);
+    var tn = normNum(x.emb.tns) || 0;
+    g.tn += tn; g.n++;
+    if (x.ev.nivelMax === 'critico' || x.ev.nivelMax === 'alto') g.alertas++;
+    if (!g.clientes.has(i)) g.clientes.set(i, { nombre: i, tn: 0, n: 0, alertas: 0, etapas: {} });
+    var c = g.clientes.get(i);
+    c.tn += tn; c.n++;
+    if (x.ev.nivelMax === 'critico' || x.ev.nivelMax === 'alto') c.alertas++;
+    c.etapas[x.ev.etapa] = (c.etapas[x.ev.etapa] || 0) + 1;
+  });
+
+  var lista = [];
+  grupos.forEach(function (g) { lista.push(g); });
+  lista.sort(function (a, b) { return b.tn - a.tn || b.n - a.n; });
+
+  var totalTn = lista.reduce(function (a, g) { return a + g.tn; }, 0);
+
+  var h = '<div class="segmento sub">' +
+    '<button data-act="expact" data-v="1" aria-pressed="' + soloActivas + '">' +
+      'En curso<span class="cnt">' + usados.length + '</span></button>' +
+    '<button data-act="expact" data-v="0" aria-pressed="' + (!soloActivas) + '">' +
+      'Todas<span class="cnt">' + evs.length + '</span></button>' +
+    '</div>';
+
+  if (!lista.length) {
+    return h + '<p class="centro">No hay cargas ' +
+      (soloActivas ? 'en curso' : '') + ' con este filtro.</p>';
+  }
+
+  h += '<p class="conteo">' + lista.length +
+    (lista.length === 1 ? ' exportador' : ' exportadores') + ' · ' +
+    fmtNum(totalTn) + ' tn en ' + usados.length +
+    (usados.length === 1 ? ' carga' : ' cargas') + '</p>';
+
+  h += '<div class="lista">' + lista.map(function (g) {
+    var cls = [];
+    g.clientes.forEach(function (c) { cls.push(c); });
+    cls.sort(function (a, b) { return b.tn - a.tn; });
+
+    return '<article class="emb exp-card">' +
+      '<div class="emb-cuerpo">' +
+        '<div class="exp-cab">' +
+          '<div class="exp-ident">' +
+            '<h3>' + esc(g.nombre) + '</h3>' +
+            (function () { var f = bandera(paisDeEmpresa(g.nombre));
+              return f ? '<span class="rot-pais">' + f + '</span>' : ''; })() +
+          '</div>' +
+          '<div class="exp-tot">' +
+            '<span class="n">' + fmtNum(g.tn) + ' tn</span>' +
+            '<span class="l">' + g.n + (g.n === 1 ? ' carga' : ' cargas') +
+              ' · ' + cls.length + (cls.length === 1 ? ' cliente' : ' clientes') + '</span>' +
+          '</div>' +
+          (g.alertas ? '<span class="pill pend"><span class="pt"></span>' + g.alertas +
+            (g.alertas === 1 ? ' con alerta' : ' con alertas') + '</span>' : '') +
+        '</div>' +
+
+        '<div class="exp-clientes">' + cls.map(function (c) {
+          var barra = ETAPAS.map(function (et) {
+            var n = c.etapas[et.id] || 0;
+            return n ? '<i class="e-' + et.id + '" style="flex:' + n + '" title="' +
+              esc(n + ' en ' + et.label) + '"></i>' : '';
+          }).join('');
+          return '<button class="exp-cli" data-act="vercargas" data-e="' + esc(g.nombre) +
+            '" data-i="' + esc(c.nombre) + '">' +
+            '<span class="cli-nom">' + esc(c.nombre) +
+              (function () { var f = bandera(paisDeEmpresa(c.nombre));
+                return f ? ' ' + f : ''; })() + '</span>' +
+            '<span class="cli-barra">' + barra + '</span>' +
+            '<span class="cli-tn">' + fmtNum(c.tn) + ' tn</span>' +
+            '<span class="cli-n">' + c.n + '</span>' +
+            (c.alertas ? '<span class="cli-al" title="' + c.alertas + ' con alerta">' +
+              c.alertas + '</span>' : '<span class="cli-al vacio"></span>') +
+            '</button>';
+        }).join('') + '</div>' +
+      '</div></article>';
+  }).join('') + '</div>';
+
+  return h;
+}
+
 function vistaContratos() {
   var lista = calcularContratos();
   var q = S.busca.trim().toLowerCase();
@@ -5644,18 +6248,38 @@ function vistaPanel(x) {
     if (a.campos) a.campos.forEach(function (c) { falta[c] = 1; });
   });
 
+  // Cabecera fija: aclara que esto es una edición, sobre qué embarque, y que
+  // lo que se toca se escribe en la planilla.
   var h = '<div class="velo" data-act="cerrar"></div>' +
-    '<aside class="panel" role="dialog" aria-label="Embarque ' + esc(emb.contract) + '">' +
-    '<button class="cerrar" data-act="cerrar">Cerrar</button>' +
-    '<h2>' + esc(emb.importer || emb.exporter || 'Sin cargar') +
-      (bandera(paisDeEmpresa(emb.importer)) ? ' ' + bandera(paisDeEmpresa(emb.importer)) : '') + '</h2>' +
-    (emb.exporter && emb.importer
-      ? '<p style="margin:2px 0 0;font-size:13.5px;color:var(--tinta2)">desde <b>' +
-        esc(emb.exporter) + '</b> ' + bandera(paisDeEmpresa(emb.exporter)) + '</p>'
-      : '') +
-    '<p style="margin:5px 0 0;font-family:var(--mono);font-size:12px;color:var(--tinta3)">' +
-      esc(emb.contract) + ' · ' + esc(emb._tab) + '</p>' +
-    '<div style="margin:12px 0">' + pasosEtapa(ev.etapa) + '</div>';
+    '<aside class="panel panel-edit" role="dialog" aria-label="Editar embarque ' +
+      esc(emb.contract) + '">' +
+
+    '<header class="pe-top">' +
+      '<div class="pe-tit">' +
+        '<span class="pe-chip">' + ico('lapiz') + 'Editando</span>' +
+        '<span class="pe-donde">' + esc(nombreCorto(emb._tab)) + ' · fila ' + emb._fila + '</span>' +
+      '</div>' +
+      '<div class="pe-acc">' +
+        (S.guardando > 0
+          ? '<span class="pe-estado guardando">Guardando…</span>'
+          : (S.guardadoOk ? '<span class="pe-estado ok">' + ico('check') + 'Guardado</span>' : '')) +
+        '<button class="cerrar" data-act="cerrar">' + ico('x') + 'Cerrar</button>' +
+      '</div>' +
+    '</header>' +
+
+    '<div class="pe-quien">' +
+      '<h2>' + esc(emb.importer || emb.exporter || 'Sin cargar') +
+        (bandera(paisDeEmpresa(emb.importer)) ? ' ' + bandera(paisDeEmpresa(emb.importer)) : '') +
+      '</h2>' +
+      (emb.exporter && emb.importer
+        ? '<p class="pe-desde">desde <b>' + esc(emb.exporter) + '</b> ' +
+          bandera(paisDeEmpresa(emb.exporter)) + '</p>'
+        : '') +
+      '<p class="pe-ref">' + esc(emb.contract || 'Sin contrato') + '</p>' +
+    '</div>' +
+
+    '<div class="pe-etapa">' + pasosEtapa(ev.etapa) + '</div>' +
+    '<p class="pe-aviso">' + ico('check') + 'Cada cambio se guarda solo en la planilla.</p>';
 
   // Lo que hay que hacer, arriba de todo.
   if (ev.alertas.length) {
@@ -5751,6 +6375,55 @@ function vistaPanel(x) {
   h += '</div>';
 
   h += bloqueAdvice(emb, ev);
+
+  // Pasar a "A facturar": la mudanza que hoy se hace a mano.
+  if ((S.fuentesFact || []).length && !emb._aFacturar) {
+    var destinoNom = S.fuentesFact[0].tab;
+    h += '<div class="bloque"><h3 class="gt">Pasar a ' + esc(destinoNom) + '</h3>';
+
+    if (S.factError) h += '<div class="error">' + esc(S.factError) + '</div>';
+
+    if (S.pasar === emb._id) {
+      var r0 = resumenMudanza(emb);
+      h += '<div class="confirmar">' +
+        '<p class="cf-tit">' + ico('mover') + 'Se va a mover esta fila</p>' +
+        '<dl class="cf-datos">' +
+          '<div><dt>Qué</dt><dd>' + esc(r0.quien) + '</dd></div>' +
+          '<div><dt>Contrato</dt><dd>' + esc(r0.contrato || '—') + '</dd></div>' +
+          (r0.bl ? '<div><dt>BL</dt><dd>' + esc(r0.bl) + '</dd></div>' : '') +
+          '<div><dt>Toneladas</dt><dd>' + (r0.tns ? fmtNum(r0.tns) : '—') + '</dd></div>' +
+          (r0.total ? '<div><dt>Total</dt><dd>USD ' + fmtNum(r0.total) + '</dd></div>' : '') +
+          '<div><dt>De</dt><dd>' + esc(r0.desde) + ', fila ' + r0.fila + '</dd></div>' +
+          '<div><dt>A</dt><dd>' + esc(destinoNom) + ', arriba del TOTAL</dd></div>' +
+        '</dl>' +
+        '<p class="cf-ojo">La fila se borra de «' + esc(r0.desde) + '». No se puede deshacer ' +
+          'desde acá: si algo sale mal, se recupera con el historial de versiones de Sheets.</p>' +
+
+        '<label class="chk"><input type="checkbox" data-avisar="1"' +
+          (S.avisarPia !== false ? ' checked' : '') + '>' +
+          '<span>Avisar a ' + esc(AVISO_FACTURAR) + '</span></label>' +
+        (S.avisarPia !== false
+          ? '<div class="modos" style="margin:8px 0 0">' +
+            '<button data-act="avmodo" data-v="0" aria-pressed="' + (!S.enviarPia) + '">' +
+              'Dejar borrador</button>' +
+            '<button data-act="avmodo" data-v="1" aria-pressed="' + (!!S.enviarPia) + '">' +
+              'Enviar ahora</button></div>'
+          : '') +
+
+        '<div class="alta-acc">' +
+          '<button class="primario" data-act="pasarok" data-f="' + esc(emb._id) + '"' +
+            (S.pasando ? ' disabled' : '') + '>' +
+            (S.pasando ? 'Moviendo…' : ico('check') + 'Sí, pasarla') + '</button>' +
+          '<button data-act="pasarno">Cancelar</button>' +
+        '</div></div>';
+    } else {
+      h += '<button data-act="pasar" data-f="' + esc(emb._id) + '">' +
+        ico('mover') + 'Pasar a ' + esc(destinoNom) + '</button>' +
+        '<p class="ayuda">Mueve la fila arriba del TOTAL y la saca de «' +
+        esc(emb._tab) + '», como el cortar y pegar de siempre.</p>';
+    }
+    h += '</div>';
+  }
 
   // Comentarios: lo que el equipo se dice sobre este embarque.
   var cs = comentariosDe(emb);
@@ -6109,6 +6782,7 @@ document.addEventListener('click', function (ev) {
     // Nada se arrastra entre secciones: ni el panel abierto ni los filtros.
     S.sel = null; S.editCtr = null; S.altaEmb = null; S.alta = null;
     S.soloSug = false; S.busca = ''; S.combo = null; S.menuSem = null;
+    S.verFact = false; S.devolver = null;
     return pintar();
   }
   if (act === 'csv') return exportarCSV();
@@ -6147,6 +6821,7 @@ document.addEventListener('click', function (ev) {
     S.filtroTab = el.getAttribute('data-t') || '';
     S.filtroTipo = '';   // los tipos cambian según la pestaña
     S.soloSug = false;   // y los sugeridos también
+    S.verFact = false;
     return pintar();
   }
   if (act === 'ftipo') { S.filtroTipo = el.getAttribute('data-t') || ''; return pintar(); }
@@ -6181,6 +6856,56 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'desmarcar') { S.marcados = {}; S.adviceMsg = null; return pintar(); }
   if (act === 'advidioma') { S.adviceIdioma = el.getAttribute('data-v'); return pintar(); }
+  if (act === 'expact') { S.expSoloActivas = el.getAttribute('data-v') === '1'; return pintar(); }
+  if (act === 'vercargas') {
+    // Del resumen a las cargas de ese par exportador/cliente.
+    S.vista = 'carga'; S.sel = null; S.soloSug = false;
+    S.busca = el.getAttribute('data-i') || '';
+    S.expDesde = el.getAttribute('data-e') || '';
+    return pintar();
+  }
+  if (act === 'movok') { S.ultimoMov = null; return pintar(); }
+  if (act === 'irdevolver') {
+    var mv = S.ultimoMov || {};
+    S.verFact = true; S.vista = 'carga'; S.sel = null;
+    S.buscaFact = mv.bl || mv.contrato || '';
+    S.topeFact = 25; S.ultimoMov = null; S.factError = null;
+    return pintar();
+  }
+  if (act === 'vfact') {
+    S.verFact = true; S.vista = 'carga'; S.sel = null; S.devolver = null;
+    S.factError = null; S.topeFact = 25;
+    return pintar();
+  }
+  if (act === 'masfact') { S.topeFact = (S.topeFact || 25) + 25; return pintar(); }
+  if (act === 'devolver') {
+    S.devolver = parseInt(el.getAttribute('data-r'), 10);
+    S.devolverTab = null; S.factError = null;
+    return pintar();
+  }
+  if (act === 'devolverno') { S.devolver = null; S.factError = null; return pintar(); }
+  if (act === 'devolvertab') { S.devolverTab = el.getAttribute('data-t'); return pintar(); }
+  if (act === 'devolverok') {
+    var nro = parseInt(el.getAttribute('data-r'), 10);
+    var tabD = S.devolverTab;
+    if (!tabD) {
+      var fac = (S.fuentesFact || [])[0];
+      var cru = fac.filas.filter(function (f) { return f.fila === nro; })[0];
+      var oo = {};
+      if (cru) ['bl', 'containers', 'vessel'].forEach(function (c) {
+        if (fac.mapa[c] !== undefined) oo[c] = cru.celdas[fac.mapa[c]];
+      });
+      tabD = tabProbable(oo);
+    }
+    S.devolver = null;
+    return devolverDeFacturar(nro, tabD);
+  }
+  if (act === 'pasar') { S.pasar = el.getAttribute('data-f'); S.factError = null; return pintar(); }
+  if (act === 'pasarno') { S.pasar = null; S.factError = null; return pintar(); }
+  if (act === 'avmodo') { S.enviarPia = el.getAttribute('data-v') === '1'; return pintar(); }
+  if (act === 'pasarok') {
+    return pasarAFacturar(el.getAttribute('data-f'), S.avisarPia !== false, !!S.enviarPia);
+  }
   if (act === 'calendario') {
     var idTxt = el.getAttribute('data-p');
     var nativo = document.getElementById(idTxt + '-cal');
@@ -6371,6 +7096,7 @@ document.addEventListener('click', function (ev) {
 });
 
 document.addEventListener('input', function (e) {
+  if (e.target.id === 'busca-fact') { S.buscaFact = e.target.value; S.topeFact = 25; pintar(); return; }
   if (e.target.id === 'busca-cargas' || e.target.id === 'busca-ctr') {
     S.busca = e.target.value; pintar();
   }
@@ -6443,6 +7169,9 @@ document.addEventListener('change', function (e) {
   if (alS) { S.alta = S.alta || {}; S.alta[alS] = e.target.value; return pintar(); }
   var fcs = e.target.getAttribute && e.target.getAttribute('data-fcol');
   if (fcs && e.target.tagName === 'SELECT') { S.fCol[fcs] = e.target.value; return pintar(); }
+  if (e.target.getAttribute && e.target.getAttribute('data-avisar')) {
+    S.avisarPia = e.target.checked; return pintar();
+  }
   var mk = e.target.getAttribute && e.target.getAttribute('data-marcar');
   if (mk) {
     S.marcados = S.marcados || {};
