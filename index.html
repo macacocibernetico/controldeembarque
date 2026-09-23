@@ -1326,8 +1326,10 @@ var CAMPOS_CTR = {
   tipo:       {alias:['tipo','type']},
   tns:        {alias:['toneladas','tns','tons','cantidad']},
   precio:     {alias:['precio','price']},
+  packaging:  {alias:['packaging','envase','presentacion','presentación']},
   incoterm:   {alias:['incoterm']},
   formaPago:  {alias:['forma de pago','payment','payment condition','condicion de pago']},
+  pagosUsa:   {alias:['pagos usa','pagos u.s.a','pagos']},
   comision:   {alias:['comision total','comision','commission']},
   entregado:  {alias:['ent','entregado','delivered']},
   saldo:      {alias:['saldo','saldo del contrato','balance']},
@@ -2199,6 +2201,19 @@ function siguienteNumero(ctr) {
 async function crearContrato(datos) {
   var pestana = S.cfg.tabAlta;
   if (!pestana) throw new Error('No hay una pestaña de alta configurada.');
+
+  // Se revisa contra la planilla, no contra lo que está cargado en pantalla:
+  // otra persona pudo haber usado ese número hace un minuto.
+  var yaHay = await api(BASE + S.cfg.sheetId + '/values/' +
+    encodeURIComponent("'" + pestana.replace(/'/g, "''") + "'!B1:B3000"));
+  var k = clave(datos.contrato);
+  var repetido = (yaHay.values || []).some(function (f) {
+    return f && f[0] && clave(f[0]) === k;
+  });
+  if (repetido) {
+    throw new Error('El contrato "' + datos.contrato + '" ya existe en "' + pestana +
+      '". Poné otro número.');
+  }
 
   var meta = await api(BASE + S.cfg.sheetId +
     '?fields=' + encodeURIComponent('sheets(properties(sheetId,title))'));
@@ -5874,6 +5889,7 @@ function vistaContratos() {
 // cambió, y nunca sobre las columnas con fórmula (Total, Comisión, ENT, Saldo).
 var CAMPOS_EDIT_CTR = [
   ['fecha', 'Fecha', 'date'],
+  ['contrato', 'Número de contrato', 'text'],
   ['exportador', 'Exportador', 'combo'],
   ['importador', 'Importador', 'combo'],
   ['producto', 'Producto', 'combo'],
@@ -5883,7 +5899,8 @@ var CAMPOS_EDIT_CTR = [
   ['packaging', 'Packaging', 'text'],
   ['incoterm', 'Incoterm', 'text'],
   ['formaPago', 'Forma de pago', 'pago'],
-  ['periodo', 'Período de embarque', 'text']
+  ['periodo', 'Período de embarque', 'text'],
+  ['pagosUsa', 'Pagos USA', 'text']
 ];
 
 async function guardarContrato() {
@@ -5958,7 +5975,9 @@ function panelContrato() {
     if (tipo === 'combo') {
       var ops = listaDe[campo] || [];
       var ok = ops.some(function (o) { return clave(o) === clave(val); });
-      if (val && !ok) fuera.push(label);
+      // Solo frena si se TOCÓ ese campo. Muchos contratos viejos tienen nombres
+      // que no están en la base, y eso no puede impedir corregir el packaging.
+      if (val && !ok && (campo in e.cambios)) fuera.push(label);
       return comboGen('c-' + campo, campo, label, ops, val, ok, 'ctr');
     }
     if (tipo === 'pago') {
@@ -5972,6 +5991,8 @@ function panelContrato() {
   }).join('');
 
   var hayCambios = Object.keys(e.cambios).length > 0;
+  var nuevoNum = ('contrato' in e.cambios) ? e.cambios.contrato : e.contrato;
+  var repeEd = contratoRepetido(nuevoNum, e.contrato);
 
   return '<div class="velo" data-act="ctrcerrar"></div>' +
     '<aside class="panel" role="dialog" aria-label="Editar contrato">' +
@@ -5990,9 +6011,16 @@ function panelContrato() {
         (fuera.length
           ? '<p class="no-base">Fuera de la base: ' + fuera.join(', ') +
             '. Hay que agregarlos a la base de datos.</p>' : '') +
+        (repeEd
+          ? '<div class="error" style="margin:10px 0 0">Ya existe otro contrato ' +
+            '<b>' + esc(nuevoNum) + '</b>' +
+            (repeEd.exportador || repeEd.importador
+              ? ': ' + esc([repeEd.exportador, repeEd.importador].filter(Boolean).join(' → '))
+              : '') + '. Los números no se pueden repetir.</div>'
+          : '') +
         '<div class="alta-acc">' +
           '<button class="primario" data-act="ctrguardar"' +
-            (!hayCambios || fuera.length || S.guardandoCtr ? ' disabled' : '') + '>' +
+            (!hayCambios || fuera.length || repeEd || S.guardandoCtr ? ' disabled' : '') + '>' +
             (S.guardandoCtr ? 'Guardando…' : ico('check') + 'Guardar cambios') + '</button>' +
           '<span class="ayuda">' +
             (hayCambios ? Object.keys(e.cambios).length + ' campo(s) modificado(s)'
@@ -6097,6 +6125,22 @@ function listaDeCampo(campo) {
 // Escribir para ir acotando, en vez de buscar en una lista de 500. Si lo que
 // se escribe no está en la base, no se inventa: hay que darlo de alta ahí
 // primero, porque si no el nombre no cruza con nada.
+/* Un número de contrato repetido rompe todo lo que cruza por contrato: el
+   saldo, los embarques asociados, el advice. Se avisa antes de guardar, no
+   después. */
+function contratoRepetido(num, exceptoEste) {
+  var k = clave(num);
+  if (!k) return null;
+  var encontrado = null;
+  S.contratos.forEach(function (c, nombre) {
+    if (encontrado) return;
+    if (clave(nombre) !== k) return;
+    if (exceptoEste && clave(exceptoEste) === k) return;   // es el mismo que se edita
+    encontrado = c;
+  });
+  return encontrado;
+}
+
 function comboAlta(campo, label, opciones, a) {
   var ops = opciones || [];
   var val = a[campo] || '';
@@ -6142,10 +6186,19 @@ function formAlta() {
     ref = '<div class="ultimo-ctr"><span class="ayuda">Buscando el último contrato…</span></div>';
   }
 
+  var repe = contratoRepetido(a.contrato);
+
   return '<div class="alta">' +
     '<div class="alta-cab"><h3>Nuevo contrato</h3>' +
       '<button data-act="altacerrar">Cancelar</button></div>' +
     (S.altaError ? '<div class="error">' + esc(S.altaError) + '</div>' : '') +
+    (repe
+      ? '<div class="error">El contrato <b>' + esc(a.contrato) + '</b> ya existe' +
+        (repe.exportador || repe.importador
+          ? ': ' + esc([repe.exportador, repe.importador].filter(Boolean).join(' → ')) : '') +
+        (repe.tns ? ', ' + fmtNum(repe.tns) + ' tn' : '') +
+        '. Poné otro número.</div>'
+      : '') +
     ref +
     '<div class="alta-grid">' +
       txt('fecha', 'Fecha', 'date') +
@@ -6168,10 +6221,12 @@ function formAlta() {
       (total * 0.02).toLocaleString('es-AR', { maximumFractionDigits: 2 }) + '</p>' : '') +
     '<div class="alta-acc">' +
       '<button class="primario" data-act="altaguardar"' +
-        (faltan.length || fuera.length || S.creando ? ' disabled' : '') + '>' +
+        (faltan.length || fuera.length || repe || S.creando ? ' disabled' : '') + '>' +
         (S.creando ? 'Creando…' : ico('check') + 'Crear contrato') + '</button>' +
       '<span class="ayuda">' +
-        (fuera.length
+        (repe
+          ? 'Ese número de contrato ya está usado'
+          : fuera.length
           ? 'Hay que agregar a la base de datos: ' + fuera.join(', ')
           : faltan.length
             ? 'Falta completar: ' + faltan.join(', ')
