@@ -491,11 +491,15 @@ th.ord:hover{background:#ebebed}
 
 /* Panel lateral ------------------------------------------------------------- */
 .velo{position:fixed;inset:0;background:rgba(0,0,0,.22);z-index:40;
-  animation:fundir .3s var(--ease);
+
   backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
 .panel{position:fixed;inset:0 0 0 auto;width:min(520px,100%);background:var(--sup);
   box-shadow:var(--s3);overflow-y:auto;padding:28px 30px 70px;z-index:41;
-  -webkit-overflow-scrolling:touch;animation:entrar .34s var(--ease)}
+  -webkit-overflow-scrolling:touch}
+/* La animación va solo al abrir. Antes estaba en .panel y se repetía en cada
+   redibujo: al tildar una firma, el panel volvía a entrar y parpadeaba. */
+.panel.anim{animation:entrar .34s var(--ease)}
+.velo.anim{animation:fundir .3s var(--ease)}
 @keyframes entrar{from{transform:translateX(100%)}to{transform:none}}
 @keyframes fundir{from{opacity:0}to{opacity:1}}
 .panel h2{font-size:24px;margin:0 0 3px;padding-right:90px;letter-spacing:-.028em;
@@ -715,6 +719,17 @@ th.ord:hover{background:#ebebed}
 .sw-firma.on .riel{background:var(--ok)}
 .sw-firma.on .bolita{left:17px}
 .sw-firma.on .et{color:var(--ok);font-weight:600}
+
+/* Confirmación al cerrar con cambios sin guardar */
+.confirmar-cierre{background:var(--narbg);border-radius:var(--r2);padding:16px 18px;
+  margin:16px 0 4px;box-shadow:0 0 0 1px rgba(217,119,6,.25);animation:aparecer .2s var(--ease)}
+.cc-tit{margin:0;font-size:15px;font-weight:600;color:var(--nar)}
+.cc-sub{margin:3px 0 13px;font-size:13px;color:var(--tinta3)}
+.cc-acc{display:flex;gap:8px;flex-wrap:wrap}
+.cc-acc .descartar{color:var(--pend);border-color:rgba(220,38,38,.3)}
+.cc-acc .descartar:hover{background:var(--pendbg);border-color:var(--pend);color:var(--pend)}
+.ctr-cambios{}   /* gancho: el contador se actualiza sin redibujar el panel */
+.btn-guardar-ctr{min-height:32px;padding:0 15px;font-size:13px}
 
 .bloque-firmas{background:var(--sup2);border-radius:var(--r2);padding:16px 18px;
   margin-bottom:20px;display:flex;flex-direction:column;gap:9px}
@@ -1027,7 +1042,8 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 
   /* Y el panel deja de entrar por el costado: sube como hoja. */
   .panel{inset:auto 0 0 0;width:100%;max-height:92vh;border-radius:22px 22px 0 0;
-    padding:10px 22px calc(60px + var(--safe));animation:subir .34s var(--ease)}
+    padding:10px 22px calc(60px + var(--safe))}
+  .panel.anim{animation:subir .34s var(--ease)}
   .pe-top{margin:0 -22px;padding:12px 22px}
   .exp-cli{grid-template-columns:auto minmax(0,1fr) auto auto;gap:9px}
   .exp-cli .cli-barra{display:none}
@@ -1103,7 +1119,8 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 
   /* Y el panel deja de entrar por el costado: sube como hoja. */
   .panel{inset:auto 0 0 0;width:100%;max-height:92vh;border-radius:22px 22px 0 0;
-    padding:10px 22px calc(60px + var(--safe));animation:subir .34s var(--ease)}
+    padding:10px 22px calc(60px + var(--safe))}
+  .panel.anim{animation:subir .34s var(--ease)}
   .pe-top{margin:0 -22px;padding:12px 22px}
   .exp-cli{grid-template-columns:auto minmax(0,1fr) auto auto;gap:9px}
   .exp-cli .cli-barra{display:none}
@@ -1253,6 +1270,8 @@ var S = {
   verFirmas: false,
   fuentesFact: [],
   guardadoOk: false,
+  animarPanel: false,
+  confirmCerrar: false,
   pasar: null,
   pasando: null,
   factError: null,
@@ -6154,6 +6173,18 @@ function filasDelContrato(ref) {
   return [ref].concat(ref.otras || []);
 }
 
+// Actualiza el "N cambios sin guardar" y el botón Guardar sin redibujar el
+// panel: así escribir o tildar no mueve nada en pantalla.
+function refrescarBarraCtr() {
+  if (!S.editCtr || typeof document === 'undefined' || !document.querySelector) return;
+  var n = Object.keys(S.editCtr.cambios).length;
+  var lbl = document.querySelector('.ctr-cambios');
+  if (lbl) lbl.textContent = n ? n + (n === 1 ? ' cambio sin guardar' : ' cambios sin guardar')
+                                : 'Sin cambios';
+  var btn = document.querySelector('.btn-guardar-ctr');
+  if (btn) btn.disabled = !n || !!S.guardandoCtr;
+}
+
 async function guardarContrato() {
   var e = S.editCtr;
   if (!e) return;
@@ -6343,17 +6374,50 @@ function panelContrato() {
   var nuevoNum = ('contrato' in e.cambios) ? e.cambios.contrato : e.contrato;
   var repeEd = contratoRepetido(nuevoNum, e.contrato);
 
-  return '<div class="velo" data-act="ctrcerrar"></div>' +
-    '<aside class="panel" role="dialog" aria-label="Editar contrato">' +
-    '<button class="cerrar" data-act="ctrcerrar">Cerrar</button>' +
-    '<h2>' + esc(e.contrato) + '</h2>' +
+  var nCambios = Object.keys(e.cambios).length;
+  var bloqueado = !hayCambios || fuera.length || S.guardandoCtr;
+  var an = S.animarPanel ? ' anim' : '';
+
+  // Cabecera fija con guardar y cancelar: siempre a mano, sin bajar hasta el
+  // final del formulario.
+  return '<div class="velo' + an + '" data-act="ctrcerrar"></div>' +
+    '<aside class="panel panel-edit' + an + '" role="dialog" aria-label="Editar contrato">' +
+    '<header class="pe-top">' +
+      '<div class="pe-tit">' +
+        '<span class="pe-chip">' + ico('lapiz') + 'Editando</span>' +
+        '<span class="pe-donde ctr-cambios">' +
+          (hayCambios ? nCambios + (nCambios === 1 ? ' cambio sin guardar' : ' cambios sin guardar')
+                      : 'Sin cambios') + '</span>' +
+      '</div>' +
+      '<div class="pe-acc">' +
+        '<button data-act="ctrcerrar">Cancelar</button>' +
+        '<button class="primario btn-guardar-ctr" data-act="ctrguardar"' +
+          (bloqueado ? ' disabled' : '') + '>' +
+          (S.guardandoCtr ? 'Guardando…' : ico('check') + 'Guardar') + '</button>' +
+      '</div>' +
+    '</header>' +
+
+    (S.confirmCerrar
+      ? '<div class="confirmar-cierre">' +
+          '<p class="cc-tit">Tenés ' + nCambios +
+            (nCambios === 1 ? ' cambio sin guardar' : ' cambios sin guardar') + '</p>' +
+          '<p class="cc-sub">Si cerrás ahora se pierden.</p>' +
+          '<div class="cc-acc">' +
+            '<button class="primario" data-act="ctrguardarcerrar"' +
+              (fuera.length ? ' disabled' : '') + '>' + ico('check') + 'Guardar y cerrar</button>' +
+            '<button class="descartar" data-act="ctrdescartar">Descartar cambios</button>' +
+            '<button data-act="ctrseguir">Seguir editando</button>' +
+          '</div>' +
+        '</div>'
+      : '') +
+
+    '<div class="pe-quien"><h2>' + esc(e.contrato) + '</h2>' +
     (ref
-      ? '<p style="margin:2px 0 0;font-size:13px;color:var(--tinta3)">' +
-        esc(ref.tab) + ' · fila ' + ref.fila +
+      ? '<p class="pe-ref">' + esc(ref.tab) + ' · fila ' + ref.fila +
         ((ref.otras && ref.otras.length)
           ? ' — ' + (ref.otras.length + 1) + ' productos en filas distintas'
-          : '') + '</p>'
-      : '<div class="error" style="margin-top:12px">Este contrato no está en las pestañas ' +
+          : '') + '</p></div>'
+      : '</div><div class="error" style="margin-top:12px">Este contrato no está en las pestañas ' +
         'editables. Revisá la configuración de pestañas.</div>') +
     (S.editCtrError ? '<div class="error" style="margin-top:12px">' + esc(S.editCtrError) + '</div>' : '') +
     (ref
@@ -6370,14 +6434,7 @@ function panelContrato() {
               ? ' de ' + esc([repeEd.exportador, repeEd.importador].filter(Boolean).join(' → '))
               : '') + '. Si no es a propósito, revisalo antes de guardar.</div>'
           : '') +
-        '<div class="alta-acc">' +
-          '<button class="primario" data-act="ctrguardar"' +
-            (!hayCambios || fuera.length || S.guardandoCtr ? ' disabled' : '') + '>' +
-            (S.guardandoCtr ? 'Guardando…' : ico('check') + 'Guardar cambios') + '</button>' +
-          '<span class="ayuda">' +
-            (hayCambios ? Object.keys(e.cambios).length + ' campo(s) modificado(s)'
-                        : 'Sin cambios') + '</span>' +
-        '</div>'
+        ''
       : '') +
     '</aside>';
 }
@@ -6890,8 +6947,9 @@ function vistaPanel(x) {
 
   // Cabecera fija: aclara que esto es una edición, sobre qué embarque, y que
   // lo que se toca se escribe en la planilla.
-  var h = '<div class="velo" data-act="cerrar"></div>' +
-    '<aside class="panel panel-edit" role="dialog" aria-label="Editar embarque ' +
+  var an = S.animarPanel ? ' anim' : '';
+  var h = '<div class="velo' + an + '" data-act="cerrar"></div>' +
+    '<aside class="panel panel-edit' + an + '" role="dialog" aria-label="Editar embarque ' +
       esc(emb.contract) + '">' +
 
     '<header class="pe-top">' +
@@ -7328,6 +7386,7 @@ function pintar() {
   }
 
   document.getElementById('root').innerHTML = html;
+  S.animarPanel = false;   // la entrada se anima una sola vez
   // Aire extra abajo cuando la barra flotante está visible.
   try {
     var hayBarra = !!(S.marcados && Object.keys(S.marcados).some(function (k) { return S.marcados[k]; }));
@@ -7377,9 +7436,9 @@ document.addEventListener('focusin', function (e) {
   var ae = e.target.getAttribute && e.target.getAttribute('data-aemb');
   if (ae && S.altaEmb) { S.altaEmb[ae] = e.target.value; return; }
   var pc = e.target.getAttribute && e.target.getAttribute('data-prodctr');
-  if (pc && S.editCtr) { S.editCtr.cambios['prod_' + pc] = e.target.value; return; }
+  if (pc && S.editCtr) { S.editCtr.cambios['prod_' + pc] = e.target.value; refrescarBarraCtr(); return; }
   var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
-  if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
+  if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; refrescarBarraCtr(); return; }
   var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
   if (cb2) {
     var p2 = cb2.split(':'), ctx2 = p2[0], campo2 = p2[1];
@@ -7605,8 +7664,24 @@ document.addEventListener('click', function (ev) {
     var actual = (cF2 in S.editCtr.cambios)
       ? S.editCtr.cambios[cF2] === true
       : esVerdadero(S.editCtr.orig[cF2]);
-    S.editCtr.cambios[cF2] = !actual;
-    return pintar();
+    var nuevo = !actual;
+    // Si vuelve a como estaba, deja de ser un cambio.
+    if (nuevo === esVerdadero(S.editCtr.orig[cF2])) delete S.editCtr.cambios[cF2];
+    else S.editCtr.cambios[cF2] = nuevo;
+
+    // Sin pintar(): redibujar todo por un tilde es lo que hacía parpadear.
+    el.classList.toggle('on', nuevo);
+    el.setAttribute('aria-pressed', String(nuevo));
+    var tk = el.querySelector('.tick');
+    if (nuevo && !tk) {
+      var sp = document.createElement('span');
+      sp.className = 'tick'; sp.innerHTML = ico('check');
+      el.appendChild(sp);
+    } else if (!nuevo && tk) {
+      tk.parentNode.removeChild(tk);
+    }
+    refrescarBarraCtr();
+    return;
   }
   if (act === 'faltafact') {
     S.factError = 'Todavía no está configurada la pestaña de "A facturar". ' +
@@ -7683,11 +7758,24 @@ document.addEventListener('click', function (ev) {
       }
     });
     S.editCtr = { contrato: kctr, orig: orig, cambios: {} };
+    S.animarPanel = true; S.confirmCerrar = false;
     S.editCtrError = null; S.combo = null;
     S.topeContratos = 8;
     return pintar();
   }
-  if (act === 'ctrcerrar') { S.editCtr = null; S.combo = null; S.topeContratos = 40; return pintar(); }
+  if (act === 'ctrcerrar') {
+    var hay = S.editCtr && Object.keys(S.editCtr.cambios).length;
+    if (hay && !S.confirmCerrar) { S.confirmCerrar = true; return pintar(); }
+    if (hay) return;   // ya se está preguntando
+    S.editCtr = null; S.combo = null; S.topeContratos = 40; S.confirmCerrar = false;
+    return pintar();
+  }
+  if (act === 'ctrdescartar') {
+    S.editCtr = null; S.combo = null; S.topeContratos = 40; S.confirmCerrar = false;
+    return pintar();
+  }
+  if (act === 'ctrseguir') { S.confirmCerrar = false; return pintar(); }
+  if (act === 'ctrguardarcerrar') { S.confirmCerrar = false; return guardarContrato(); }
   if (act === 'ctrguardar') return guardarContrato();
   if (act === 'combosel2') {
     var par = el.getAttribute('data-c').split(':');
@@ -7826,6 +7914,7 @@ document.addEventListener('click', function (ev) {
 
   if (act === 'abrir') {
     var nuevoSel = el.getAttribute('data-f');
+    if (nuevoSel !== S.sel) S.animarPanel = true;
     if (nuevoSel !== S.sel) { S.adviceTo = null; S.adviceFilas = {}; S.adviceMsg = null; }
     S.sel = nuevoSel;
     return pintar();
@@ -7870,9 +7959,9 @@ document.addEventListener('input', function (e) {
   var ae = e.target.getAttribute && e.target.getAttribute('data-aemb');
   if (ae && S.altaEmb) { S.altaEmb[ae] = e.target.value; return; }
   var pc = e.target.getAttribute && e.target.getAttribute('data-prodctr');
-  if (pc && S.editCtr) { S.editCtr.cambios['prod_' + pc] = e.target.value; return; }
+  if (pc && S.editCtr) { S.editCtr.cambios['prod_' + pc] = e.target.value; refrescarBarraCtr(); return; }
   var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
-  if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
+  if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; refrescarBarraCtr(); return; }
   var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
   if (cb2) {
     var p2 = cb2.split(':'), ctx2 = p2[0], campo2 = p2[1];
@@ -8038,6 +8127,12 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && S.combo) { S.combo = null; return pintar(); }
   if (e.key === 'Escape' && S.menuSem) { S.menuSem = null; return pintar(); }
   if (e.key === 'Escape' && S.sel !== null) { S.sel = null; pintar(); }
+  // Escape en el editor de contratos: misma pregunta que al cerrar.
+  if (e.key === 'Escape' && S.editCtr) {
+    if (S.confirmCerrar) { S.confirmCerrar = false; return pintar(); }
+    if (Object.keys(S.editCtr.cambios).length) { S.confirmCerrar = true; return pintar(); }
+    S.editCtr = null; return pintar();
+  }
   if (e.key === 'Enter' && (e.target.id === 'cid' || e.target.id === 'url')) {
     var b = document.querySelector('[data-act="' + (e.target.id === 'cid' ? 'set-cid' : 'buscar') + '"]');
     if (b) b.click();
