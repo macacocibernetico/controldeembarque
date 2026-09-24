@@ -716,6 +716,10 @@ th.ord:hover{background:#ebebed}
 .sw-firma.on .bolita{left:17px}
 .sw-firma.on .et{color:var(--ok);font-weight:600}
 
+.bloque-firmas{background:var(--sup2);border-radius:var(--r2);padding:16px 18px;
+  margin-bottom:20px;display:flex;flex-direction:column;gap:9px}
+.bloque-firmas .gt{margin:0 0 3px;font-size:14px}
+.bloque-firmas .sw-firma{background:var(--sup)}
 .firmas{background:var(--sup);border-radius:var(--r2);box-shadow:var(--s1);
   margin-bottom:18px;overflow:hidden}
 .fi-cab{display:flex;align-items:center;gap:11px;padding:13px 16px;font-size:13.5px;
@@ -812,6 +816,26 @@ th.ord:hover{background:#ebebed}
   color:var(--acento);background:var(--acentobg);padding:10px 13px;border-radius:var(--r3)}
 .alta-nota .ico{width:15px;height:15px;flex:none;stroke-width:2.2}
 .alta-nota.tenue{color:var(--tinta3);background:var(--sup2)}
+/* Productos de un contrato */
+.alta-prods{margin-top:20px;padding-top:18px;border-top:1px solid var(--linea2)}
+.ap-cab{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ap-cab h4{margin:0;font-size:14.5px;font-weight:600}
+.ap-cab .ayuda{margin:0}
+.ap-fila{display:flex;gap:12px;align-items:flex-start;background:var(--sup2);
+  border-radius:var(--r2);padding:14px;margin-bottom:10px}
+.ap-num{width:24px;height:24px;border-radius:50%;flex:none;margin-top:24px;
+  background:var(--acento);color:#fff;font-size:12px;font-weight:600;
+  display:inline-flex;align-items:center;justify-content:center}
+.ap-campos{flex:1;min-width:0;display:grid;gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.ap-campos .campo{margin-bottom:0}
+.ap-quitar{flex:none;margin-top:22px;min-width:32px;padding:0;background:none;
+  border-color:transparent;color:var(--tinta4)}
+.ap-quitar:hover{background:var(--pendbg);color:var(--pend)}
+.ap-fila-n{flex:none;margin-top:30px;font-size:12px;color:var(--tinta4);white-space:nowrap}
+.ap-mas{background:none;border-style:dashed;color:var(--acento);border-color:var(--acento)}
+.ap-mas:hover{background:var(--acentobg)}
+
 .alta-total{margin:16px 0 0;font-size:14.5px;color:var(--tinta2);background:var(--sup2);
   padding:11px 14px;border-radius:var(--r2)}
 .alta-acc{display:flex;gap:14px;align-items:center;margin-top:18px;flex-wrap:wrap}
@@ -2254,18 +2278,6 @@ async function crearContrato(datos) {
   var pestana = S.cfg.tabAlta;
   if (!pestana) throw new Error('No hay una pestaña de alta configurada.');
 
-  // Se revisa contra la planilla, no contra lo que está cargado en pantalla:
-  // otra persona pudo haber usado ese número hace un minuto.
-  var yaHay = await api(BASE + S.cfg.sheetId + '/values/' +
-    encodeURIComponent("'" + pestana.replace(/'/g, "''") + "'!B1:B3000"));
-  var k = clave(datos.contrato);
-  var repetido = (yaHay.values || []).some(function (f) {
-    return f && f[0] && clave(f[0]) === k;
-  });
-  if (repetido) {
-    throw new Error('El contrato "' + datos.contrato + '" ya existe en "' + pestana +
-      '". Poné otro número.');
-  }
 
   var meta = await api(BASE + S.cfg.sheetId +
     '?fields=' + encodeURIComponent('sheets(properties(sheetId,title))'));
@@ -3873,12 +3885,36 @@ async function cargarTodo() {
         var n = f.celdas[dc.mapa.contrato];
         if (!n) return;
         var k = String(n).trim();
-        // Gana la primera pestaña de la lista si el contrato está repetido.
-        if (S.contratos.has(k)) return;
         var g = function (campo) {
           return dc.mapa[campo] !== undefined ? f.celdas[dc.mapa[campo]] : null;
         };
+
+        // Un mismo número de contrato puede ocupar VARIAS filas: el mismo
+        // contrato partido en productos distintos (20 tn blancheado + 8 tn
+        // crudo). No es un error de carga, es como se trabaja. Antes se
+        // descartaba la segunda fila y el contrato quedaba con la mitad de las
+        // toneladas.
+        if (S.contratos.has(k)) {
+          var prev = S.contratos.get(k);
+          prev.partes = (prev.partes || 1) + 1;
+          prev.tns = (normNum(prev.tns) || 0) + (normNum(g('tns')) || 0);
+          prev.comision = (normNum(prev.comision) || 0) + (normNum(g('comision')) || 0);
+          if (normNum(g('entregado')) !== null) {
+            prev.entregadoHoja = (normNum(prev.entregadoHoja) || 0) + normNum(g('entregado'));
+          }
+          if (normNum(g('saldo')) !== null) {
+            prev.saldoHoja = (normNum(prev.saldoHoja) || 0) + normNum(g('saldo'));
+          }
+          // Los productos se listan, que es lo que distingue las filas.
+          var pNuevo = String(g('producto') || '').trim();
+          if (pNuevo && String(prev.producto || '').indexOf(pNuevo) < 0) {
+            prev.producto = [prev.producto, pNuevo].filter(Boolean).join(' + ');
+          }
+          return;
+        }
+
         S.contratos.set(k, {
+          partes: 1,
           contrato: k, origen: tc,
           exportador: g('exportador'),
           importador: g('importador'),
@@ -4000,6 +4036,32 @@ async function cargarTodo() {
         var nc = f.celdas[de.mapa.contrato];
         if (!nc) return;
         var kc = String(nc).trim();
+        // Las firmas viven en la pestaña editable (Contratos Abiertos), no en
+        // la de lectura, que suele ser un IMPORTRANGE sin esas columnas. Se
+        // toman de acá y se mezclan con el contrato.
+        if (de.mapa.firmaExp !== undefined || de.mapa.firmaImp !== undefined) {
+          var ctr0 = S.contratos.get(kc);
+          if (!ctr0) { ctr0 = { contrato: kc, origen: te }; S.contratos.set(kc, ctr0); }
+          // Si el contrato ocupa varias filas, cuenta como firmado solo
+          // cuando lo están todas.
+          var yaVisto = ctr0.tieneFirmas;
+          ctr0.tieneFirmas = true;
+          if (de.mapa.firmaExp !== undefined) {
+            var fe = esVerdadero(f.celdas[de.mapa.firmaExp]);
+            ctr0.firmaExp = yaVisto ? (ctr0.firmaExp && fe) : fe;
+          }
+          if (de.mapa.firmaImp !== undefined) {
+            var fi = esVerdadero(f.celdas[de.mapa.firmaImp]);
+            ctr0.firmaImp = yaVisto ? (ctr0.firmaImp && fi) : fi;
+          }
+        }
+
+        var refPrev = S.ctrEditables.get(kc);
+        if (refPrev) {
+          refPrev.otras = (refPrev.otras || []);
+          refPrev.otras.push({ tab: te, sheetId: he.sheetId, fila: f.fila,
+                               mapa: de.mapa, celdas: f.celdas });
+        }
         if (!S.ctrEditables.has(kc)) {
           S.ctrEditables.set(kc, {
             tab: te, sheetId: he.sheetId, fila: f.fila, mapa: de.mapa,
@@ -5042,6 +5104,20 @@ function diagnostico() {
       '</p></details>';
   }
 
+  // Si se agregaron las columnas de firma pero la app no las ve, conviene
+  // decirlo: suelen estar en la pestaña editable, no en la de lectura.
+  if ((S.cfg.tabsCtrEdit || []).length && !hayColumnasFirma()) {
+    h += '<div class="aviso">No encontré columnas de firma. Si las agregaste, tienen ' +
+      'que estar en alguna de las pestañas <b>editables</b> (' +
+      esc((S.cfg.tabsCtrEdit || []).join(', ')) + ') y llamarse <b>Firmado Exportador</b> ' +
+      'y <b>Firmado Importador</b>. Si la pestaña de lectura es un IMPORTRANGE, ahí no ' +
+      'aparecen y está bien.</div>';
+  } else if ((S.cfg.tabsCtr || []).length && !(S.cfg.tabsCtrEdit || []).length) {
+    h += '<div class="aviso">Para ver y marcar las firmas hay que elegir en ' +
+      '<b>Configuración</b> las pestañas de contratos <b>editables</b> ' +
+      '(por ejemplo «Contratos Abiertos»).</div>';
+  }
+
   if (S.advicesViejos) {
     h += '<div class="aviso">Hay ' + S.advicesViejos + ' registro' +
       (S.advicesViejos > 1 ? 's' : '') + ' en <b>Advices enviados</b> del formato ' +
@@ -5894,6 +5970,14 @@ function semaforosChicos(emb, src) {
 /* Contratos sin firmar. Se mira solo entre los que están abiertos: un contrato
    viejo y cumplido sin la casilla marcada ya no es un pendiente.
    Si la planilla no tiene esas columnas, no se muestra nada. */
+// ¿Alguna pestaña editable tiene las columnas de firma? Si ninguna las tiene,
+// no se muestra ni el filtro ni el aviso: no hay nada que informar.
+function hayColumnasFirma() {
+  var hay = false;
+  S.contratos.forEach(function (c) { if (c.tieneFirmas) hay = true; });
+  return hay;
+}
+
 function firmasPendientes() {
   var out = [];
   S.contratos.forEach(function (c, nombre) {
@@ -5968,6 +6052,11 @@ function vistaContratos() {
   if (S.fContrato === 'completos') lista = lista.filter(function (r) { return r.saldo !== null && r.saldo <= 0.5; });
   if (S.fContrato === 'excedidos') lista = lista.filter(function (r) { return r.saldo !== null && r.saldo < -0.5; });
   if (S.fContrato === 'sin_contrato') lista = lista.filter(function (r) { return r.huerfano; });
+  if (S.fContrato === 'sin_firma') {
+    var pend = {};
+    firmasPendientes().forEach(function (x) { pend[clave(x.nombre)] = 1; });
+    lista = lista.filter(function (r) { return pend[clave(r.contrato)]; });
+  }
   if (S.fContrato === 'con_embarques') lista = lista.filter(function (r) { return r.embarques.length; });
 
   // Solo tienen sentido los contratos con movimiento o con saldo pendiente.
@@ -6005,6 +6094,7 @@ function vistaContratos() {
     '<div class="chips">' +
     [['', 'Con movimiento'], ['abiertos', 'Con saldo'], ['completos', 'Completos'],
      ['excedidos', 'Excedidos'], ['sin_contrato', 'Sin contrato']]
+      .concat(hayColumnasFirma() ? [['sin_firma', 'Sin firmar']] : [])
       .map(function (o) {
         return '<button data-act="fcontrato" data-c="' + o[0] + '" aria-pressed="' +
           (S.fContrato === o[0]) + '">' + o[1] + '</button>';
@@ -6053,6 +6143,17 @@ var CAMPOS_EDIT_CTR = [
   ['firmaImp', 'Firmado por el importador', 'check']
 ];
 
+// Al editar un contrato de varias filas: lo que es del CONTRATO se escribe en
+// todas; lo que es de cada PRODUCTO, solo en la suya.
+var CAMPOS_COMUNES = ['fecha', 'contrato', 'exportador', 'importador', 'incoterm',
+                      'formaPago', 'periodo', 'pagosUsa', 'firmaExp', 'firmaImp'];
+var CAMPOS_PRODUCTO = ['producto', 'tipo', 'tns', 'precio', 'packaging'];
+
+function filasDelContrato(ref) {
+  if (!ref) return [];
+  return [ref].concat(ref.otras || []);
+}
+
 async function guardarContrato() {
   var e = S.editCtr;
   if (!e) return;
@@ -6060,27 +6161,54 @@ async function guardarContrato() {
   if (!ref) { S.editCtrError = 'No encontré la fila de este contrato.'; return pintar(); }
 
   var reqs = [];
-  CAMPOS_EDIT_CTR.forEach(function (c) {
-    var campo = c[0];
-    if (!(campo in e.cambios)) return;
-    var idx = ref.mapa[campo];
-    if (idx === undefined) return;
-    var val = e.cambios[campo];
-    if (c[2] === 'check') val = val === true;
-    if (c[2] === 'number') val = val === '' ? '' : parseFloat(val);
-    if (c[2] === 'date' && val !== '') {
+  var filas = filasDelContrato(ref);
+  var tipoDe = {};
+  CAMPOS_EDIT_CTR.forEach(function (c) { tipoDe[c[0]] = c[2]; });
+
+  var convertir = function (campo, val) {
+    var t = tipoDe[campo];
+    if (t === 'check') return val === true;
+    if (t === 'number' || campo === 'tns' || campo === 'precio') {
+      return val === '' ? '' : parseFloat(val);
+    }
+    if (t === 'date' && val !== '') {
       var dc = normFecha(val);
       if (!esFecha(dc)) throw new Error('La fecha "' + val + '" no se entiende. Usá DD/MM/AAAA.');
-      val = dc;
+      return dc;
     }
+    return val;
+  };
+
+  var escribir = function (fr, campo, val) {
+    var idx = fr.mapa[campo];
+    if (idx === undefined) return;
     reqs.push({
       updateCells: {
-        range: { sheetId: ref.sheetId, startRowIndex: ref.fila - 1, endRowIndex: ref.fila,
+        range: { sheetId: fr.sheetId, startRowIndex: fr.fila - 1, endRowIndex: fr.fila,
                  startColumnIndex: idx, endColumnIndex: idx + 1 },
         rows: [{ values: [{ userEnteredValue: aValorSheets(val) }] }],
         fields: 'userEnteredValue'
       }
     });
+  };
+
+  // 1. Lo del contrato va a TODAS sus filas.
+  Object.keys(e.cambios).forEach(function (campo) {
+    if (campo.indexOf('prod_') === 0) return;
+    if (CAMPOS_PRODUCTO.indexOf(campo) >= 0 && filas.length > 1) return;
+    var val = convertir(campo, e.cambios[campo]);
+    (CAMPOS_COMUNES.indexOf(campo) >= 0 ? filas : [ref]).forEach(function (fr) {
+      escribir(fr, campo, val);
+    });
+  });
+
+  // 2. Lo de cada producto, a su fila: los cambios llegan como prod_<i>_<campo>.
+  Object.keys(e.cambios).forEach(function (k) {
+    var m = k.match(/^prod_(\d+)_(\w+)$/);
+    if (!m) return;
+    var fr = filas[+m[1]];
+    if (!fr) return;
+    escribir(fr, m[2], convertir(m[2], e.cambios[k]));
   });
 
   if (!reqs.length) { S.editCtr = null; return pintar(); }
@@ -6118,7 +6246,13 @@ function panelContrato() {
   };
 
   var fuera = [];
+  var filasCtr = filasDelContrato(ref);
+  var multi = filasCtr.length > 1;
+
   var campos = CAMPOS_EDIT_CTR.filter(function (c) {
+    if (c[2] === 'check') return false;          // las firmas van arriba
+    // Con varios productos, lo de cada producto va en su propio bloque.
+    if (multi && CAMPOS_PRODUCTO.indexOf(c[0]) >= 0) return false;
     return ref && ref.mapa[c[0]] !== undefined;
   }).map(function (c) {
     var campo = c[0], label = c[1], tipo = c[2], val = v(campo);
@@ -6151,6 +6285,60 @@ function panelContrato() {
       (tipo === 'number' ? 'number' : 'text') + '" value="' + esc(val) + '"></div>';
   }).join('');
 
+  // Las firmas van primero: es lo que más se toca y no tiene sentido buscarlo
+  // abajo de once campos.
+  var bloqueFirmas = '';
+  var refF = S.ctrEditables.get(e.contrato);
+  if (refF && (refF.mapa.firmaExp !== undefined || refF.mapa.firmaImp !== undefined)) {
+    var swF = function (campo, label) {
+      if (refF.mapa[campo] === undefined) return '';
+      var on = (campo in e.cambios) ? e.cambios[campo] === true : esVerdadero(e.orig[campo]);
+      return '<button class="sw-firma' + (on ? ' on' : '') + '" data-act="firma" ' +
+        'data-c="' + campo + '" aria-pressed="' + on + '">' +
+        '<span class="riel"><span class="bolita"></span></span>' +
+        '<span class="et">' + label + '</span>' +
+        (on ? '<span class="tick">' + ico('check') + '</span>' : '') + '</button>';
+    };
+    bloqueFirmas = '<div class="bloque-firmas">' +
+      '<h3 class="gt">Firmas</h3>' +
+      swF('firmaExp', 'Firmado por el exportador') +
+      swF('firmaImp', 'Firmado por el importador') +
+      '</div>';
+  }
+
+  // Un bloque por producto, cada uno con su fila.
+  var bloqueProductos = '';
+  if (multi) {
+    var Lp = S.listas || {};
+    bloqueProductos = '<div class="bloque"><h3 class="gt">Productos · ' + filasCtr.length +
+      ' filas</h3><p class="ayuda" style="margin:-6px 0 12px">Lo de arriba se guarda en ' +
+      'todas las filas. Lo de cada producto, solo en la suya.</p>' +
+      filasCtr.map(function (fr, i) {
+        var g = function (campo) {
+          var k = 'prod_' + i + '_' + campo;
+          if (k in e.cambios) return e.cambios[k];
+          var idx = fr.mapa[campo];
+          var v = idx === undefined ? '' : fr.celdas[idx];
+          return v === null || v === undefined ? '' : String(v);
+        };
+        var inp = function (campo, label, tipo) {
+          if (fr.mapa[campo] === undefined) return '';
+          return '<div class="campo"><label for="pp-' + i + '-' + campo + '">' + label + '</label>' +
+            '<input id="pp-' + i + '-' + campo + '" data-prodctr="' + i + '_' + campo + '" ' +
+            'type="' + (tipo || 'text') + '" value="' + esc(g(campo)) + '"></div>';
+        };
+        return '<div class="ap-fila">' +
+          '<span class="ap-num">' + (i + 1) + '</span>' +
+          '<div class="ap-campos">' +
+            inp('producto', 'Producto') + inp('tipo', 'Tipo') +
+            inp('tns', 'Toneladas', 'number') + inp('precio', 'Precio USD/tn', 'number') +
+            inp('packaging', 'Packaging') +
+          '</div>' +
+          '<span class="ap-fila-n">fila ' + fr.fila + '</span>' +
+        '</div>';
+      }).join('') + '</div>';
+  }
+
   var hayCambios = Object.keys(e.cambios).length > 0;
   var nuevoNum = ('contrato' in e.cambios) ? e.cambios.contrato : e.contrato;
   var repeEd = contratoRepetido(nuevoNum, e.contrato);
@@ -6161,27 +6349,30 @@ function panelContrato() {
     '<h2>' + esc(e.contrato) + '</h2>' +
     (ref
       ? '<p style="margin:2px 0 0;font-size:13px;color:var(--tinta3)">' +
-        esc(ref.tab) + ' · fila ' + ref.fila + '</p>'
+        esc(ref.tab) + ' · fila ' + ref.fila +
+        ((ref.otras && ref.otras.length)
+          ? ' — ' + (ref.otras.length + 1) + ' productos en filas distintas'
+          : '') + '</p>'
       : '<div class="error" style="margin-top:12px">Este contrato no está en las pestañas ' +
         'editables. Revisá la configuración de pestañas.</div>') +
     (S.editCtrError ? '<div class="error" style="margin-top:12px">' + esc(S.editCtrError) + '</div>' : '') +
     (ref
-      ? '<div class="bloque">' + campos + '</div>' +
+      ? bloqueFirmas + '<div class="bloque">' + campos + '</div>' + bloqueProductos +
         '<p class="ayuda">Total, Comisión, ENT y Saldo son fórmulas de la planilla ' +
         'y no se tocan.</p>' +
         (fuera.length
           ? '<p class="no-base">Fuera de la base: ' + fuera.join(', ') +
             '. Hay que agregarlos a la base de datos.</p>' : '') +
         (repeEd
-          ? '<div class="error" style="margin:10px 0 0">Ya existe otro contrato ' +
+          ? '<div class="aviso" style="margin:10px 0 0">Ya existe un contrato ' +
             '<b>' + esc(nuevoNum) + '</b>' +
             (repeEd.exportador || repeEd.importador
-              ? ': ' + esc([repeEd.exportador, repeEd.importador].filter(Boolean).join(' → '))
-              : '') + '. Los números no se pueden repetir.</div>'
+              ? ' de ' + esc([repeEd.exportador, repeEd.importador].filter(Boolean).join(' → '))
+              : '') + '. Si no es a propósito, revisalo antes de guardar.</div>'
           : '') +
         '<div class="alta-acc">' +
           '<button class="primario" data-act="ctrguardar"' +
-            (!hayCambios || fuera.length || repeEd || S.guardandoCtr ? ' disabled' : '') + '>' +
+            (!hayCambios || fuera.length || S.guardandoCtr ? ' disabled' : '') + '>' +
             (S.guardandoCtr ? 'Guardando…' : ico('check') + 'Guardar cambios') + '</button>' +
           '<span class="ayuda">' +
             (hayCambios ? Object.keys(e.cambios).length + ' campo(s) modificado(s)'
@@ -6267,6 +6458,7 @@ function refrescarCombo(id, campo, opciones, val, ctx, libre) {
 // Qué lista corresponde a cada campo, para poder refrescar sin rearmar todo.
 function listaDeCampo(campo) {
   var L = S.listas || {};
+  campo = String(campo).replace(/_\d+$/, '');   // producto_1 -> producto
   if (S.altaEmb) {
     var a = S.altaEmb;
     if (campo === 'exporter') return L.exportadores || [];
@@ -6309,6 +6501,21 @@ function comboAlta(campo, label, opciones, a) {
   return comboGen('a-' + campo, campo, label, ops, val, ok, 'alta');
 }
 
+// Los productos del alta. El primero usa los nombres de siempre (producto,
+// tipo...), los siguientes llevan sufijo: producto_1, tipo_1...
+function productosAlta(a) {
+  var n = a.nProd || 1, out = [];
+  for (var i = 0; i < n; i++) {
+    var k = function (c) { return i === 0 ? c : c + '_' + i; };
+    out.push({
+      producto: a[k('producto')] || '', tipo: a[k('tipo')] || '',
+      toneladas: a[k('toneladas')] || '', precio: a[k('precio')] || '',
+      packaging: a[k('packaging')] || ''
+    });
+  }
+  return out;
+}
+
 function formAlta() {
   var a = S.alta || {};
   var L = S.listas || { exportadores: [], importadores: [], productos: [], tipos: [] };
@@ -6320,18 +6527,35 @@ function formAlta() {
       (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
   }
 
-  // Validación: los cuatro de lista tienen que existir en la base.
-  var deLista = [['exportador', L.exportadores], ['importador', L.importadores],
-                 ['producto', L.productos], ['tipo', L.tipos]];
-  var fuera = deLista.filter(function (d) {
-    var v = a[d[0]];
-    return v && !d[1].some(function (o) { return clave(o) === clave(v); });
-  }).map(function (d) { return d[0]; });
+  // Un contrato puede llevar varios productos: cada uno va a su propia fila
+  // con el mismo número, que es como ya está armada la planilla y como la
+  // fórmula de ENT separa lo entregado de cada producto.
+  var nProd = a.nProd || 1;
+  var prods = productosAlta(a);
 
-  var faltan = ['contrato', 'exportador', 'importador', 'producto', 'tipo', 'toneladas', 'precio']
-    .filter(function (k) { return !a[k]; });
+  var enLista = function (lista, v) {
+    return !v || (lista || []).some(function (o) { return clave(o) === clave(v); });
+  };
+  var fuera = [];
+  if (!enLista(L.exportadores, a.exportador)) fuera.push('exportador');
+  if (!enLista(L.importadores, a.importador)) fuera.push('importador');
+  prods.forEach(function (p, i) {
+    var sfx = nProd > 1 ? ' ' + (i + 1) : '';
+    if (!enLista(L.productos, p.producto)) fuera.push('producto' + sfx);
+    if (!enLista(L.tipos, p.tipo)) fuera.push('tipo' + sfx);
+  });
 
-  var total = (parseFloat(a.toneladas) || 0) * (parseFloat(a.precio) || 0);
+  var faltan = ['contrato', 'exportador', 'importador'].filter(function (k) { return !a[k]; });
+  prods.forEach(function (p, i) {
+    var sfx = nProd > 1 ? ' ' + (i + 1) : '';
+    ['producto', 'tipo', 'toneladas', 'precio'].forEach(function (c) {
+      if (!p[c]) faltan.push(c + sfx);
+    });
+  });
+
+  var total = prods.reduce(function (acc, p) {
+    return acc + (parseFloat(p.toneladas) || 0) * (parseFloat(p.precio) || 0);
+  }, 0);
 
   // Referencia de numeración: el último contrato que quedó arriba del TOTAL.
   var ref = '';
@@ -6354,39 +6578,60 @@ function formAlta() {
       '<button data-act="altacerrar">Cancelar</button></div>' +
     (S.altaError ? '<div class="error">' + esc(S.altaError) + '</div>' : '') +
     (repe
-      ? '<div class="error">El contrato <b>' + esc(a.contrato) + '</b> ya existe' +
+      ? '<div class="aviso">Ya hay un contrato <b>' + esc(a.contrato) + '</b>' +
         (repe.exportador || repe.importador
-          ? ': ' + esc([repe.exportador, repe.importador].filter(Boolean).join(' → ')) : '') +
+          ? ' de ' + esc([repe.exportador, repe.importador].filter(Boolean).join(' → ')) : '') +
         (repe.tns ? ', ' + fmtNum(repe.tns) + ' tn' : '') +
-        '. Poné otro número.</div>'
+        '. Si es otro producto del mismo contrato está bien; si no, cambiá el número.</div>'
       : '') +
     ref +
     '<div class="alta-grid">' +
-      txt('fecha', 'Fecha', 'date') +
+      campoFecha('a-fecha', 'data-alta', 'fecha', 'Fecha', a.fecha) +
       txt('contrato', 'Contrato', 'text', 'LT100-2026') +
       comboAlta('exportador', 'Exportador', L.exportadores, a) +
       comboAlta('importador', 'Importador', L.importadores, a) +
-      comboAlta('producto', 'Producto', L.productos, a) +
-      comboAlta('tipo', 'Tipo', L.tipos, a) +
-      txt('toneladas', 'Toneladas', 'number') +
-      txt('precio', 'Precio USD/tn', 'number') +
-      txt('packaging', 'Packaging', 'text', 'Big Bags 1250 kgs') +
       txt('incoterm', 'Incoterm', 'text', 'CIF Rotterdam') +
       comboGen('a-formaPago', 'formaPago', 'Forma de pago',
         S.formasPago.map(function (f) { return f.texto; }), a.formaPago || '', true, 'alta', true) +
       txt('periodo', 'Período de embarque', 'text', 'Octubre 2026') +
     '</div>' +
-    (total ? '<p class="alta-total">Total: US$ ' +
+
+    '<div class="alta-prods">' +
+      '<div class="ap-cab"><h4>Productos</h4>' +
+        '<span class="ayuda">' + (nProd > 1
+          ? nProd + ' productos · se cargan en ' + nProd + ' filas con el mismo número'
+          : 'Si el contrato lleva más de uno, agregalos: cada uno va en su fila') +
+        '</span></div>' +
+      prods.map(function (p, i) {
+        var k = function (c) { return i === 0 ? c : c + '_' + i; };
+        return '<div class="ap-fila">' +
+          (nProd > 1 ? '<span class="ap-num">' + (i + 1) + '</span>' : '') +
+          '<div class="ap-campos">' +
+            comboAlta(k('producto'), 'Producto', L.productos, a) +
+            comboAlta(k('tipo'), 'Tipo', L.tipos, a) +
+            txt(k('toneladas'), 'Toneladas', 'number') +
+            txt(k('precio'), 'Precio USD/tn', 'number') +
+            txt(k('packaging'), 'Packaging', 'text', 'Big Bags 1250 kgs') +
+          '</div>' +
+          (i > 0
+            ? '<button class="ap-quitar" data-act="prodquitar" data-i="' + i + '" ' +
+              'aria-label="Quitar producto ' + (i + 1) + '">' + ico('x') + '</button>'
+            : '') +
+        '</div>';
+      }).join('') +
+      '<button class="ap-mas" data-act="prodmas">' + ico('plus') + 'Agregar otro producto</button>' +
+    '</div>' +
+    (total ? '<p class="alta-total">Total' + (nProd > 1 ? ' del contrato' : '') + ': US$ ' +
       total.toLocaleString('es-AR', { maximumFractionDigits: 2 }) +
       ' · comisión estimada US$ ' +
       (total * 0.02).toLocaleString('es-AR', { maximumFractionDigits: 2 }) + '</p>' : '') +
     '<div class="alta-acc">' +
       '<button class="primario" data-act="altaguardar"' +
-        (faltan.length || fuera.length || repe || S.creando ? ' disabled' : '') + '>' +
+        (faltan.length || fuera.length || S.creando ? ' disabled' : '') + '>' +
         (S.creando ? 'Creando…' : ico('check') + 'Crear contrato') + '</button>' +
       '<span class="ayuda">' +
         (repe
-          ? 'Ese número de contrato ya está usado'
+          ? 'Ese número ya existe: revisá que sea a propósito'
           : fuera.length
           ? 'Hay que agregar a la base de datos: ' + fuera.join(', ')
           : faltan.length
@@ -6416,6 +6661,24 @@ function filaContrato(r) {
       (r.saldo < -0.5 ? 'exc' : r.saldo <= 0.5 ? 'full' : '') + '"></i></div>' : '';
 
   var editable = S.ctrEditables.has(r.contrato);
+  var ctr = S.contratos.get(r.contrato);
+  var partes = (ctr && ctr.partes > 1)
+    ? '<span class="pill gris" title="El mismo número en ' + ctr.partes +
+      ' filas, con productos distintos"><span class="pt"></span>' + ctr.partes +
+      ' filas</span>'
+    : '';
+  var firmas = (ctr && ctr.tieneFirmas)
+    ? (function () {
+        if (ctr.firmaExp && ctr.firmaImp) {
+          return '<span class="pill ok"><span class="pt"></span>Firmado por los dos</span>';
+        }
+        if (!ctr.firmaExp && !ctr.firmaImp) {
+          return '<span class="pill pend"><span class="pt"></span>Sin firmar</span>';
+        }
+        return '<span class="pill nar"><span class="pt"></span>Falta ' +
+          (ctr.firmaExp ? 'el importador' : 'el exportador') + '</span>';
+      })()
+    : '';
   return '<article class="emb ctr-fila' + (editable ? ' editable' : '') + '"' +
     (editable ? ' data-act="ctrabrir" data-k="' + esc(r.contrato) + '" tabindex="0"' : '') + '>' +
     '<div class="fila-top" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.3fr) minmax(0,1fr)">' +
@@ -6455,6 +6718,8 @@ function filaContrato(r) {
             (r.embarques.length === 1 ? ' embarque activo' : ' embarques activos') + '</span>' : '') +
         (r.aFacturar
           ? '<span class="pill ok"><span class="pt"></span>' + r.aFacturar + ' a facturar</span>' : '') +
+        partes +
+        firmas +
       '</div>' +
     '</div>' +
     (function () {
@@ -6917,29 +7182,53 @@ function kv(k, v) {
 
 async function guardarAlta() {
   var a = S.alta || {};
-  var req = ['contrato', 'exportador', 'importador', 'producto', 'tipo', 'toneladas', 'precio'];
-  var faltan = req.filter(function (k) { return !a[k]; });
+  var prods = productosAlta(a);
+  var faltan = ['contrato', 'exportador', 'importador'].filter(function (k) { return !a[k]; });
+  prods.forEach(function (p, i) {
+    ['producto', 'tipo', 'toneladas', 'precio'].forEach(function (c) {
+      if (!p[c]) faltan.push(c + (prods.length > 1 ? ' ' + (i + 1) : ''));
+    });
+  });
   if (faltan.length) {
     S.altaError = 'Falta completar: ' + faltan.join(', ');
     return pintar();
   }
 
+  // La fecha llega como DD/MM/AAAA.
+  // Se manda como número de serie: la columna ya tiene formato de fecha y
+  // así no depende del idioma de la planilla para interpretarla.
+  var fechaD = normFecha(a.fecha);
+  var fechaVal = esFecha(fechaD) ? Math.floor((fechaD - EPOCH) / DIA) : (a.fecha || '');
+
   S.creando = true; S.altaError = null; pintar();
+  var hechas = [];
   try {
-    var fila = await crearContrato({
-      fecha: a.fecha || '',
-      contrato: String(a.contrato).trim(),
-      exportador: a.exportador, importador: a.importador,
-      producto: a.producto, tipo: a.tipo,
-      toneladas: parseFloat(a.toneladas), precio: parseFloat(a.precio),
-      packaging: a.packaging || '', incoterm: a.incoterm || '',
-      formaPago: a.formaPago || '', periodo: a.periodo || ''
-    });
+    // Una fila por producto, con el mismo número. Se insertan de a una arriba
+    // del TOTAL, así quedan juntas y en el orden en que se cargaron.
+    for (var i = 0; i < prods.length; i++) {
+      var p = prods[i];
+      var fila = await crearContrato({
+        fecha: fechaVal,
+        contrato: String(a.contrato).trim(),
+        exportador: a.exportador, importador: a.importador,
+        producto: p.producto, tipo: p.tipo,
+        toneladas: parseFloat(p.toneladas), precio: parseFloat(p.precio),
+        packaging: p.packaging || '', incoterm: a.incoterm || '',
+        formaPago: a.formaPago || '', periodo: a.periodo || ''
+      });
+      hechas.push(fila);
+    }
     S.alta = null;
-    S.avisoOk = 'Contrato ' + a.contrato + ' creado en la fila ' + fila + '.';
+    S.avisoOk = 'Contrato ' + a.contrato + ' creado' +
+      (hechas.length > 1
+        ? ' en ' + hechas.length + ' filas, una por producto (' + hechas.join(', ') + ').'
+        : ' en la fila ' + hechas[0] + '.');
     await cargarTodo();
   } catch (e) {
-    S.altaError = e.message;
+    S.altaError = e.message + (hechas && hechas.length
+      ? ' Ojo: ya se cargaron ' + hechas.length + ' fila(s) (' + hechas.join(', ') +
+        '); revisalas en la planilla antes de reintentar.'
+      : '');
   } finally {
     S.creando = false; pintar();
   }
@@ -7078,6 +7367,8 @@ document.addEventListener('focusin', function (e) {
 
     var cF = e.target.getAttribute('data-aemb');
     if (cF && S.altaEmb) { S.altaEmb[cF] = fmt; return; }
+    var cA = e.target.getAttribute('data-alta');
+    if (cA) { S.alta = S.alta || {}; S.alta[cA] = fmt; return; }
     var cE = e.target.getAttribute('data-ectr');
     if (cE && S.editCtr) { S.editCtr.cambios[cE] = fmt; return; }
     return;   // el panel guarda al salir del campo, no en cada tecla
@@ -7085,6 +7376,8 @@ document.addEventListener('focusin', function (e) {
 
   var ae = e.target.getAttribute && e.target.getAttribute('data-aemb');
   if (ae && S.altaEmb) { S.altaEmb[ae] = e.target.value; return; }
+  var pc = e.target.getAttribute && e.target.getAttribute('data-prodctr');
+  if (pc && S.editCtr) { S.editCtr.cambios['prod_' + pc] = e.target.value; return; }
   var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
   if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
   var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
@@ -7217,7 +7510,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'altaabrir') {
     S.topeContratos = 8;   // con el formulario abierto, la lista estorba
     var hoy = new Date();
-    S.alta = { cargandoUltimo: true, fecha: hoy.getFullYear() + '-' +
+    S.alta = { nProd: 1, cargandoUltimo: true, fecha: hoy.getFullYear() + '-' +
       String(hoy.getMonth() + 1).padStart(2, '0') + '-' +
       String(hoy.getDate()).padStart(2, '0') };
     S.altaError = null;
@@ -7417,6 +7710,31 @@ document.addEventListener('click', function (ev) {
 
   if (act === 'altacerrar') { S.alta = null; S.altaError = null; S.topeContratos = 40; return pintar(); }
   if (act === 'altaguardar') return guardarAlta();
+  if (act === 'prodmas') {
+    S.alta = S.alta || {};
+    var nP = (S.alta.nProd || 1);
+    // El nuevo hereda tipo y packaging del anterior: casi siempre coinciden.
+    var ant = function (c) { return nP - 1 === 0 ? c : c + '_' + (nP - 1); };
+    S.alta['tipo_' + nP] = S.alta[ant('tipo')] || '';
+    S.alta['packaging_' + nP] = S.alta[ant('packaging')] || '';
+    S.alta.nProd = nP + 1;
+    return pintar();
+  }
+  if (act === 'prodquitar') {
+    var iq = parseInt(el.getAttribute('data-i'), 10);
+    var nQ = S.alta.nProd || 1;
+    // Correr los de abajo un lugar para arriba.
+    for (var j = iq; j < nQ - 1; j++) {
+      ['producto', 'tipo', 'toneladas', 'precio', 'packaging'].forEach(function (c) {
+        S.alta[c + '_' + j] = S.alta[c + '_' + (j + 1)];
+      });
+    }
+    ['producto', 'tipo', 'toneladas', 'precio', 'packaging'].forEach(function (c) {
+      delete S.alta[c + '_' + (nQ - 1)];
+    });
+    S.alta.nProd = nQ - 1;
+    return pintar();
+  }
 
   if (act === 'masctr') { S.topeContratos = (S.topeContratos || 40) + 40; return pintar(); }
   if (act === 'fcontrato') {
@@ -7542,6 +7860,8 @@ document.addEventListener('input', function (e) {
 
     var cF = e.target.getAttribute('data-aemb');
     if (cF && S.altaEmb) { S.altaEmb[cF] = fmt; return; }
+    var cA = e.target.getAttribute('data-alta');
+    if (cA) { S.alta = S.alta || {}; S.alta[cA] = fmt; return; }
     var cE = e.target.getAttribute('data-ectr');
     if (cE && S.editCtr) { S.editCtr.cambios[cE] = fmt; return; }
     return;   // el panel guarda al salir del campo, no en cada tecla
@@ -7549,6 +7869,8 @@ document.addEventListener('input', function (e) {
 
   var ae = e.target.getAttribute && e.target.getAttribute('data-aemb');
   if (ae && S.altaEmb) { S.altaEmb[ae] = e.target.value; return; }
+  var pc = e.target.getAttribute && e.target.getAttribute('data-prodctr');
+  if (pc && S.editCtr) { S.editCtr.cambios['prod_' + pc] = e.target.value; return; }
   var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
   if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; return; }
   var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
@@ -7638,6 +7960,8 @@ document.addEventListener('change', function (e) {
       txtIn.value = comoTxt;
       var c1 = txtIn.getAttribute('data-aemb');
       if (c1 && S.altaEmb) { S.altaEmb[c1] = comoTxt; return; }
+      var c1b = txtIn.getAttribute('data-alta');
+      if (c1b) { S.alta = S.alta || {}; S.alta[c1b] = comoTxt; return; }
       var c2 = txtIn.getAttribute('data-ectr');
       if (c2 && S.editCtr) { S.editCtr.cambios[c2] = comoTxt; return pintar(); }
       var c3 = txtIn.getAttribute('data-fecha');
