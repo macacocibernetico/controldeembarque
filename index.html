@@ -701,6 +701,43 @@ th.ord:hover{background:#ebebed}
 .bf-fila2 input{flex:1;min-width:200px}
 .barra-flota .primario{min-height:40px;padding:0 20px}
 /* Interruptor de copia a Peter */
+/* Firmas del contrato */
+.sw-firma{width:100%;justify-content:flex-start;gap:11px;min-height:44px;padding:0 14px;
+  background:var(--sup2);border-color:transparent;font-weight:500;font-size:14px}
+.sw-firma .riel{width:36px;height:21px;border-radius:980px;background:var(--linea3);
+  position:relative;flex:none;transition:background .2s var(--ease)}
+.sw-firma .bolita{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .2s var(--ease)}
+.sw-firma .et{color:var(--tinta2);text-align:left}
+.sw-firma .tick{margin-left:auto;color:var(--ok);display:inline-flex}
+.sw-firma .tick .ico{width:16px;height:16px;stroke-width:2.6}
+.sw-firma.on{background:var(--okbg)}
+.sw-firma.on .riel{background:var(--ok)}
+.sw-firma.on .bolita{left:17px}
+.sw-firma.on .et{color:var(--ok);font-weight:600}
+
+.firmas{background:var(--sup);border-radius:var(--r2);box-shadow:var(--s1);
+  margin-bottom:18px;overflow:hidden}
+.fi-cab{display:flex;align-items:center;gap:11px;padding:13px 16px;font-size:13.5px;
+  color:var(--tinta2)}
+.fi-cab .ico{width:16px;height:16px;flex:none;color:var(--nar)}
+.fi-cab > span{flex:1}
+.fi-cab b{color:var(--tinta);font-weight:600}
+.fi-cab button{min-height:30px;font-size:13px}
+.fi-lista{border-top:1px solid var(--linea2);max-height:340px;overflow-y:auto}
+.fi-item{width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) auto;
+  gap:14px;align-items:center;min-height:42px;padding:0 16px;background:none;
+  border-color:transparent;border-radius:0;text-align:left;font-weight:400}
+.fi-item:hover{background:var(--sup2);border-color:transparent}
+.fi-item + .fi-item{box-shadow:inset 0 1px 0 var(--linea)}
+.fi-num{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--tinta);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fi-quien{font-size:13px;color:var(--tinta3);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.fi-falta{font-size:12px;font-weight:600;padding:3px 10px;border-radius:980px;
+  white-space:nowrap;background:var(--narbg);color:var(--nar)}
+.fi-falta.ambas{background:var(--pendbg);color:var(--pend)}
+
 .sw-peter{background:none;border-color:var(--linea2);gap:9px;padding:0 14px 0 8px}
 .sw-peter .riel{width:34px;height:20px;border-radius:980px;background:var(--sup3);
   position:relative;flex:none;transition:background .2s var(--ease)}
@@ -1189,6 +1226,7 @@ var S = {
   expSoloActivas: true,
   expDesde: '',
   expAbierto: null,
+  verFirmas: false,
   fuentesFact: [],
   guardadoOk: false,
   pasar: null,
@@ -1327,6 +1365,9 @@ var CAMPOS_CTR = {
   tns:        {alias:['toneladas','tns','tons','cantidad']},
   precio:     {alias:['precio','price']},
   packaging:  {alias:['packaging','envase','presentacion','presentación']},
+  firmaExp:   {alias:['firmado exportador','firma exportador','firmado por exportador']},
+  firmaImp:   {alias:['firmado importador','firma importador','firmado cliente',
+                      'firmado por importador']},
   incoterm:   {alias:['incoterm']},
   formaPago:  {alias:['forma de pago','payment','payment condition','condicion de pago']},
   pagosUsa:   {alias:['pagos usa','pagos u.s.a','pagos']},
@@ -2050,8 +2091,19 @@ async function leerHoja(id, nombre) {
   return { sheetId: hoja.properties.sheetId, encabezados: encabezados, filas: filas, filaEncabezado: iEnc + 1 };
 }
 
+// Una casilla puede llegar como booleano o, según cómo se lea, como "TRUE".
+function esVerdadero(v) {
+  if (v === true) return true;
+  if (v === 1) return true;
+  var t = String(v == null ? '' : v).trim().toLowerCase();
+  return t === 'true' || t === 'verdadero' || t === 'sí' || t === 'si' || t === 'x';
+}
+
 function aValorSheets(v) {
   if (v === null || v === undefined || v === '') return { stringValue: '' };
+  // Las casillas de verificación son booleanos: escribir "TRUE" como texto
+  // rompería la casilla.
+  if (typeof v === 'boolean') return { boolValue: v };
   if (typeof v === 'number') return { numberValue: v };
   if (v instanceof Date) return { numberValue: Math.floor((v - EPOCH) / DIA) };
   if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) {
@@ -2282,6 +2334,34 @@ async function crearContrato(datos) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ values: [fila] })
   });
+
+  // Las casillas de firma nacen vacías: un contrato recién cargado no está
+  // firmado por nadie. Se escriben por posición detectada, no fija, porque
+  // están a la derecha y pueden moverse.
+  try {
+    var enc = await api(BASE + S.cfg.sheetId + '/values/' +
+      encodeURIComponent("'" + pestana.replace(/'/g, "''") + "'!A1:AZ1"));
+    var cabe = (enc.values && enc.values[0]) || [];
+    var mapaF = detectar(cabe, CAMPOS_CTR).mapa;
+    var reqsF = [];
+    ['firmaExp', 'firmaImp'].forEach(function (c) {
+      if (mapaF[c] === undefined) return;
+      reqsF.push({
+        updateCells: {
+          range: { sheetId: sheetId, startRowIndex: n - 1, endRowIndex: n,
+                   startColumnIndex: mapaF[c], endColumnIndex: mapaF[c] + 1 },
+          rows: [{ values: [{ userEnteredValue: { boolValue: false } }] }],
+          fields: 'userEnteredValue'
+        }
+      });
+    });
+    if (reqsF.length) {
+      await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: reqsF })
+      });
+    }
+  } catch (e) { /* si la pestaña no tiene esas columnas, no pasa nada */ }
 
   return n;
 }
@@ -3813,6 +3893,10 @@ async function cargarTodo() {
           entregadoHoja: normNum(g('entregado')),
           saldoHoja: normNum(g('saldo')),
           periodo: g('periodo'),
+          packaging: g('packaging'),
+          firmaExp: esVerdadero(g('firmaExp')),
+          firmaImp: esVerdadero(g('firmaImp')),
+          tieneFirmas: dc.mapa.firmaExp !== undefined || dc.mapa.firmaImp !== undefined,
           formaPago: g('formaPago'),
           cond: interpretarPago(g('formaPago'))
         });
@@ -5807,6 +5891,70 @@ function semaforosChicos(emb, src) {
   }).join('');
 }
 
+/* Contratos sin firmar. Se mira solo entre los que están abiertos: un contrato
+   viejo y cumplido sin la casilla marcada ya no es un pendiente.
+   Si la planilla no tiene esas columnas, no se muestra nada. */
+function firmasPendientes() {
+  var out = [];
+  S.contratos.forEach(function (c, nombre) {
+    if (!c.tieneFirmas) return;
+    if (c.firmaExp && c.firmaImp) return;
+    // Solo los que siguen en juego: con saldo o sin entregar todo.
+    var saldo = normNum(c.saldo);
+    var ent = normNum(c.entregado);
+    var tns = normNum(c.tns);
+    var abierto = (saldo === null || saldo === undefined)
+      ? true
+      : saldo > 0.5;
+    if (!abierto && ent && tns && ent >= tns) return;
+    out.push({
+      nombre: nombre, c: c,
+      falta: (!c.firmaExp && !c.firmaImp) ? 'ambas'
+           : (!c.firmaExp ? 'exportador' : 'importador')
+    });
+  });
+  return out.sort(function (a, b) {
+    var p = { ambas: 0, exportador: 1, importador: 2 };
+    return p[a.falta] - p[b.falta] || a.nombre.localeCompare(b.nombre, 'es');
+  });
+}
+
+function panelFirmas() {
+  var lista = firmasPendientes();
+  if (!lista.length) return '';
+
+  var ambas = lista.filter(function (x) { return x.falta === 'ambas'; }).length;
+
+  return '<div class="firmas">' +
+    '<div class="fi-cab">' + ico('lapiz') +
+      '<span><b>' + lista.length +
+        (lista.length === 1 ? ' contrato sin firmar' : ' contratos sin firmar') + '</b>' +
+        (ambas ? ' — ' + ambas + (ambas === 1 ? ' sin ninguna de las dos firmas'
+                                              : ' sin ninguna de las dos firmas') : '') +
+      '</span>' +
+      '<button data-act="verfirmas" aria-pressed="' + (!!S.verFirmas) + '">' +
+        (S.verFirmas ? 'Ocultar' : 'Ver cuáles') + '</button>' +
+    '</div>' +
+    (S.verFirmas
+      ? '<div class="fi-lista">' + lista.slice(0, 40).map(function (x) {
+          var falta = x.falta === 'ambas'
+            ? 'Faltan las dos firmas'
+            : 'Falta la firma del ' + x.falta;
+          return '<button class="fi-item" data-act="ctrabrir" data-k="' + esc(x.nombre) + '">' +
+            '<span class="fi-num">' + esc(x.nombre) + '</span>' +
+            '<span class="fi-quien">' +
+              esc([x.c.exportador, x.c.importador].filter(Boolean).join(' → ')) + '</span>' +
+            '<span class="fi-falta ' + x.falta + '">' + esc(falta) + '</span>' +
+            '</button>';
+        }).join('') +
+        (lista.length > 40
+          ? '<p class="ayuda" style="padding:8px 12px">y ' + (lista.length - 40) + ' más</p>'
+          : '') +
+      '</div>'
+      : '') +
+    '</div>';
+}
+
 function vistaContratos() {
   var lista = calcularContratos();
   var q = S.busca.trim().toLowerCase();
@@ -5832,7 +5980,7 @@ function vistaContratos() {
 
   var conEmb = lista.filter(function (r) { return r.embarques.length; }).length;
 
-  var h = '';
+  var h = panelFirmas();
 
   if (!S.alta) {
     h += '<div class="barra-alta">' +
@@ -5900,7 +6048,9 @@ var CAMPOS_EDIT_CTR = [
   ['incoterm', 'Incoterm', 'text'],
   ['formaPago', 'Forma de pago', 'pago'],
   ['periodo', 'Período de embarque', 'text'],
-  ['pagosUsa', 'Pagos USA', 'text']
+  ['pagosUsa', 'Pagos USA', 'text'],
+  ['firmaExp', 'Firmado por el exportador', 'check'],
+  ['firmaImp', 'Firmado por el importador', 'check']
 ];
 
 async function guardarContrato() {
@@ -5916,6 +6066,7 @@ async function guardarContrato() {
     var idx = ref.mapa[campo];
     if (idx === undefined) return;
     var val = e.cambios[campo];
+    if (c[2] === 'check') val = val === true;
     if (c[2] === 'number') val = val === '' ? '' : parseFloat(val);
     if (c[2] === 'date' && val !== '') {
       var dc = normFecha(val);
@@ -5983,6 +6134,16 @@ function panelContrato() {
     if (tipo === 'pago') {
       var ops2 = S.formasPago.map(function (f) { return f.texto; });
       return comboGen('c-' + campo, campo, label, ops2, val, true, 'ctr', true);
+    }
+    if (tipo === 'check') {
+      var marcado = (campo in e.cambios) ? e.cambios[campo] === true
+                                         : esVerdadero(e.orig[campo]);
+      return '<div class="campo"><button class="sw-firma' + (marcado ? ' on' : '') + '" ' +
+        'data-act="firma" data-c="' + campo + '" aria-pressed="' + marcado + '">' +
+        '<span class="riel"><span class="bolita"></span></span>' +
+        '<span class="et">' + label + '</span>' +
+        (marcado ? '<span class="tick">' + ico('check') + '</span>' : '') +
+        '</button></div>';
     }
     if (tipo === 'date') return campoFecha('c-' + campo, 'data-ectr', campo, label, val);
     return '<div class="campo"><label for="c-' + campo + '">' + label + '</label>' +
@@ -7142,6 +7303,16 @@ document.addEventListener('click', function (ev) {
     var idP = el.getAttribute('data-f');
     S.pasar = (S.pasar === idP) ? null : idP;   // el mismo botón lo cierra
     S.entiendo = false; S.factError = null;
+    return pintar();
+  }
+  if (act === 'verfirmas') { S.verFirmas = !S.verFirmas; return pintar(); }
+  if (act === 'firma') {
+    var cF2 = el.getAttribute('data-c');
+    if (!S.editCtr) return;
+    var actual = (cF2 in S.editCtr.cambios)
+      ? S.editCtr.cambios[cF2] === true
+      : esVerdadero(S.editCtr.orig[cF2]);
+    S.editCtr.cambios[cF2] = !actual;
     return pintar();
   }
   if (act === 'faltafact') {
