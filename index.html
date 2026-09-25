@@ -823,6 +823,18 @@ th.ord:hover{background:#ebebed}
   font-size:13px;min-height:32px}
 .aviso-sug button[aria-pressed=true]{background:var(--acento);color:#fff}
 
+/* Copia del shipment advice: se ve exactamente lo que va a salir */
+.cc-vista{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin:0 0 12px;
+  padding:10px 12px;border-radius:var(--r3);background:var(--sup2);font-size:12.5px}
+.cc-lbl{font-weight:600;color:var(--tinta3);flex:none}
+.cc-lista{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.cc-mail{background:var(--sup);border-radius:980px;padding:3px 10px;
+  box-shadow:0 0 0 1px var(--linea2);color:var(--tinta);overflow-wrap:anywhere}
+.cc-mail.o-documental{box-shadow:0 0 0 1px rgba(37,99,235,.35);color:#1d4ed8}
+.cc-mail.o-peter{box-shadow:0 0 0 1px rgba(5,150,105,.35);color:var(--ok)}
+.cc-nota{font-size:12px;color:var(--tinta3);font-style:italic}
+.cc-falta{flex-basis:100%;font-size:12.5px;font-weight:600;color:var(--nar)}
+
 .bf-error{margin:0 0 12px;font-size:13.5px;color:var(--pend);background:var(--pendbg);
   padding:11px 14px;border-radius:var(--r2)}
 
@@ -1368,13 +1380,15 @@ var S = {
   adviceEnviando: null,
   adviceMsg: null,
   adviceIdioma: 'en',
-  advicePeter: false,
+  advicePeter: null,   // null = automático (sí con Alrisha)
   adviceTo: null,
   adviceFilas: {},
   marcados: {},
   advices: new Map(),
   advicesViejos: 0,
   paises: new Map(),
+  mailsDoc: new Map(),
+  mailsRaros: [],
   diagPaises: null,
   sinPais: { clientes: [], proveedores: [] },
   alta: null,
@@ -2536,7 +2550,7 @@ function datosAdvice(sel) {
     errores: [], exporter: base.exporter, importer: base.importer,
     etd: f(base.etd), eta: f(base.eta), port: base.port, vessel: base.vessel,
     bl: base.bl, goods: goods, contratos: contratos,
-    emailTo: base.mailsCC || ''
+    emailTo: destinoAdvice(base).para
   };
 }
 
@@ -3978,6 +3992,73 @@ var NOMBRE_PAIS = {
   'singapur':'SG','australia':'AU','nueva zelanda':'NZ'
 };
 
+/* Los mails de una celda. Vienen separados por coma, pero en la práctica
+   también aparecen con punto y coma, espacios, saltos de línea o con nombre
+   ("Juan <juan@x.com>"). Se extraen los que tienen forma de mail, sin
+   repetir, y lo que sobra se reporta para revisarlo. */
+function parsearMails(txt) {
+  var t = String(txt == null ? '' : txt);
+  var re = /[A-Z0-9._%+'-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,}/gi;
+  var vistos = {}, mails = [];
+  (t.match(re) || []).forEach(function (m) {
+    var k = m.toLowerCase().replace(/\.$/, '');
+    if (!vistos[k]) { vistos[k] = 1; mails.push(k); }
+  });
+  // Lo que queda sin mail, para avisar (un "@" suelto, un dominio incompleto).
+  var resto = t.replace(re, ' ').replace(/[<>"(),;:\s]+/g, ' ').trim();
+  var raros = resto.split(' ').filter(function (x) { return x.indexOf('@') >= 0; });
+  return { mails: mails, raros: raros };
+}
+
+/* La copia del advice, armada en un solo lugar: lo que se muestra en pantalla
+   es exactamente lo que sale en el mail.
+   - la casilla fija de exportación;
+   - los mails documentales del cliente (Database_old);
+   - Peter, si está encendido.
+   Sin repetir, y sin nadie que ya esté en "Para". */
+function ccAdvice(importador, destino) {
+  var para = {};
+  parsearMails(destino).mails.forEach(function (m) { para[m] = 1; });
+  var vistos = {}, cc = [];
+  var sumar = function (m, origen) {
+    var k = String(m || '').trim().toLowerCase();
+    if (!k || para[k] || vistos[k]) return;
+    vistos[k] = 1; cc.push({ mail: k, origen: origen });
+  };
+  var peter = String(ADV.peter || '').toLowerCase();
+  var conPeter = peterActivo(importador);
+  // Si "Copia a Peter" está apagado, Peter no va, aunque su mail figure entre
+  // los documentales del cliente: el interruptor tiene que decir la verdad.
+  if (!conPeter) vistos[peter] = 1;
+  sumar(ADV.ccFijo, 'fijo');
+  if (conPeter) sumar(ADV.peter, 'peter');
+  mailsDocumentales(importador).forEach(function (m) { sumar(m, 'documental'); });
+  return cc;
+}
+
+// Peter va en copia por defecto cuando el cliente es Alrisha; en cualquier
+// caso se puede prender o apagar a mano, y eso manda.
+function peterActivo(importador) {
+  if (S.advicePeter === true || S.advicePeter === false) return S.advicePeter;
+  return clave(importador).indexOf('alrisha') >= 0;
+}
+
+/* A quién va el advice. Primero la columna "Mails CC" del embarque, que es lo
+   que usaba el script de siempre. Si está vacía, los mails documentales del
+   cliente: un advice no puede salir sin "Para", y frenarlo cuando la planilla
+   sí tiene a quién mandarlo no tiene sentido. */
+function destinoAdvice(emb) {
+  var propio = String((emb && emb.mailsCC) || '').trim();
+  if (propio) return { para: propio, origen: 'embarque' };
+  var docs = mailsDocumentales(emb && emb.importer);
+  if (docs.length) return { para: docs.join(', '), origen: 'documental' };
+  return { para: '', origen: '' };
+}
+
+function mailsDocumentales(empresa) {
+  return (S.mailsDoc && S.mailsDoc.get(clave(empresa))) || [];
+}
+
 function codigoPais(v) {
   var t = String(v == null ? '' : v).trim();
   if (!t) return null;
@@ -3992,6 +4073,8 @@ function codigoPais(v) {
    Las empresas se atan por nombre, que es el mismo en las dos planillas. */
 async function cargarPaisesEmpresas() {
   S.paises = new Map();
+  S.mailsDoc = new Map();
+  S.mailsRaros = [];
   S.sinPais = { clientes: [], proveedores: [] };
   S.diagPaises = null;
   if (!S.cfg.paisSheetId) return;
@@ -4051,15 +4134,32 @@ async function cargarPaisesEmpresas() {
           // Sin columna de nombre clara, se usa la primera con texto.
           if (cNom < 0) cNom = 0;
 
-          var con = 0;
+          // Mails para el envío documental: van en copia del shipment advice.
+          // Se busca primero la columna exacta, que es la que importa; una
+          // columna "Mail" suelta podría ser otra cosa.
+          var encF = filas[iEnc] || [], cMails = -1;
+          for (var q = 0; q < encF.length; q++) {
+            var kq = clave(encF[q]);
+            if (kq.indexOf('documental') >= 0 ||
+                (kq.indexOf('mail') >= 0 && kq.indexOf('envio') >= 0)) { cMails = q; break; }
+          }
+
+          var con = 0, conMail = 0;
           filas.slice(iEnc + 1).forEach(function (f2) {
             var nom = f2 && f2[cNom] ? String(f2[cNom]).trim() : '';
             if (!nom) return;
             var cod = codigoPais(f2[cPais]);
             if (cod) { S.paises.set(clave(nom), cod); con++; }
             else if (cubo.length < 400) cubo.push(nom);
+
+            if (cMails >= 0 && f2[cMails]) {
+              var r2 = parsearMails(f2[cMails]);
+              if (r2.mails.length) { S.mailsDoc.set(clave(nom), r2.mails); conMail++; }
+              if (r2.raros.length) S.mailsRaros.push({ empresa: nom, raros: r2.raros });
+            }
           });
-          usadas.push(hoja + ' → ' + con + ' con país');
+          usadas.push(hoja + ' → ' + con + ' con país' +
+            (cMails >= 0 ? ', ' + conMail + ' con mails documentales' : ''));
         })
         .catch(function (e) { usadas.push(hoja + ': ' + e.message); });
     };
@@ -4156,7 +4256,10 @@ async function enviarAdvice(ids, desdeBarra) {
 
   var destino = (S.adviceTo !== null && S.adviceTo !== undefined) ? S.adviceTo : d.emailTo;
   destino = String(destino || '').trim();
-  if (!destino) return fallar('Falta el destinatario. La columna Mails CC de esa fila está vacía.');
+  if (!destino) {
+    return fallar('Falta el destinatario: la fila no tiene "Mails CC" y ' +
+      (d.importer || 'el cliente') + ' no tiene mails para envío documental en Database_old.');
+  }
 
   S.adviceEnviando = desdeBarra ? 'barra' : sel[0]._id;
   S.adviceMsg = null; pintar();
@@ -4164,8 +4267,7 @@ async function enviarAdvice(ids, desdeBarra) {
   try {
     var t = textosAdvice(d, S.adviceIdioma || 'en');
     var firma = await firmaDelUsuario();
-    var cc = [ADV.ccFijo];
-    if (S.advicePeter) cc.push(ADV.peter);
+    var cc = ccAdvice(d.importer, destino).map(function (x) { return x.mail; });
 
     var mime = armarMime(destino, cc.join(', '), t.subject,
                          cuerpoPlano(t), cuerpoHtml(t, firma));
@@ -4282,7 +4384,7 @@ function bloqueAdvice(emb, ev) {
   var hermanas = hermanasAdvice(emb);
   var sel = filasAdvice(emb);
   var destino = (S.adviceTo !== null && S.adviceTo !== undefined)
-    ? S.adviceTo : (sel[0].mailsCC || '');
+    ? S.adviceTo : destinoAdvice(sel[0]).para;
 
   var yaEnviado = adviceDe(emb);
   var h = '<div class="bloque"><h3 class="gt">Shipment advice</h3>';
@@ -4327,12 +4429,18 @@ function bloqueAdvice(emb, ev) {
     });
   }
 
+  var origenPara = (S.adviceTo === null || S.adviceTo === undefined)
+    ? destinoAdvice(sel[0]).origen : 'mano';
   h += '<div class="campo" style="margin-top:12px">' +
-    '<label for="adv-to-panel">Destinatarios</label>' +
+    '<label for="adv-to-panel">Para</label>' +
     '<input id="adv-to-panel" data-advto="1" value="' + esc(destino) + '" ' +
     'placeholder="cliente@empresa.com"></div>' +
-    '<p class="ayuda" style="margin:-8px 0 12px">Separar con coma. Se precarga de Mails CC. ' +
-    'La copia fija la agrega el script.</p>';
+    '<p class="ayuda" style="margin:-8px 0 10px">' +
+      (origenPara === 'documental'
+        ? 'La fila no tiene «Mails CC»: se tomaron los mails documentales de Database_old.'
+        : origenPara === 'embarque' ? 'De la columna «Mails CC» del embarque. Separar con coma.'
+        : 'Separar con coma.') + '</p>' +
+    vistaCC(sel[0].importer, destino);
 
   h += '<div class="adv-fila">' +
     '<span class="modos">' +
@@ -4341,7 +4449,7 @@ function bloqueAdvice(emb, ev) {
           ((S.adviceIdioma || 'en') === o[0]) + '">' + o[1] + '</button>';
       }).join('') +
     '</span>' +
-    togglePeter() +
+    togglePeter(sel[0].importer) +
     '</div>';
 
   h += '<button class="primario ancho" data-act="advice" data-f="' + esc(emb._id) + '"' +
@@ -5410,12 +5518,41 @@ function sugeridos(evs) {
 // Interruptor de copia a Peter. Era un checkbox nativo y dependía del evento
 // change, que se pierde fácil; ahora es un botón con su propia acción, y
 // además se ve encendido o apagado de un vistazo.
-function togglePeter() {
-  var on = !!S.advicePeter;
+function togglePeter(importador) {
+  var on = peterActivo(importador);
+  var auto = S.advicePeter !== true && S.advicePeter !== false && on;
   return '<button class="sw-peter' + (on ? ' on' : '') + '" data-act="advpeter" ' +
-    'aria-pressed="' + on + '">' +
+    'data-imp="' + esc(importador || '') + '" aria-pressed="' + on + '" ' +
+    'title="' + esc(ADV.peter) + (auto ? ' — encendido porque el cliente es Alrisha' : '') + '">' +
     '<span class="riel"><span class="bolita"></span></span>' +
-    '<span class="et">Copia a Peter</span></button>';
+    '<span class="et">Copia a Peter' + (auto ? ' (Alrisha)' : '') + '</span></button>';
+}
+
+// La copia, a la vista antes de generar. Si falta el mail documental del
+// cliente, se dice fuerte: es lo que hace que el aviso llegue a quien tiene que.
+function vistaCC(importador, destino) {
+  var cc = ccAdvice(importador, destino);
+  var docs = cc.filter(function (x) { return x.origen === 'documental'; });
+  var etq = { fijo: 'fija', documental: 'documental', peter: 'Peter' };
+  return '<div class="cc-vista">' +
+    '<span class="cc-lbl">CC</span>' +
+    '<span class="cc-lista">' + cc.map(function (x) {
+      return '<span class="cc-mail o-' + x.origen + '" title="' + etq[x.origen] + '">' +
+        esc(x.mail) + '</span>';
+    }).join('') + '</span>' +
+    (function () {
+      if (docs.length) return '';
+      // Si no están en copia puede ser porque ya van en "Para": no es falta.
+      var todos = mailsDocumentales(importador);
+      var enPara = parsearMails(destino).mails;
+      if (todos.length && todos.every(function (m) { return enPara.indexOf(m) >= 0; })) {
+        return '<span class="cc-nota">Los mails documentales van en «Para»</span>';
+      }
+      return '<span class="cc-falta">' + (importador
+        ? 'Sin mails documentales para ' + esc(importador) + ' en Database_old'
+        : 'Sin cliente') + '</span>';
+    })() +
+    '</div>';
 }
 
 // Mientras haya algo para deshacer, se ofrece. Dura un día: pasado eso la
@@ -5565,7 +5702,7 @@ function barraAdvice(evs) {
   if (Object.keys(tabs).length > 1) difs.unshift('la pestaña');
 
   var destino = (S.adviceTo !== null && S.adviceTo !== undefined)
-    ? S.adviceTo : (base.mailsCC || '');
+    ? S.adviceTo : destinoAdvice(base).para;
   var msg = (S.adviceMsg && S.adviceMsg.barra) ? S.adviceMsg : null;
   var goods = sel.map(function (o) {
     return (o.tns || '') + ' Tns ' + (o.product || '');
@@ -5606,7 +5743,13 @@ function barraAdvice(evs) {
       '. El advice necesita que sean del mismo embarque.</p>';
   }
 
-  h += '<div class="bf-fila2">' +
+  var origenB = (S.adviceTo === null || S.adviceTo === undefined)
+    ? destinoAdvice(base).origen : 'mano';
+  h += vistaCC(base.importer, destino) +
+    (origenB === 'documental'
+      ? '<p class="cc-nota" style="margin:0 0 8px">La fila no tiene «Mails CC»: el «Para» ' +
+        'sale de los mails documentales de Database_old.</p>' : '') +
+    '<div class="bf-fila2">' +
     '<label class="sr-solo" for="adv-to-barra">Destinatarios</label>' +
     '<input id="adv-to-barra" data-advto="1" value="' + esc(destino) + '" ' +
       'placeholder="destinatarios, separados por coma">' +
@@ -5616,7 +5759,7 @@ function barraAdvice(evs) {
           ((S.adviceIdioma || 'en') === o[0]) + '">' + o[1] + '</button>';
       }).join('') +
     '</span>' +
-    togglePeter() +
+    togglePeter(base.importer) +
     '<button class="primario" data-act="adviceMulti"' +
       (difs.length || S.adviceEnviando ? ' disabled' : '') + '>' +
       (S.adviceEnviando ? 'Creando…' : ico('mail') + 'Crear borrador del shipment advice') +
@@ -8617,7 +8760,11 @@ document.addEventListener('click', function (ev) {
     }
     return;
   }
-  if (act === 'advpeter') { S.advicePeter = !S.advicePeter; return pintar(); }
+  if (act === 'advpeter') {
+    var impP = el.getAttribute('data-imp') || '';
+    S.advicePeter = !peterActivo(impP);
+    return pintar();
+  }
   if (act === 'permiso-gmail') {
     S.faltaGmail = false; S.token = null;
     return pedirToken(true).then(function () { S.adviceMsg = null; pintar(); })
