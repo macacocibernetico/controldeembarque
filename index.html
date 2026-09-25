@@ -772,6 +772,14 @@ th.ord:hover{background:#ebebed}
 .ev-txt span{font-size:12px;color:var(--tinta3);font-weight:400}
 .ev-tick{position:absolute;right:12px;color:var(--acento)}
 .ev-tick .ico{width:17px;height:17px;stroke-width:2.6}
+.ctr-tit{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  margin:-4px 0 14px;padding-bottom:12px;border-bottom:1px solid var(--linea2)}
+.ctr-tit h3{margin:0;font-size:19px;font-weight:700;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;color:var(--tinta);overflow-wrap:anywhere}
+.ct-pre{color:var(--acento);margin-right:1px}
+.ct-anio{color:var(--tinta3);font-weight:600}
+.ct-resto{color:var(--tinta3);font-weight:500;font-size:15px;margin-left:4px}
+.ct-fecha{font-size:12.5px;color:var(--tinta4);white-space:nowrap;flex:none}
 .pill.via-maritimo{color:#1d4ed8;gap:5px}
 .pill.via-terrestre{color:#92400e;gap:5px}
 .pill .deduc{font-size:10.5px;color:var(--tinta4);margin-left:2px;cursor:help}
@@ -7068,10 +7076,28 @@ function panelFirmas() {
     '</div>';
 }
 
+/* Los contratos se numeran LT<número>-<año>: LT099-2026. Se separa en partes
+   para mostrarlo en el título con el prefijo y el año destacados. Los que no
+   siguen el formato (P00951.000, 700/21...) se muestran tal cual. */
+function partirNumero(txt) {
+  var t = String(txt || '').trim();
+  // Número corto (hasta 4 cifras) y año de 4 cifras razonable: si no, un
+  // código como "CK13042021-38" se leería como el contrato 13042021 de 2038.
+  var m = t.match(/^([A-Za-z]{1,4})\s*(\d{1,4})\s*([-\/])\s*(\d{4})\b(.*)$/);
+  if (!m) return null;
+  var anio = +m[4];
+  if (anio < 2000 || anio > new Date().getFullYear() + 2) return null;
+  return {
+    prefijo: m[1].toUpperCase(),
+    cuerpo: m[2],   // con los ceros, como está escrito
+    numero: +m[2], sep: m[3], anio: anio,
+    resto: m[5] || ''
+  };
+}
+
 var ORDENES_CTR = [
   ['recientes', 'Más recientes primero'],
   ['antiguos', 'Más antiguos primero'],
-  ['numero', 'Número de contrato'],
   ['cliente', 'Cliente (A → Z)'],
   ['exportador', 'Exportador (A → Z)'],
   ['saldo', 'Mayor saldo pendiente'],
@@ -7094,9 +7120,6 @@ function ordenarContratos(lista, orden) {
       if (x === null && y === null) return 0;
       if (x === null) return 1; if (y === null) return -1;
       return x - y;
-    },
-    numero: function (a, b) {
-      return String(a.contrato).localeCompare(String(b.contrato), 'es', { numeric: true });
     },
     cliente: function (a, b) { return txt(a.importador).localeCompare(txt(b.importador), 'es'); },
     exportador: function (a, b) { return txt(a.exportador).localeCompare(txt(b.exportador), 'es'); },
@@ -7854,8 +7877,18 @@ function filaContrato(r) {
           (ctr.firmaExp ? 'el importador' : 'el exportador') + '</span>';
       })()
     : '';
+  var num = partirNumero(r.contrato);
   return '<article class="emb ctr-fila' + (editable ? ' editable' : '') + '"' +
     (editable ? ' data-act="ctrabrir" data-k="' + esc(r.contrato) + '" tabindex="0"' : '') + '>' +
+    // El número es lo que identifica al contrato: va como título de la tarjeta.
+    '<header class="ctr-tit">' +
+      '<h3>' + (num
+        ? '<span class="ct-pre">' + esc(num.prefijo) + '</span>' + esc(num.cuerpo) +
+          '<span class="ct-anio">' + esc(num.sep + num.anio) + '</span>' +
+          (num.resto ? '<span class="ct-resto">' + esc(num.resto) + '</span>' : '')
+        : esc(r.contrato)) + '</h3>' +
+      (esFecha(r.fecha) ? '<span class="ct-fecha">' + fmtFecha(r.fecha) + '</span>' : '') +
+    '</header>' +
     '<div class="fila-top" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.3fr) minmax(0,1fr)">' +
       '<div>' +
         '<div class="partes"><div class="via-partes">' +
@@ -7869,7 +7902,6 @@ function filaContrato(r) {
               return f ? '<span class="rot-pais">' + f + '</span>' : ''; })() +
           '</div>' +
         '</div></div>' +
-        '<div class="ctr-cod">' + esc(r.contrato) + '</div>' +
         (function () {
           var ref = S.ctrEditables.get(r.contrato);
           if (ref) return '<div class="orig">' + esc(ref.tab) + ' · fila ' + ref.fila +
