@@ -1376,6 +1376,8 @@ var S = {
   fuentesFact: [],
   guardadoOk: false,
   animarPanel: false,
+  tFiltro: null,
+  tBusca: null,
   empresas: new Map(),
   hayHojaEmpresas: false,
   gen: null,
@@ -8096,14 +8098,14 @@ function vistaPlanilla(filas) {
 
   function filtroCol(c) {
     if (SEMAFOROS.indexOf(c) >= 0) {
-      return '<th class="fth"><select data-fcol="' + c + '">' +
+      return '<th class="fth"><select id="fcol-' + c + '" data-fcol="' + c + '">' +
         ['', 'ok', 'pendiente', 'atencion', 'vacio'].map(function (o) {
           return '<option value="' + (o ? etiqueta(c, o) : '') + '"' +
             (S.fCol[c] === (o ? etiqueta(c, o) : '') ? ' selected' : '') + '>' +
             (o ? etiqueta(c, o) : '—') + '</option>';
         }).join('') + '</select></th>';
     }
-    return '<th class="fth"><input data-fcol="' + c + '" value="' +
+    return '<th class="fth"><input id="fcol-' + c + '" data-fcol="' + c + '" autocomplete="off" value="' +
       esc(S.fCol[c] || '') + '" placeholder="filtrar"></th>';
   }
 
@@ -8113,7 +8115,50 @@ function vistaPlanilla(filas) {
             '<tr><th class="nrofila fth"></th><th class="sel-col fth"></th>' +
               cols.map(filtroCol).join('') + '</tr>';
 
-  var cuerpo = filas.map(function (x) {
+  var cuerpo = filasHtmlPlanilla(filas, cols);
+
+  return '<div class="full">' + barra +
+    '<div class="hoja"><table class="tbl-hoja"><thead>' + enc +
+    '</thead><tbody>' + cuerpo + '</tbody></table></div>' +
+    '<p class="ayuda" style="margin-top:9px">Los colores son los mismos de la planilla. ' +
+    'El número de la izquierda es la fila real. Clic en el nombre de una columna ordena, ' +
+    'la × la oculta, y la fila de abajo filtra. Clic en una fila abre el detalle. ' +
+    'La casilla de al lado elige filas para el shipment advice: las que no son del mismo ' +
+    'embarque se apagan solas.</p>' +
+    '</div>';
+}
+
+// Solo las filas del cuerpo de la tabla. Separado para poder redibujar nada más
+// esto cuando se tipea en un filtro de columna, sin tocar el resto.
+function filasVisiblesPlanilla() {
+  var evs = evaluarTodo().filter(function (x) {
+    if (S.filtroTab && x.emb._tab !== S.filtroTab) return false;
+    if (S.filtroTipo && clave(x.emb.tipo) !== S.filtroTipo) return false;
+    return true;
+  });
+  var filas = ordenar(aplicarFiltros(evs), S.orden);
+  if (S.soloSug) {
+    var ids = {};
+    sugeridos(evs).forEach(function (x) { ids[x.emb._id] = 1; });
+    filas = filas.filter(function (x) { return ids[x.emb._id]; });
+  }
+  return filas;
+}
+
+// Al tipear en un filtro de columna: se cambian las filas y el conteo, nada
+// más. El campo donde se escribe no se toca, así no pierde el foco ni se traba.
+function refrescarPlanilla() {
+  var tb = document.querySelector && document.querySelector('.tbl-hoja tbody');
+  if (!tb) return pintar();
+  var cols = columnasDisponibles().filter(function (c) { return !S.colsOcultas[c]; });
+  var filas = filasVisiblesPlanilla();
+  tb.innerHTML = filasHtmlPlanilla(filas, cols);
+  var cnt = document.querySelector('.hoja-barra .ayuda');
+  if (cnt) cnt.textContent = filas.length + ' filas';
+}
+
+function filasHtmlPlanilla(filas, cols) {
+  return filas.map(function (x) {
     var emb = x.emb, src = x.src;
     var marcado = !!(S.marcados && S.marcados[emb._id]);
     var noCombina = motivoIncompatible(emb);
@@ -8151,16 +8196,6 @@ function vistaPlanilla(filas) {
         return '<td' + cls + '>' + pintarCelda(v) + '</td>';
       }).join('') + '</tr>';
   }).join('');
-
-  return '<div class="full">' + barra +
-    '<div class="hoja"><table class="tbl-hoja"><thead>' + enc +
-    '</thead><tbody>' + cuerpo + '</tbody></table></div>' +
-    '<p class="ayuda" style="margin-top:9px">Los colores son los mismos de la planilla. ' +
-    'El número de la izquierda es la fila real. Clic en el nombre de una columna ordena, ' +
-    'la × la oculta, y la fila de abajo filtra. Clic en una fila abre el detalle. ' +
-    'La casilla de al lado elige filas para el shipment advice: las que no son del mismo ' +
-    'embarque se apagan solas.</p>' +
-    '</div>';
 }
 
 var EDITABLES = ['vessel', 'shippingLine', 'booking', 'containers', 'bl', 'invoice', 'tracking', 'nota'];
@@ -9248,7 +9283,16 @@ document.addEventListener('click', function (ev) {
 document.addEventListener('input', function (e) {
   if (e.target.id === 'busca-fact') { S.buscaFact = e.target.value; S.topeFact = 25; pintar(); return; }
   if (e.target.id === 'busca-cargas' || e.target.id === 'busca-ctr') {
-    S.busca = e.target.value; pintar();
+    S.busca = e.target.value;
+    clearTimeout(S.tBusca);
+    // Con la planilla abierta alcanza con redibujar la tabla.
+    S.tBusca = setTimeout(function () {
+      if (S.modo === 'planilla' && S.vista === 'carga' && document.querySelector('.tbl-hoja tbody')) {
+        refrescarPlanilla();
+      } else {
+        pintar();
+      }
+    }, 160);
   }
   if (e.target.id === 'nuevo-com') S.borrador = e.target.value;   // sin redibujar
   if (e.target.id === 'pegarcfg') { S.pegado = e.target.value; return; }
@@ -9316,7 +9360,11 @@ document.addEventListener('input', function (e) {
   var al = e.target.getAttribute && e.target.getAttribute('data-alta');
   if (al && e.target.tagName === 'INPUT') { S.alta = S.alta || {}; S.alta[al] = e.target.value; }
   var fc = e.target.getAttribute && e.target.getAttribute('data-fcol');
-  if (fc && e.target.tagName === 'INPUT') { S.fCol[fc] = e.target.value; pintar(); }
+  if (fc && e.target.tagName === 'INPUT') {
+    S.fCol[fc] = e.target.value;
+    clearTimeout(S.tFiltro);
+    S.tFiltro = setTimeout(refrescarPlanilla, 90);
+  }
   if (e.target.id === 'cid' || e.target.id === 'url') S.setup.entrada = e.target.value;
 });
 
