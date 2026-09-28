@@ -458,6 +458,63 @@ tbody tr.sel td{background:var(--acentobg)}
   text-align:center;font-size:12px;min-width:40px;
   border-right:1px solid var(--linea2);font-weight:500}
 .tbl-hoja th.nrofila{z-index:3}
+/* Embudo de filtro en cada encabezado, como en Sheets */
+.th-filtro{min-height:22px;min-width:22px;width:22px;padding:0;border-radius:5px;
+  background:none;border-color:transparent;color:var(--tinta4);flex:none;opacity:.55}
+.th-in:hover .th-filtro,.th-filtro.abierta,.th-filtro.on{opacity:1}
+.th-filtro:hover{background:var(--sup3);color:var(--tinta)}
+.th-filtro .ico{width:12px;height:12px;stroke-width:1.9}
+.th-filtro.on{background:#1a73e8;color:#fff}
+.th-filtro.on .ico{fill:currentColor}
+.th-filtro.abierta{box-shadow:0 0 0 2px rgba(26,115,232,.35)}
+.tbl-hoja th.th-filtrada{background:#e8f0fe}
+
+/* El menú de filtro */
+.menu-col{position:fixed;z-index:60;background:var(--sup);border-radius:10px;
+  box-shadow:0 8px 28px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.06);padding:6px 0 0;
+  font-size:13px;animation:aparecer .14s var(--ease);max-height:calc(100vh - 24px);
+  display:flex;flex-direction:column}
+.mc-op{width:100%;justify-content:flex-start;gap:10px;min-height:34px;padding:0 16px;
+  background:none;border:0;border-radius:0;font-weight:400;font-size:13px}
+.mc-op:hover{background:var(--sup2)}
+.mc-op .ico{width:15px;height:15px;color:var(--tinta3)}
+.mc-sec{padding:10px 16px;border-top:1px solid var(--linea2)}
+.mc-tit{margin:0 0 7px;font-size:11.5px;font-weight:600;color:var(--tinta3);
+  text-transform:uppercase;letter-spacing:.04em}
+.mc-sec select,.mc-sec input{width:100%;min-height:32px;font-size:13px}
+.mc-sec input{margin-top:7px}
+.mc-acc{display:flex;align-items:center;gap:4px;margin-bottom:2px}
+.mc-acc button{background:none;border:0;min-height:26px;padding:0 6px;color:#1a73e8;
+  font-size:12.5px;font-weight:500}
+.mc-acc button:hover{background:#e8f0fe}
+.mc-acc span{margin-left:auto;font-size:12px;color:var(--tinta4)}
+.mc-lista{max-height:230px;overflow-y:auto;margin:8px -16px 0;padding:0 8px;
+  border-top:1px solid var(--linea)}
+.mc-item{display:flex;align-items:center;gap:9px;min-height:30px;padding:0 8px;
+  border-radius:6px;cursor:pointer}
+.mc-item:hover{background:var(--sup2)}
+.mc-item input{position:absolute;opacity:0;pointer-events:none}
+.mc-item .cbx{width:16px;height:16px;flex:none;border-radius:3px;border:1.5px solid var(--linea3);
+  background:var(--sup);display:inline-flex;align-items:center;justify-content:center;
+  transition:background .12s,border-color .12s}
+.mc-item .cbx .ico{width:11px;height:11px;stroke-width:3;color:#fff;opacity:0}
+.mc-item input:checked + .cbx{background:#1a73e8;border-color:#1a73e8}
+.mc-item input:checked + .cbx .ico{opacity:1}
+.mc-item input:focus-visible + .cbx{box-shadow:0 0 0 2px rgba(26,115,232,.4)}
+.mc-v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-v.vac{color:var(--tinta4);font-style:italic}
+.mc-n{font-size:11.5px;color:var(--tinta4);flex:none;font-variant-numeric:tabular-nums}
+.mc-item .punto{width:9px;height:9px;border-radius:2px;flex:none}
+.mc-item .punto.p-ok{background:#b7e1cd}
+.mc-item .punto.p-pendiente{background:#f4c7c3}
+.mc-item .punto.p-atencion{background:#c9daf8}
+.mc-item .punto.p-vacio{background:#fff;box-shadow:0 0 0 1px var(--linea3)}
+.mc-pie{display:flex;align-items:center;gap:8px;padding:10px 12px;margin-top:auto;
+  border-top:1px solid var(--linea2);background:var(--sup)}
+.mc-pie > :first-child{margin-right:auto}
+.mc-pie button{min-height:32px;font-size:13px}
+.mc-limpiar{background:none;border-color:transparent;color:var(--pend)}
+.mc-limpiar:hover{background:var(--pendbg)}
 /* Columna de selección, fija junto al número de fila */
 .tbl-hoja .sel-col{position:sticky;left:41px;z-index:1;background:#fafafa;width:34px;
   min-width:34px;padding:4px 7px;text-align:center;border-right:1px solid var(--linea2)}
@@ -1376,6 +1433,7 @@ var S = {
   fuentesFact: [],
   guardadoOk: false,
   animarPanel: false,
+  menuCol: null,
   tFiltro: null,
   tBusca: null,
   empresas: new Map(),
@@ -5192,7 +5250,9 @@ var ICONOS = {
   mover:  'M2 8h10M9 5l3 3-3 3M14 2v12',
   volver: 'M6 3L2.5 6.5 6 10M2.5 6.5h7a4 4 0 0 1 0 8H6',
   flecha: 'M6 3.5l5 4.5-5 4.5',
-  doc:    'M4 1.5h5L12.5 5v9.5h-9zM9 1.5V5h3.5M6 8h4M6 11h4'
+  doc:    'M4 1.5h5L12.5 5v9.5h-9zM9 1.5V5h3.5M6 8h4M6 11h4',
+  embudo: 'M2 3h12l-4.6 5.4V13l-2.8-1.4V8.4z',
+  az:     'M3 12l2.5-8 2.5 8M3.8 9.5h3.4M10 4h3.5L10 12h3.5'
 };
 
 function ico(nombre) {
@@ -5572,7 +5632,8 @@ function vistaApp() {
       barraDeshacer() +
       tituloVista() +
       segmentado + cuerpo + diagnostico() +
-    '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs);
+    '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
+    (S.modo === 'planilla' && S.vista === 'carga' ? menuColumna() : '');
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -6582,6 +6643,57 @@ function textoCelda(emb, campo) {
   return String(v);
 }
 
+/* --- Filtro por columna, como el de Google Sheets ---------------------------
+   Cada columna puede tener:
+     - una condición: está vacía, no está vacía, contiene, no contiene;
+     - una lista de valores permitidos (los tildados);
+   y las dos se combinan. S.fCol[col] = { cond, texto, vals }.
+   vals = null significa "todos": no se filtra por valor.
+   -------------------------------------------------------------------------- */
+
+// El valor que se ve en la lista del filtro. En los semáforos es el estado
+// (Enviados, Pendientes...), que es por lo que uno filtra, no la nota.
+function valorFiltro(emb, c) {
+  if (SEMAFOROS.indexOf(c) >= 0) return etiqueta(c, emb[c] || 'vacio');
+  return String(textoCelda(emb, c) || '').trim();
+}
+
+function filtroColActivo(f) {
+  return !!(f && (f.cond || f.vals));
+}
+
+function pasaFiltroCol(emb, src, c, f) {
+  if (!filtroColActivo(f)) return true;
+  var v = src.mapa[c] === undefined ? '' : valorFiltro(emb, c);
+  var vacio = SEMAFOROS.indexOf(c) >= 0 ? (!emb[c] || emb[c] === 'vacio') : v === '';
+  var t = clave(f.texto || '');
+  if (f.cond === 'vacia' && !vacio) return false;
+  if (f.cond === 'llena' && vacio) return false;
+  if (f.cond === 'contiene' && t && clave(v).indexOf(t) < 0) return false;
+  if (f.cond === 'nocontiene' && t && clave(v).indexOf(t) >= 0) return false;
+  if (f.vals && !f.vals[v]) return false;
+  return true;
+}
+
+// Los valores de una columna, con cuántas filas tiene cada uno. Como en Sheets,
+// se cuentan sobre lo que dejan pasar los OTROS filtros.
+function valoresColumna(c) {
+  var guarda = S.fCol[c];
+  delete S.fCol[c];
+  var filas;
+  try { filas = filasVisiblesPlanilla(); } finally { if (guarda) S.fCol[c] = guarda; }
+  var cuenta = {};
+  filas.forEach(function (x) {
+    var v = x.src.mapa[c] === undefined ? '' : valorFiltro(x.emb, c);
+    cuenta[v] = (cuenta[v] || 0) + 1;
+  });
+  return Object.keys(cuenta).sort(function (a, b) {
+    if (a === '') return -1;               // (Vacías) arriba, como en Sheets
+    if (b === '') return 1;
+    return a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' });
+  }).map(function (v) { return { v: v, n: cuenta[v] }; });
+}
+
 function aplicarFiltros(evs) {
   var q = S.busca.trim().toLowerCase();
   return evs.filter(function (x) {
@@ -6608,13 +6720,10 @@ function aplicarFiltros(evs) {
     if (S.f.cbte === 'si' && !emb._faltaComprobante) return false;
     if (S.f.cbte === 'no' && emb._faltaComprobante) return false;
 
-    // Filtros escritos en el encabezado de la vista planilla.
+    // Filtros por columna de la vista planilla.
     var claves = Object.keys(S.fCol);
     for (var j = 0; j < claves.length; j++) {
-      var cc = claves[j], q2 = String(S.fCol[cc] || '').trim().toLowerCase();
-      if (!q2) continue;
-      if (src.mapa[cc] === undefined) return false;
-      if (textoCelda(emb, cc).toLowerCase().indexOf(q2) < 0) return false;
+      if (!pasaFiltroCol(emb, src, claves[j], S.fCol[claves[j]])) return false;
     }
 
     // Falta un dato concreto.
@@ -6636,7 +6745,7 @@ function filtrosActivos() {
   if (S.f.falta) n++;
   if (S.filtroTab) n++;
   if (S.filtroEtapa) n++;
-  Object.keys(S.fCol).forEach(function (k) { if (S.fCol[k]) n++; });
+  Object.keys(S.fCol).forEach(function (k) { if (filtroColActivo(S.fCol[k])) n++; });
   return n;
 }
 
@@ -8069,7 +8178,7 @@ function vistaPlanilla(filas) {
   var barra = '<div class="hoja-barra">' +
     '<button data-act="cols" aria-pressed="' + S.colsPanel + '">' + ico('cols') + 'Columnas' +
       (ocultas ? ' · ' + ocultas + ' ocultas' : '') + '</button>' +
-    (Object.keys(S.fCol).some(function (k) { return S.fCol[k]; }) || S.ordenCol
+    (Object.keys(S.fCol).some(function (k) { return filtroColActivo(S.fCol[k]); }) || S.ordenCol
       ? '<button data-act="limpiarcol">Quitar filtros de columna</button>' : '') +
     '<span class="ayuda" style="margin-left:auto">' + filas.length + ' filas</span>' +
     '</div>';
@@ -8089,31 +8198,23 @@ function vistaPlanilla(filas) {
   function encabezado(c) {
     var act = S.ordenCol && S.ordenCol.campo === c;
     var flecha = act ? (S.ordenCol.dir === 1 ? ' ↑' : ' ↓') : '';
-    return '<th><div class="th-in">' +
+    var filtrada = filtroColActivo(S.fCol[c]);
+    var abierta = S.menuCol && S.menuCol.c === c;
+    return '<th' + (filtrada ? ' class="th-filtrada"' : '') + '><div class="th-in">' +
       '<button class="th-ord" data-act="ordcol" data-c="' + c + '" title="Ordenar">' +
         CAMPOS[c].label + flecha + '</button>' +
+      // El embudo abre el menú de filtro, como en Sheets.
+      '<button class="th-filtro' + (filtrada ? ' on' : '') + (abierta ? ' abierta' : '') + '" ' +
+        'data-act="menucol" data-c="' + c + '" ' +
+        'title="' + (filtrada ? 'Filtro activo' : 'Filtrar y ordenar') + '" ' +
+        'aria-label="Filtrar ' + esc(CAMPOS[c].label) + '">' + ico('embudo') + '</button>' +
       '<button class="th-x" data-act="ocultar" data-c="' + c + '" title="Ocultar columna">×</button>' +
       '</div></th>';
   }
 
-  function filtroCol(c) {
-    if (SEMAFOROS.indexOf(c) >= 0) {
-      return '<th class="fth"><select id="fcol-' + c + '" data-fcol="' + c + '">' +
-        ['', 'ok', 'pendiente', 'atencion', 'vacio'].map(function (o) {
-          return '<option value="' + (o ? etiqueta(c, o) : '') + '"' +
-            (S.fCol[c] === (o ? etiqueta(c, o) : '') ? ' selected' : '') + '>' +
-            (o ? etiqueta(c, o) : '—') + '</option>';
-        }).join('') + '</select></th>';
-    }
-    return '<th class="fth"><input id="fcol-' + c + '" data-fcol="' + c + '" autocomplete="off" value="' +
-      esc(S.fCol[c] || '') + '" placeholder="filtrar"></th>';
-  }
-
   var enc = '<tr><th class="nrofila">#</th>' +
               '<th class="sel-col" title="Elegir para el shipment advice">' + ico('mail') + '</th>' +
-              cols.map(encabezado).join('') + '</tr>' +
-            '<tr><th class="nrofila fth"></th><th class="sel-col fth"></th>' +
-              cols.map(filtroCol).join('') + '</tr>';
+              cols.map(encabezado).join('') + '</tr>';
 
   var cuerpo = filasHtmlPlanilla(filas, cols);
 
@@ -8130,6 +8231,77 @@ function vistaPlanilla(filas) {
 
 // Solo las filas del cuerpo de la tabla. Separado para poder redibujar nada más
 // esto cuando se tipea en un filtro de columna, sin tocar el resto.
+/* El menú de filtro de una columna. Va con posición fija, fuera de la tabla,
+   para que el scroll horizontal de la planilla no lo corte. Se edita sobre
+   un borrador: recién al tocar Aceptar se aplica, como en Sheets. */
+function menuColumna() {
+  var M = S.menuCol;
+  if (!M) return '';
+  var c = M.c, B = M.borrador;
+  var valores = valoresColumna(c);
+  var sem = SEMAFOROS.indexOf(c) >= 0;
+  var todos = !B.vals;
+  var marcado = function (v) { return todos || !!B.vals[v]; };
+  var nMarc = todos ? valores.length : valores.filter(function (x) { return B.vals[x.v]; }).length;
+  var colorSem = function (v) {
+    if (!sem) return '';
+    var est = ['ok', 'pendiente', 'atencion', 'vacio'].filter(function (e) {
+      return etiqueta(c, e) === v;
+    })[0] || 'vacio';
+    return '<span class="punto p-' + est + '"></span>';
+  };
+  var ancho = 290;
+  var x = Math.max(8, Math.min(M.x, (window.innerWidth || 1200) - ancho - 8));
+
+  return '<div class="menu-col" role="dialog" aria-label="Filtro de ' + esc(CAMPOS[c].label) + '" ' +
+    'style="left:' + x + 'px;top:' + M.y + 'px;width:' + ancho + 'px">' +
+
+    '<button class="mc-op" data-act="mcorden" data-d="1">' + ico('az') + 'Ordenar A → Z</button>' +
+    '<button class="mc-op" data-act="mcorden" data-d="-1">' + ico('az') + 'Ordenar Z → A</button>' +
+
+    '<div class="mc-sec">' +
+      '<p class="mc-tit">Filtrar por condición</p>' +
+      '<select data-mccond="1" id="mc-cond">' +
+        [['', 'Ninguna'], ['llena', 'No está vacía'], ['vacia', 'Está vacía'],
+         ['contiene', 'El texto contiene'], ['nocontiene', 'El texto no contiene']]
+          .map(function (o) {
+            return '<option value="' + o[0] + '"' + ((B.cond || '') === o[0] ? ' selected' : '') +
+              '>' + o[1] + '</option>';
+          }).join('') +
+      '</select>' +
+      (B.cond === 'contiene' || B.cond === 'nocontiene'
+        ? '<input id="mc-texto" data-mctexto="1" placeholder="Valor" value="' + esc(B.texto || '') + '">'
+        : '') +
+    '</div>' +
+
+    '<div class="mc-sec">' +
+      '<p class="mc-tit">Filtrar por valores</p>' +
+      '<div class="mc-acc">' +
+        '<button data-act="mctodo">Seleccionar todo</button>' +
+        '<button data-act="mcnada">Borrar</button>' +
+        '<span>' + nMarc + ' de ' + valores.length + '</span>' +
+      '</div>' +
+      '<input id="mc-buscar" data-mcbuscar="1" placeholder="Buscar" autocomplete="off">' +
+      '<div class="mc-lista">' + valores.map(function (o) {
+        var txt = o.v === '' ? '(Vacías)' : o.v;
+        return '<label class="mc-item" data-txt="' + esc(clave(txt)) + '">' +
+          '<input type="checkbox" data-mcval="' + esc(o.v) + '"' + (marcado(o.v) ? ' checked' : '') + '>' +
+          '<span class="cbx">' + ico('check') + '</span>' +
+          colorSem(o.v) +
+          '<span class="mc-v' + (o.v === '' ? ' vac' : '') + '">' + esc(txt) + '</span>' +
+          '<span class="mc-n">' + o.n + '</span></label>';
+      }).join('') + '</div>' +
+    '</div>' +
+
+    '<div class="mc-pie">' +
+      (filtroColActivo(S.fCol[c])
+        ? '<button class="mc-limpiar" data-act="mclimpiar">Quitar filtro</button>' : '<span></span>') +
+      '<button data-act="mccancelar">Cancelar</button>' +
+      '<button class="primario" data-act="mcok"' +
+        (B.vals && !Object.keys(B.vals).length ? ' disabled' : '') + '>Aceptar</button>' +
+    '</div></div>';
+}
+
 function filasVisiblesPlanilla() {
   var evs = evaluarTodo().filter(function (x) {
     if (S.filtroTab && x.emb._tab !== S.filtroTab) return false;
@@ -8707,53 +8879,14 @@ function pintar() {
 }
 
 document.addEventListener('focusin', function (e) {
-  // Fechas: se formatean en el propio input, sin redibujar, para no perder el
-  // foco justo cuando se está escribiendo el año.
-  if (e.target.classList && e.target.classList.contains('f-txt')) {
-    var borrando = e.inputType === 'deleteContentBackward' ||
-                   e.inputType === 'deleteContentForward';
-    var antes = e.target.value;
-    var fmt = formatearFecha(antes, borrando);
-    if (fmt !== antes) {
-      var fin = e.target.selectionStart === antes.length;
-      e.target.value = fmt;
-      if (fin) { try { e.target.setSelectionRange(fmt.length, fmt.length); } catch (er) {} }
-    }
-    var nat = document.getElementById(e.target.id + '-cal');
-    if (nat) nat.value = aISO(fmt);
-
-    var cF = e.target.getAttribute('data-aemb');
-    if (cF && S.altaEmb) { S.altaEmb[cF] = fmt; return; }
-    var cA = e.target.getAttribute('data-alta');
-    if (cA) { S.alta = S.alta || {}; S.alta[cA] = fmt; return; }
-    var cG = e.target.getAttribute('data-gen');
-    if (cG && S.gen) { S.gen[cG] = fmt; return; }
-    var cE = e.target.getAttribute('data-ectr');
-    if (cE && S.editCtr) { S.editCtr.cambios[cE] = fmt; return; }
-    return;   // el panel guarda al salir del campo, no en cada tecla
-  }
-
-  var ae = e.target.getAttribute && e.target.getAttribute('data-aemb');
-  if (ae && S.altaEmb) { S.altaEmb[ae] = e.target.value; return; }
-  var gp = e.target.getAttribute && e.target.getAttribute('data-gen');
-  if (gp && S.gen && !e.target.classList.contains('f-txt')) {
-    ponerRuta(S.gen, gp, e.target.value);
-    if (gp.indexOf('productos.') === 0) refrescarTotalesGen();
-    return;
-  }
-  var pc = e.target.getAttribute && e.target.getAttribute('data-prodctr');
-  if (pc && S.editCtr) { S.editCtr.cambios['prod_' + pc] = e.target.value; refrescarBarraCtr(); return; }
-  var ec = e.target.getAttribute && e.target.getAttribute('data-ectr');
-  if (ec && S.editCtr) { S.editCtr.cambios[ec] = e.target.value; refrescarBarraCtr(); return; }
+  // Al entrar en un campo con desplegable, se abre la lista. Nada más: antes
+  // este evento tenía una copia del manejo de escritura, y con solo hacer clic
+  // en un campo lo marcaba como modificado aunque no se hubiera tocado.
   var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
   if (cb2) {
-    var p2 = cb2.split(':'), ctx2 = p2[0], campo2 = p2[1];
-    if (ctx2 === 'ctr' && S.editCtr) S.editCtr.cambios[campo2] = e.target.value;
-    else if (ctx2 === 'gen' && S.gen) ponerRuta(S.gen, campo2, e.target.value);
-    else if (ctx2 === 'emb' && S.altaEmb) S.altaEmb[campo2] = e.target.value;
-    else { S.alta = S.alta || {}; S.alta[campo2] = e.target.value; }
+    if (S.combo === cb2) return;
+    var campo2 = cb2.split(':')[1], ctx2 = cb2.split(':')[0];
     S.combo = cb2;
-    // Solo el desplegable, no la pantalla entera.
     return refrescarCombo(e.target.id, campo2, listaDeCampo(campo2),
                           e.target.value, ctx2, campo2 === 'formaPago');
   }
@@ -8762,6 +8895,13 @@ document.addEventListener('focusin', function (e) {
 });
 
 document.addEventListener('click', function (ev) {
+  // Menú de filtro abierto: un clic afuera lo cierra sin aplicar, como en
+  // Sheets, y no hace nada más (no abre la fila que estaba debajo).
+  if (S.menuCol && ev.target.closest) {
+    var dentro = ev.target.closest('.menu-col');
+    var suBoton = ev.target.closest('[data-act="menucol"]');
+    if (!dentro && !suBoton) { S.menuCol = null; ev.stopPropagation(); return pintar(); }
+  }
   // Elegir para el advice no debe abrir el panel. Se mira toda la píldora, no
   // solo el input: el clic suele caer en el texto o en el cuadradito.
   if (ev.target.closest && ev.target.closest('.ir-fact')) {
@@ -8847,7 +8987,7 @@ document.addEventListener('click', function (ev) {
     columnasDisponibles().forEach(function (c) { if (!dejar[c]) S.colsOcultas[c] = true; });
     return pintar();
   }
-  if (act === 'limpiarcol') { S.fCol = {}; S.ordenCol = null; return pintar(); }
+  if (act === 'limpiarcol') { S.fCol = {}; S.ordenCol = null; S.menuCol = null; return pintar(); }
   if (act === 'ordcol') {
     var c0 = el.getAttribute('data-c');
     S.ordenCol = (S.ordenCol && S.ordenCol.campo === c0 && S.ordenCol.dir === 1)
@@ -8900,6 +9040,35 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'adviceMulti') {
     return enviarAdvice(Object.keys(S.marcados).filter(function (k) { return S.marcados[k]; }), true);
+  }
+  if (act === 'menucol') {
+    var cM = el.getAttribute('data-c');
+    if (S.menuCol && S.menuCol.c === cM) { S.menuCol = null; return pintar(); }
+    var r = el.getBoundingClientRect ? el.getBoundingClientRect() : { left: 100, bottom: 100 };
+    var act0 = S.fCol[cM] || {};
+    S.menuCol = { c: cM, x: Math.round(r.left - 220), y: Math.round(r.bottom + 6),
+      borrador: { cond: act0.cond || '', texto: act0.texto || '',
+                  vals: act0.vals ? Object.assign({}, act0.vals) : null } };
+    return pintar();
+  }
+  if (act === 'mcorden') {
+    S.ordenCol = { campo: S.menuCol.c, dir: +el.getAttribute('data-d') };
+    S.menuCol = null; return pintar();
+  }
+  if (act === 'mctodo') { S.menuCol.borrador.vals = null; return pintar(); }
+  if (act === 'mcnada') { S.menuCol.borrador.vals = {}; return pintar(); }
+  if (act === 'mccancelar') { S.menuCol = null; return pintar(); }
+  if (act === 'mclimpiar') { delete S.fCol[S.menuCol.c]; S.menuCol = null; return pintar(); }
+  if (act === 'mcok') {
+    var Mo = S.menuCol, Bo = Mo.borrador;
+    // Si quedaron tildados todos, no hay filtro por valor.
+    if (Bo.vals) {
+      var todosV = valoresColumna(Mo.c);
+      if (todosV.every(function (o) { return Bo.vals[o.v]; })) Bo.vals = null;
+    }
+    if (!Bo.cond) Bo.texto = '';
+    if (filtroColActivo(Bo)) S.fCol[Mo.c] = Bo; else delete S.fCol[Mo.c];
+    S.menuCol = null; return pintar();
   }
   if (act === 'sumarhermanas') {
     var idsM = Object.keys(S.marcados).filter(function (k) { return S.marcados[k]; });
@@ -9328,6 +9497,16 @@ document.addEventListener('input', function (e) {
 
   var ae = e.target.getAttribute && e.target.getAttribute('data-aemb');
   if (ae && S.altaEmb) { S.altaEmb[ae] = e.target.value; return; }
+  if (e.target.getAttribute && e.target.getAttribute('data-mcbuscar')) {
+    var q = clave(e.target.value);
+    Array.prototype.forEach.call(document.querySelectorAll('.mc-item'), function (it) {
+      it.style.display = !q || it.getAttribute('data-txt').indexOf(q) >= 0 ? '' : 'none';
+    });
+    return;
+  }
+  if (e.target.getAttribute && e.target.getAttribute('data-mctexto') && S.menuCol) {
+    S.menuCol.borrador.texto = e.target.value; return;
+  }
   var gp = e.target.getAttribute && e.target.getAttribute('data-gen');
   if (gp && S.gen && !e.target.classList.contains('f-txt')) {
     ponerRuta(S.gen, gp, e.target.value);
@@ -9380,6 +9559,25 @@ document.addEventListener('change', function (e) {
   if (alS) { S.alta = S.alta || {}; S.alta[alS] = e.target.value; return pintar(); }
   var fcs = e.target.getAttribute && e.target.getAttribute('data-fcol');
   if (fcs && e.target.tagName === 'SELECT') { S.fCol[fcs] = e.target.value; return pintar(); }
+  var mv = e.target.getAttribute && e.target.getAttribute('data-mcval');
+  if (mv !== null && mv !== undefined && S.menuCol) {
+    var Bm = S.menuCol.borrador;
+    if (!Bm.vals) {   // estaban todos: se arma la lista completa y se saca este
+      Bm.vals = {};
+      valoresColumna(S.menuCol.c).forEach(function (o) { Bm.vals[o.v] = true; });
+    }
+    if (e.target.checked) Bm.vals[mv] = true; else delete Bm.vals[mv];
+    var totalV = document.querySelectorAll('.mc-lista input').length;
+    var nV = Object.keys(Bm.vals).length;
+    var cntEl = document.querySelector('.mc-acc span');
+    if (cntEl) cntEl.textContent = nV + ' de ' + totalV;
+    var okB = document.querySelector('[data-act="mcok"]');
+    if (okB) okB.disabled = nV === 0;
+    return;
+  }
+  if (e.target.getAttribute && e.target.getAttribute('data-mccond') && S.menuCol) {
+    S.menuCol.borrador.cond = e.target.value; return pintar();
+  }
   var gd = e.target.getAttribute && e.target.getAttribute('data-gendoc');
   if (gd !== null && gd !== undefined && gd !== '' && S.gen) {
     S.gen.docs[+gd].on = e.target.checked;
@@ -9523,6 +9721,10 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && S.combo) { S.combo = null; return pintar(); }
   if (e.key === 'Escape' && S.menuSem) { S.menuSem = null; return pintar(); }
   if (e.key === 'Escape' && S.sel !== null) { S.sel = null; pintar(); }
+  if (e.key === 'Escape' && S.menuCol) { S.menuCol = null; return pintar(); }
+  if (e.key === 'Enter' && S.menuCol && e.target.id === 'mc-texto') {
+    var bOk = document.querySelector('[data-act="mcok"]'); if (bOk) bOk.click(); return;
+  }
   if (e.key === 'Escape' && S.gen) { S.gen = null; return pintar(); }
   // Escape en el editor de contratos: misma pregunta que al cerrar.
   if (e.key === 'Escape' && S.editCtr) {
