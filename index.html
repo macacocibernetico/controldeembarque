@@ -442,9 +442,16 @@ tbody tr.sel td{background:var(--acentobg)}
 .nw{white-space:nowrap;color:var(--tinta2);font-size:13px}
 
 /* Vista planilla ------------------------------------------------------------ */
-.full{width:calc(100vw - 244px);margin-left:calc(50% - 50vw + 122px);padding:0 34px}
+/* 100vw incluye la barra de scroll vertical (unos 15px en Windows): sin
+   descontarla, la página se desbordaba y aparecía una segunda barra
+   horizontal que no servía para nada. --sb la mide la app al dibujar. */
+.full{width:calc(100vw - var(--sb, 0px) - 244px);
+  margin-left:calc(50% - (100vw - var(--sb, 0px)) / 2 + 122px);padding:0 34px}
+html{overflow-x:clip}
+/* La tabla ocupa el alto de la pantalla: así su barra horizontal queda a la
+   vista y no escondida al final de todas las filas. */
 .hoja{border:1px solid var(--linea2);border-radius:var(--r2);overflow:auto;
-  background:#fff;max-height:76vh;-webkit-overflow-scrolling:touch}
+  background:#fff;max-height:calc(100vh - 96px);-webkit-overflow-scrolling:touch}
 .tbl-hoja{border-collapse:separate;border-spacing:0;font-size:13px}
 .tbl-hoja th{position:sticky;top:0;z-index:2;background:#f5f5f7;color:var(--tinta2);
   font-weight:600;font-size:12.5px;padding:8px 11px;text-align:left;white-space:nowrap;
@@ -458,6 +465,27 @@ tbody tr.sel td{background:var(--acentobg)}
   text-align:center;font-size:12px;min-width:40px;
   border-right:1px solid var(--linea2);font-weight:500}
 .tbl-hoja th.nrofila{z-index:3}
+
+/* Pantalla completa: la planilla tapa todo y la tabla usa el alto que queda.
+   Su barra horizontal queda siempre al pie de la pantalla. */
+.full.pantalla-completa{position:fixed;inset:0;z-index:35;width:auto;margin:0;
+  padding:12px 16px calc(12px + var(--safe));background:var(--papel);
+  display:flex;flex-direction:column}
+.full.pantalla-completa .hoja{flex:1;max-height:none;min-height:0}
+.full.pantalla-completa > .ayuda{display:none}
+body.con-barra .full.pantalla-completa{padding-bottom:calc(210px + var(--safe))}
+.btn-full{gap:6px}
+.btn-full[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);color:#fff}
+.btn-full .ico{width:14px;height:14px}
+
+/* La primera columna de datos queda fija al moverse a la derecha, como una
+   columna inmovilizada en Sheets: siempre se ve de quién es cada fila. */
+.tbl-hoja .col-fija{position:sticky;left:75px;z-index:1;max-width:220px;
+  overflow:hidden;text-overflow:ellipsis;box-shadow:inset -1px 0 0 var(--linea2)}
+.tbl-hoja td.col-fija{background:#fff}
+.tbl-hoja th.col-fija{z-index:3;background:#f5f5f7}
+.tbl-hoja tbody tr:hover td.col-fija{background:#f7f9fc}
+.tbl-hoja tbody tr.marcado td.col-fija{background:#e8f0fe}
 /* Embudo de filtro en cada encabezado, como en Sheets */
 .th-filtro{min-height:22px;min-width:22px;width:22px;padding:0;border-radius:5px;
   background:none;border-color:transparent;color:var(--tinta4);flex:none;opacity:.55}
@@ -1218,7 +1246,7 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .tabbar{display:flex}
   .segmento.solo-movil{display:flex}
   .barra-flota{left:0}
-  .full{width:100vw;margin-left:calc(50% - 50vw);padding:0 16px}
+  .full{width:calc(100vw - var(--sb, 0px));margin-left:calc(50% - (100vw - var(--sb, 0px)) / 2);padding:0 16px}
   .app{padding:14px 16px calc(96px + var(--safe));max-width:none}
   body.con-barra .app{padding-bottom:calc(270px + var(--safe))}
 
@@ -1434,6 +1462,7 @@ var S = {
   guardadoOk: false,
   animarPanel: false,
   menuCol: null,
+  planillaFull: false,
   tFiltro: null,
   tBusca: null,
   empresas: new Map(),
@@ -5252,6 +5281,8 @@ var ICONOS = {
   flecha: 'M6 3.5l5 4.5-5 4.5',
   doc:    'M4 1.5h5L12.5 5v9.5h-9zM9 1.5V5h3.5M6 8h4M6 11h4',
   embudo: 'M2 3h12l-4.6 5.4V13l-2.8-1.4V8.4z',
+  agrandar: 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4',
+  achicar:  'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4',
   az:     'M3 12l2.5-8 2.5 8M3.8 9.5h3.4M10 4h3.5L10 12h3.5'
 };
 
@@ -8176,6 +8207,10 @@ function vistaPlanilla(filas) {
   var ocultas = todas.length - cols.length;
 
   var barra = '<div class="hoja-barra">' +
+    '<button class="btn-full" data-act="planfull" aria-pressed="' + !!S.planillaFull + '" ' +
+      'title="' + (S.planillaFull ? 'Salir (Esc)' : 'Ver la planilla en pantalla completa') + '">' +
+      ico(S.planillaFull ? 'achicar' : 'agrandar') +
+      (S.planillaFull ? 'Salir de pantalla completa' : 'Pantalla completa') + '</button>' +
     '<button data-act="cols" aria-pressed="' + S.colsPanel + '">' + ico('cols') + 'Columnas' +
       (ocultas ? ' · ' + ocultas + ' ocultas' : '') + '</button>' +
     (Object.keys(S.fCol).some(function (k) { return filtroColActivo(S.fCol[k]); }) || S.ordenCol
@@ -8195,12 +8230,13 @@ function vistaPlanilla(filas) {
       '</div></div>';
   }
 
-  function encabezado(c) {
+  function encabezado(c, i) {
     var act = S.ordenCol && S.ordenCol.campo === c;
     var flecha = act ? (S.ordenCol.dir === 1 ? ' ↑' : ' ↓') : '';
     var filtrada = filtroColActivo(S.fCol[c]);
     var abierta = S.menuCol && S.menuCol.c === c;
-    return '<th' + (filtrada ? ' class="th-filtrada"' : '') + '><div class="th-in">' +
+    var clsTh = [filtrada ? 'th-filtrada' : '', i === 0 ? 'col-fija' : ''].filter(Boolean).join(' ');
+    return '<th' + (clsTh ? ' class="' + clsTh + '"' : '') + '><div class="th-in">' +
       '<button class="th-ord" data-act="ordcol" data-c="' + c + '" title="Ordenar">' +
         CAMPOS[c].label + flecha + '</button>' +
       // El embudo abre el menú de filtro, como en Sheets.
@@ -8218,7 +8254,7 @@ function vistaPlanilla(filas) {
 
   var cuerpo = filasHtmlPlanilla(filas, cols);
 
-  return '<div class="full">' + barra +
+  return '<div class="full' + (S.planillaFull ? ' pantalla-completa' : '') + '">' + barra +
     '<div class="hoja"><table class="tbl-hoja"><thead>' + enc +
     '</thead><tbody>' + cuerpo + '</tbody></table></div>' +
     '<p class="ayuda" style="margin-top:9px">Los colores son los mismos de la planilla. ' +
@@ -8349,25 +8385,34 @@ function filasHtmlPlanilla(filas, cols) {
           '<input type="checkbox" data-marcar="' + esc(emb._id) + '"' +
             (marcado ? ' checked' : '') + (noCombina ? ' disabled' : '') + '>' +
           '<span class="cbx">' + ico('check') + '</span></label></td>' +
-      cols.map(function (c) {
-        if (src.mapa[c] === undefined) return '<td class="na"></td>';
-        if (SEMAFOROS.indexOf(c) >= 0) {
-          if (src.noAplica[c]) return '<td class="na"></td>';
-          var est = emb[c] || 'vacio';
-          var txt = (emb._notas && emb._notas[c]) || '';
-          return '<td class="cel-' + est + '" title="' + esc(etiqueta(c, est)) +
-            (txt ? ' — ' + esc(txt) : '') + '">' + esc(txt) + '</td>';
-        }
-        var v = emb[c];
-        var cls = (c === 'tns' || c === 'price' || c === 'total' || c === 'commission')
-          ? ' class="num"' : '';
-        if (c === 'pagoEstimado' && emb._faltaComprobante) {
-          return '<td class="cel-naranja" title="Falta el comprobante de pago">' +
-            pintarCelda(v) + '</td>';
-        }
-        return '<td' + cls + '>' + pintarCelda(v) + '</td>';
+      cols.map(function (c, i) {
+        var td = celdaPlanilla(emb, src, c);
+        if (i !== 0) return td;
+        // Primera columna: se suma la clase que la deja fija.
+        var conClase = td.indexOf('<td class=') === 0;
+        return conClase ? '<td class=' + td.charAt(10) + 'col-fija ' + td.slice(11)
+                        : '<td class="col-fija"' + td.slice(3);
       }).join('') + '</tr>';
   }).join('');
+}
+
+function celdaPlanilla(emb, src, c) {
+  if (src.mapa[c] === undefined) return '<td class="na"></td>';
+  if (SEMAFOROS.indexOf(c) >= 0) {
+    if (src.noAplica[c]) return '<td class="na"></td>';
+    var est = emb[c] || 'vacio';
+    var txt = (emb._notas && emb._notas[c]) || '';
+    return '<td class="cel-' + est + '" title="' + esc(etiqueta(c, est)) +
+      (txt ? ' — ' + esc(txt) : '') + '">' + esc(txt) + '</td>';
+  }
+  var v = emb[c];
+  var cls = (c === 'tns' || c === 'price' || c === 'total' || c === 'commission')
+    ? ' class="num"' : '';
+  if (c === 'pagoEstimado' && emb._faltaComprobante) {
+    return '<td class="cel-naranja" title="Falta el comprobante de pago">' +
+      pintarCelda(v) + '</td>';
+  }
+  return '<td' + cls + '>' + pintarCelda(v) + '</td>';
 }
 
 var EDITABLES = ['vessel', 'shippingLine', 'booking', 'containers', 'bl', 'invoice', 'tracking', 'nota'];
@@ -8857,6 +8902,10 @@ function pintar() {
 
   document.getElementById('root').innerHTML = html;
   S.animarPanel = false;   // la entrada se anima una sola vez
+  try {
+    var sb = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.setProperty('--sb', Math.max(0, sb) + 'px');
+  } catch (e) {}
   // Aire extra abajo cuando la barra flotante está visible.
   try {
     var hayBarra = !!(S.marcados && Object.keys(S.marcados).some(function (k) { return S.marcados[k]; }));
@@ -8877,6 +8926,10 @@ function pintar() {
     }
   }
 }
+
+document.addEventListener('fullscreenchange', function () {
+  if (!document.fullscreenElement && S.planillaFull) { S.planillaFull = false; pintar(); }
+});
 
 document.addEventListener('focusin', function (e) {
   // Al entrar en un campo con desplegable, se abre la lista. Nada más: antes
@@ -8977,7 +9030,8 @@ document.addEventListener('click', function (ev) {
     var ta = document.getElementById('nuevo-com');
     return comentar(el.getAttribute('data-f'), ta ? ta.value : '');
   }
-  if (act === 'modo') { S.modo = el.getAttribute('data-m'); return pintar(); }
+  if (act === 'modo') {
+    S.planillaFull = false; S.modo = el.getAttribute('data-m'); return pintar(); }
   if (act === 'cols') { S.colsPanel = !S.colsPanel; return pintar(); }
   if (act === 'ocultar') { S.colsOcultas[el.getAttribute('data-c')] = true; return pintar(); }
   if (act === 'colstodas') { S.colsOcultas = {}; return pintar(); }
@@ -9040,6 +9094,20 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'adviceMulti') {
     return enviarAdvice(Object.keys(S.marcados).filter(function (k) { return S.marcados[k]; }), true);
+  }
+  if (act === 'planfull') {
+    S.planillaFull = !S.planillaFull; S.menuCol = null;
+    // Además de ocupar toda la ventana, se pide al navegador que esconda sus
+    // barras. Se pide sobre <html>, que no se redibuja, para que no se salga
+    // de pantalla completa con cada cambio.
+    try {
+      if (S.planillaFull && document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(function () {});
+      } else if (!S.planillaFull && document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(function () {});
+      }
+    } catch (e) {}
+    return pintar();
   }
   if (act === 'menucol') {
     var cM = el.getAttribute('data-c');
@@ -9722,6 +9790,9 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && S.menuSem) { S.menuSem = null; return pintar(); }
   if (e.key === 'Escape' && S.sel !== null) { S.sel = null; pintar(); }
   if (e.key === 'Escape' && S.menuCol) { S.menuCol = null; return pintar(); }
+  if (e.key === 'Escape' && S.planillaFull && S.sel === null && !S.gen && !S.editCtr) {
+    S.planillaFull = false; return pintar();
+  }
   if (e.key === 'Enter' && S.menuCol && e.target.id === 'mc-texto') {
     var bOk = document.querySelector('[data-act="mcok"]'); if (bOk) bOk.click(); return;
   }
