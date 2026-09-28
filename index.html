@@ -458,6 +458,19 @@ tbody tr.sel td{background:var(--acentobg)}
   text-align:center;font-size:12px;min-width:40px;
   border-right:1px solid var(--linea2);font-weight:500}
 .tbl-hoja th.nrofila{z-index:3}
+/* Columna de selección, fija junto al número de fila */
+.tbl-hoja .sel-col{position:sticky;left:41px;z-index:1;background:#fafafa;width:34px;
+  min-width:34px;padding:4px 7px;text-align:center;border-right:1px solid var(--linea2)}
+.tbl-hoja th.sel-col{z-index:3;background:#f5f5f7;color:var(--tinta4)}
+.tbl-hoja th.sel-col .ico{width:13px;height:13px}
+.tbl-hoja .sel-col .col-check{padding:0;justify-content:center}
+.tbl-hoja .sel-col .cbx{width:17px;height:17px}
+.tbl-hoja tbody tr.marcado td{background:var(--acentobg)}
+.tbl-hoja tbody tr.marcado .nrofila,.tbl-hoja tbody tr.marcado .sel-col{background:#dbe7fd}
+.tbl-hoja tbody tr.incompat td{opacity:.42}
+.tbl-hoja tbody tr.incompat .sel-col{opacity:1}
+.tbl-hoja .col-check input:disabled + .cbx{background:var(--sup3);border-color:var(--linea2);
+  cursor:not-allowed}
 .tbl-hoja tbody tr:hover .nrofila{background:#ebebed}
 .tbl-hoja td.na{background:#fafafa}
 .th-in{display:flex;align-items:center;gap:4px}
@@ -859,6 +872,12 @@ th.ord:hover{background:#ebebed}
 .cc-nota{font-size:12px;color:var(--tinta3);font-style:italic}
 .cc-falta{flex-basis:100%;font-size:12.5px;font-weight:600;color:var(--nar)}
 
+.bf-sumar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 12px;
+  padding:9px 12px;border-radius:var(--r3);background:var(--acentobg);color:var(--acento);
+  font-size:13px}
+.bf-sumar .ico{width:14px;height:14px;flex:none}
+.bf-sumar span{flex:1;min-width:180px}
+.bf-sumar button{min-height:30px;font-size:12.5px;background:var(--sup)}
 .bf-error{margin:0 0 12px;font-size:13.5px;color:var(--pend);background:var(--pendbg);
   padding:11px 14px;border-radius:var(--r2)}
 
@@ -4151,21 +4170,49 @@ async function cargarPaisesEmpresas() {
                    (k.indexOf('pais') >= 0 && k.indexOf('para') < 0);
           };
           var esMails = function (k) {
-            return k.indexOf('documental') >= 0 ||
-                   (k.indexOf('mail') >= 0 && k.indexOf('envio') >= 0);
+            return k.indexOf('mail') >= 0 &&
+                   (k.indexOf('document') >= 0 || k.indexOf('envio') >= 0);
+          };
+
+          // ¿Esa columna tiene nombres, o VERDADERO/FALSO? En Database_old la
+          // columna "Client" es una casilla (si es cliente o no) y el nombre
+          // está en "Company". Tomar "Client" como nombre hacía que ningún
+          // mail se asignara a ninguna empresa.
+          var esDeCasillas = function (col, desde) {
+            var bool = 0, total = 0;
+            for (var r = desde; r < Math.min(filas.length, desde + 80); r++) {
+              var v = filas[r] && filas[r][col];
+              if (v === null || v === undefined || v === '') continue;
+              total++;
+              var t = String(v).trim().toUpperCase();
+              if (v === true || v === false || t === 'TRUE' || t === 'FALSE' ||
+                  t === 'VERDADERO' || t === 'FALSO') bool++;
+            }
+            return total > 0 && bool / total > 0.5;
+          };
+          // Cuál es la columna del nombre: por prioridad, no la primera que aparezca.
+          var PRIO_NOMBRE = ['company', 'empresa', 'razon social', 'real name', 'nombre',
+                             'name', 'supplier', 'proveedor', 'importador', 'exportador',
+                             'client', 'cliente'];
+          var prioNombre = function (k) {
+            for (var q = 0; q < PRIO_NOMBRE.length; q++) {
+              if (k === PRIO_NOMBRE[q] || k.indexOf(PRIO_NOMBRE[q]) === 0) return q;
+            }
+            return -1;
           };
 
           // El encabezado es la fila, entre las primeras diez, con más columnas
-          // reconocibles. Ya no hace falta que tenga Country para leer los mails.
+          // reconocibles. No hace falta que tenga Country para leer los mails.
           var iEnc = -1, mejor = 0, cPais = -1, cNom = -1, cMails = -1;
           for (var f = 0; f < Math.min(10, filas.length); f++) {
-            var enc = filas[f] || [], p = -1, n = -1, m = -1;
+            var enc = filas[f] || [], p = -1, n = -1, nPrio = 99, m = -1;
             for (var i = 0; i < enc.length; i++) {
               var k = clave(enc[i]);
               if (!k) continue;
               if (m < 0 && esMails(k)) { m = i; continue; }
               if (p < 0 && esPais(k)) { p = i; continue; }
-              if (n < 0 && esNombre(k)) n = i;
+              var pr = prioNombre(k);
+              if (pr >= 0 && pr < nPrio && !esDeCasillas(i, f + 1)) { n = i; nPrio = pr; }
             }
             var puntos = (p >= 0) + (n >= 0) + (m >= 0) * 2;
             if (puntos > mejor) { mejor = puntos; iEnc = f; cPais = p; cNom = n; cMails = m; }
@@ -4224,7 +4271,14 @@ async function cargarPaisesEmpresas() {
       total: S.paises.size
     };
   } catch (e) {
-    S.diagPaises = { error: e.message };
+    var msg = e.message || String(e);
+    if (/403|permission|permiso/i.test(msg)) {
+      msg = 'tu cuenta no tiene permiso para abrirla. Pedile acceso de lectura a quien ' +
+            'es dueño de la Planilla Comercial.';
+    } else if (/404|not found/i.test(msg)) {
+      msg = 'no existe o cambió el enlace. Revisá la URL en Configuración.';
+    }
+    S.diagPaises = { error: msg };
   }
 }
 
@@ -5658,7 +5712,13 @@ function vistaCC(importador, destino) {
         return '<span class="cc-nota">Los mails documentales van en «Para»</span>';
       }
       var hayCol = (S.diagMails || []).some(function (x) { return x.mails.indexOf('—') !== 0; });
+      var errPlanilla = S.diagPaises && S.diagPaises.error;
       return '<span class="cc-falta">' + (!importador ? 'Sin cliente'
+        // Las tres razones por las que no aparecen, de la más básica a la más fina.
+        : !(S.cfg && S.cfg.paisSheetId)
+          ? 'No está cargada la Planilla Comercial en Configuración → Países de las empresas'
+        : errPlanilla
+          ? 'No se pudo leer la Planilla Comercial: ' + esc(errPlanilla)
         : !hayCol ? 'No encontré la columna «Mails para envio documental» en Database_old ' +
                     '(ver Configuración → Países de las empresas)'
         : 'Sin mails documentales para ' + esc(importador) + ' en Database_old' +
@@ -5790,6 +5850,27 @@ function vistaFacturadas() {
   return h;
 }
 
+/* Un advice junta filas del MISMO embarque: misma pestaña, exportador,
+   importador, buque, puerto, BL y fechas. Si ya hay filas elegidas, las que no
+   combinan se deshabilitan y dicen por qué, en vez de dejar elegirlas y que
+   el error aparezca recién al generar. */
+function motivoIncompatible(emb) {
+  var ids = Object.keys(S.marcados || {}).filter(function (k) { return S.marcados[k]; });
+  if (!ids.length || S.marcados[emb._id]) return null;
+  var base = filaPorId(ids[0]);
+  if (!base) return null;
+  if (base._tab !== emb._tab) return 'Es de otra pestaña (' + nombreCorto(base._tab) + ')';
+  var f = function (d) { return esFecha(d) ? d.getTime() : String(d || ''); };
+  var dif = [];
+  [['exporter', 'exportador'], ['importer', 'importador'], ['bl', 'BL'],
+   ['vessel', 'buque'], ['port', 'puerto']].forEach(function (c) {
+    if (clave(emb[c[0]]) !== clave(base[c[0]])) dif.push(c[1]);
+  });
+  if (f(emb.etd) !== f(base.etd)) dif.push('ETD');
+  if (f(emb.eta) !== f(base.eta)) dif.push('ETA');
+  return dif.length ? 'Otro embarque: cambia ' + dif.join(', ') : null;
+}
+
 function barraAdvice(evs) {
   var ids = Object.keys(S.marcados || {}).filter(function (k) { return S.marcados[k]; });
   if (!ids.length) return '';
@@ -5853,6 +5934,18 @@ function barraAdvice(evs) {
   if (difs.length) {
     h += '<p class="bf-error">No se pueden combinar: no coincide ' + difs.join(', ') +
       '. El advice necesita que sean del mismo embarque.</p>';
+  } else {
+    // Filas del mismo embarque que todavía no se eligieron.
+    var faltanH = hermanasAdvice(base).filter(function (o) { return !S.marcados[o._id]; });
+    if (faltanH.length) {
+      h += '<p class="bf-sumar">' + ico('plus') +
+        '<span>Hay ' + faltanH.length + (faltanH.length === 1 ? ' fila más' : ' filas más') +
+        ' del mismo BL (' + esc(faltanH.map(function (o) {
+          return 'fila ' + o._fila + ': ' + (o.product || '');
+        }).join(' · ')) + ')</span>' +
+        '<button data-act="sumarhermanas">Sumar' + (faltanH.length === 1 ? 'la' : 'las') +
+        '</button></p>';
+    }
   }
 
   var origenB = (S.adviceTo === null || S.adviceTo === undefined)
@@ -8014,16 +8107,31 @@ function vistaPlanilla(filas) {
       esc(S.fCol[c] || '') + '" placeholder="filtrar"></th>';
   }
 
-  var enc = '<tr><th class="nrofila">#</th>' + cols.map(encabezado).join('') + '</tr>' +
-            '<tr><th class="nrofila fth"></th>' + cols.map(filtroCol).join('') + '</tr>';
+  var enc = '<tr><th class="nrofila">#</th>' +
+              '<th class="sel-col" title="Elegir para el shipment advice">' + ico('mail') + '</th>' +
+              cols.map(encabezado).join('') + '</tr>' +
+            '<tr><th class="nrofila fth"></th><th class="sel-col fth"></th>' +
+              cols.map(filtroCol).join('') + '</tr>';
 
   var cuerpo = filas.map(function (x) {
     var emb = x.emb, src = x.src;
-    return '<tr' + (emb._id === S.sel ? ' class="sel"' : '') +
+    var marcado = !!(S.marcados && S.marcados[emb._id]);
+    var noCombina = motivoIncompatible(emb);
+    var clases = [];
+    if (emb._id === S.sel) clases.push('sel');
+    if (marcado) clases.push('marcado');
+    if (noCombina) clases.push('incompat');
+    return '<tr' + (clases.length ? ' class="' + clases.join(' ') + '"' : '') +
       ' data-act="abrir" data-f="' + esc(emb._id) + '">' +
       '<td class="nrofila" title="' + esc(emb._tab) +
         (adviceDe(emb) ? ' · advice enviado' : '') + '">' + emb._fila +
         (adviceDe(emb) ? '<i class="pt-adv"></i>' : '') + '</td>' +
+      '<td class="sel-col">' +
+        '<label class="col-check" title="' + esc(noCombina || (marcado
+          ? 'Quitar del shipment advice' : 'Elegir para el shipment advice')) + '">' +
+          '<input type="checkbox" data-marcar="' + esc(emb._id) + '"' +
+            (marcado ? ' checked' : '') + (noCombina ? ' disabled' : '') + '>' +
+          '<span class="cbx">' + ico('check') + '</span></label></td>' +
       cols.map(function (c) {
         if (src.mapa[c] === undefined) return '<td class="na"></td>';
         if (SEMAFOROS.indexOf(c) >= 0) {
@@ -8049,7 +8157,9 @@ function vistaPlanilla(filas) {
     '</thead><tbody>' + cuerpo + '</tbody></table></div>' +
     '<p class="ayuda" style="margin-top:9px">Los colores son los mismos de la planilla. ' +
     'El número de la izquierda es la fila real. Clic en el nombre de una columna ordena, ' +
-    'la × la oculta, y la fila de abajo filtra. Clic en una fila abre el detalle.</p>' +
+    'la × la oculta, y la fila de abajo filtra. Clic en una fila abre el detalle. ' +
+    'La casilla de al lado elige filas para el shipment advice: las que no son del mismo ' +
+    'embarque se apagan solas.</p>' +
     '</div>';
 }
 
@@ -8755,6 +8865,12 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'adviceMulti') {
     return enviarAdvice(Object.keys(S.marcados).filter(function (k) { return S.marcados[k]; }), true);
+  }
+  if (act === 'sumarhermanas') {
+    var idsM = Object.keys(S.marcados).filter(function (k) { return S.marcados[k]; });
+    var b0 = filaPorId(idsM[0]);
+    if (b0) hermanasAdvice(b0).forEach(function (o) { S.marcados[o._id] = true; });
+    return pintar();
   }
   if (act === 'desmarcar') { S.marcados = {}; S.adviceMsg = null; return pintar(); }
   if (act === 'advidioma') { S.adviceIdioma = el.getAttribute('data-v'); return pintar(); }
