@@ -466,6 +466,36 @@ html{overflow-x:clip}
   border-right:1px solid var(--linea2);font-weight:500}
 .tbl-hoja th.nrofila{z-index:3}
 
+/* Cuadrícula como la de Sheets: líneas visibles entre filas y columnas, y
+   encabezados en negrita. */
+.tbl-hoja td,.tbl-hoja th{border-right:1px solid #d7dbe0;border-bottom:1px solid #d7dbe0}
+.tbl-hoja th{font-weight:700;color:var(--tinta);background:#eef0f3;
+  border-bottom:2px solid #c3c8cf}
+.tbl-hoja th .th-ord{font-weight:700;color:var(--tinta)}
+.tbl-hoja tbody tr:hover td{background:#f5f8ff}
+.th-candado{display:inline-flex;margin-right:4px;color:var(--tinta4);vertical-align:-1px}
+.th-candado .ico{width:11px;height:11px;stroke-width:2}
+.tbl-hoja th.th-bloq{background:#e9ebee}
+
+/* Celda en edición */
+.tbl-hoja td.editando{padding:0;background:#fff !important;
+  box-shadow:inset 0 0 0 2px #1a73e8;position:relative;z-index:2}
+.edit-cel{width:100%;min-width:120px;height:100%;min-height:34px;border:0;border-radius:0;
+  padding:0 10px;font:inherit;background:#fff;outline:none;box-shadow:none}
+.edit-cel.mal{background:#fdecea;color:var(--pend)}
+.tbl-hoja td[data-c]{cursor:cell}
+
+/* Aviso al lado de una celda que no se puede editar */
+.aviso-cel{position:fixed;z-index:70;max-width:320px;display:flex;flex-wrap:wrap;gap:8px;
+  align-items:flex-start;padding:10px 12px;border-radius:9px;background:#202124;color:#fff;
+  font-size:12.5px;line-height:1.4;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:aparecer .15s var(--ease)}
+.aviso-cel .ac-ico{display:inline-flex;color:#fdd663;margin-top:1px}
+.aviso-cel .ac-ico .ico{width:13px;height:13px;stroke-width:2.2}
+.aviso-cel > span:nth-child(2){flex:1 1 calc(100% - 25px);min-width:0}
+.aviso-cel button{min-height:28px;font-size:12px;background:#fff;color:#202124;border:0;margin-left:21px}
+.tbl-hoja td[data-c]{-webkit-user-select:none;user-select:none}
+.tbl-hoja td.editando{-webkit-user-select:text;user-select:text}
+
 /* Pantalla completa: la planilla tapa todo y la tabla usa el alto que queda.
    Su barra horizontal queda siempre al pie de la pantalla. */
 .full.pantalla-completa{position:fixed;inset:0;z-index:35;width:auto;margin:0;
@@ -1463,6 +1493,9 @@ var S = {
   animarPanel: false,
   menuCol: null,
   planillaFull: false,
+  editCel: null,
+  tAbrir: null,
+  tAvisoCel: null,
   tFiltro: null,
   tBusca: null,
   empresas: new Map(),
@@ -1777,6 +1810,19 @@ function estadoComision(v) {
   if (k.indexOf('cobrad') >= 0) return 'cobrada';
   if (k.indexOf('facturad') >= 0 || k.indexOf('enviad') >= 0) return 'facturada';
   return 'otro';
+}
+
+/* Números escritos a la argentina: el punto separa miles y la coma, decimales.
+   "1.295" es mil doscientos noventa y cinco, no uno coma dos; "25,5" es 25.5.
+   Si viene con punto decimal y sin coma ("25.5"), también se entiende. */
+function numAR(v) {
+  if (typeof v === 'number') return v;
+  var t = String(v == null ? '' : v).trim().replace(/\s|US\$|USD|\$/gi, '');
+  if (!t) return null;
+  if (t.indexOf(',') >= 0) t = t.replace(/\./g, '').replace(',', '.');
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+  var n = Number(t);
+  return isFinite(n) ? n : null;
 }
 
 function convertir(v, tipo) {
@@ -2362,6 +2408,7 @@ function aValorSheets(v) {
   if (typeof v === 'boolean') return { boolValue: v };
   if (typeof v === 'number') return { numberValue: v };
   if (v instanceof Date) return { numberValue: Math.floor((v - EPOCH) / DIA) };
+  if (typeof v === 'string' && v.charAt(0) === '=') return { formulaValue: v };
   if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) {
     var d = new Date(String(v) + 'T00:00:00Z');
     if (!isNaN(d)) return { numberValue: Math.floor((d - EPOCH) / DIA) };
@@ -5199,20 +5246,35 @@ async function aplicarCambio(id, campo, valor) {
     return pintar();
   }
 
-  var antes = f[campo];
-  f[campo] = (campo === '_faltaComprobante' || CAMPOS[campo].tipo === 'semaforo')
-    ? valor : convertir(valor, CAMPOS[campo].tipo);
-  S.guardando++; pintar();
+  var antes = f[campo], antesTotal = f.total;
+  var tipo = campo === '_faltaComprobante' ? '' : CAMPOS[campo].tipo;
+  if (campo === '_faltaComprobante' || tipo === 'semaforo') f[campo] = valor;
+  else if (tipo === 'numero') f[campo] = numAR(valor);
+  else f[campo] = convertir(valor, tipo);
 
   var valores = {}, colores = {};
   if (campo === '_faltaComprobante') colores[idx] = valor ? 'falta_cbte' : 'vacio';
   else if (SEMAFOROS.indexOf(campo) >= 0) colores[idx] = valor;
-  else valores[idx] = valor;
+  // Se escribe el número o la fecha de verdad, no el texto tipeado: como texto,
+  // "25,5" rompía la fórmula del total y las sumas del contrato (SUMIFS)
+  // ignoraban esa carga.
+  else valores[idx] = (f[campo] === null || f[campo] === undefined) ? '' : f[campo];
+
+  // Cambió la cantidad o el precio: el total se vuelve a escribir como fórmula,
+  // así queda bien aunque en esa fila hubiera un número fijo.
+  if ((campo === 'tns' || campo === 'price') && src.mapa.total !== undefined &&
+      src.mapa.tns !== undefined && src.mapa.price !== undefined) {
+    valores[src.mapa.total] = '=' + letraCol(src.mapa.price) + f._fila + '*' +
+                              letraCol(src.mapa.tns) + f._fila;
+    var pr = normNum(f.price), tn = normNum(f.tns);
+    f.total = (pr !== null && tn !== null) ? Math.round(pr * tn * 100) / 100 : f.total;
+  }
+  S.guardando++; pintar();
 
   try {
     await escribirCeldas(S.cfg.sheetId, f._sheetId, f._fila, valores, colores);
   } catch (e) {
-    f[campo] = antes;
+    f[campo] = antes; f.total = antesTotal;
     S.error = 'No se pudo guardar: ' + e.message;
   } finally {
     S.guardando--;
@@ -5283,6 +5345,7 @@ var ICONOS = {
   embudo: 'M2 3h12l-4.6 5.4V13l-2.8-1.4V8.4z',
   agrandar: 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4',
   achicar:  'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4',
+  candado:  'M4.5 7V5a3.5 3.5 0 0 1 7 0v2M3.5 7h9v7h-9z',
   az:     'M3 12l2.5-8 2.5 8M3.8 9.5h3.4M10 4h3.5L10 12h3.5'
 };
 
@@ -8235,9 +8298,14 @@ function vistaPlanilla(filas) {
     var flecha = act ? (S.ordenCol.dir === 1 ? ' ↑' : ' ↓') : '';
     var filtrada = filtroColActivo(S.fCol[c]);
     var abierta = S.menuCol && S.menuCol.c === c;
-    var clsTh = [filtrada ? 'th-filtrada' : '', i === 0 ? 'col-fija' : ''].filter(Boolean).join(' ');
+    var bloqueada = CAMPOS_DEL_CONTRATO.indexOf(c) >= 0 || c === 'total';
+    var clsTh = [filtrada ? 'th-filtrada' : '', i === 0 ? 'col-fija' : '',
+                 bloqueada ? 'th-bloq' : ''].filter(Boolean).join(' ');
     return '<th' + (clsTh ? ' class="' + clsTh + '"' : '') + '><div class="th-in">' +
-      '<button class="th-ord" data-act="ordcol" data-c="' + c + '" title="Ordenar">' +
+      '<button class="th-ord" data-act="ordcol" data-c="' + c + '" title="' +
+        (bloqueada ? (c === 'total' ? 'Se calcula solo: precio × toneladas'
+                                    : 'Viene del contrato: se cambia desde Contratos') : 'Ordenar') + '">' +
+        (bloqueada ? '<span class="th-candado">' + ico('candado') + '</span>' : '') +
         CAMPOS[c].label + flecha + '</button>' +
       // El embudo abre el menú de filtro, como en Sheets.
       '<button class="th-filtro' + (filtrada ? ' on' : '') + (abierta ? ' abierta' : '') + '" ' +
@@ -8259,7 +8327,9 @@ function vistaPlanilla(filas) {
     '</thead><tbody>' + cuerpo + '</tbody></table></div>' +
     '<p class="ayuda" style="margin-top:9px">Los colores son los mismos de la planilla. ' +
     'El número de la izquierda es la fila real. Clic en el nombre de una columna ordena, ' +
-    'la × la oculta, y la fila de abajo filtra. Clic en una fila abre el detalle. ' +
+    'el embudo filtra y la × la oculta. Clic en una fila abre el detalle; ' +
+    '<b>doble clic en una celda la edita</b> (Enter guarda, Esc cancela). ' +
+    'Las columnas con candado vienen del contrato y se cambian desde Contratos. ' +
     'La casilla de al lado elige filas para el shipment advice: las que no son del mismo ' +
     'embarque se apagan solas.</p>' +
     '</div>';
@@ -8396,7 +8466,111 @@ function filasHtmlPlanilla(filas, cols) {
   }).join('');
 }
 
+/* Edición desde la planilla, con doble clic como en Sheets.
+   Lo que sale del contrato no se toca desde la carga: si el precio está mal,
+   está mal en el contrato, y corregirlo solo acá dejaría las dos cosas
+   distintas. El total tampoco: es precio × toneladas y se calcula solo. */
+var CAMPOS_DEL_CONTRATO = ['contract', 'exporter', 'importer', 'price', 'tipo',
+                           'product', 'incoterm'];
+
+function motivoNoEditable(emb, c) {
+  var src = fuenteDe(emb);
+  if (src.mapa[c] === undefined) return 'Esta columna no existe en «' + emb._tab + '».';
+  if (src.noAplica && src.noAplica[c]) return 'Esta columna no aplica en «' + emb._tab + '».';
+  if (c === 'total') return 'El total se calcula solo: precio × toneladas. Cambiá la cantidad y se actualiza.';
+  if (CAMPOS_DEL_CONTRATO.indexOf(c) >= 0) {
+    var etq = CAMPOS[c].label;
+    return (c === 'price'
+      ? 'El precio sale del contrato' : etq + ' sale del contrato') +
+      (emb.contract ? ' ' + emb.contract : '') +
+      '. Si está mal, corregilo en el contrato y se actualiza en sus cargas.';
+  }
+  return null;
+}
+
+// Convierte la celda en un campo para escribir, sin redibujar la tabla.
+function editarCelda(td) {
+  var tr = td.closest('tr'), c = td.getAttribute('data-c');
+  var emb = filaPorId(tr.getAttribute('data-f'));
+  if (!emb || !c) return;
+  var no = motivoNoEditable(emb, c);
+  if (no) return avisoCelda(td, no, CAMPOS_DEL_CONTRATO.indexOf(c) >= 0 ? emb.contract : null);
+
+  cerrarEdicionCelda(false);
+  var tipo = CAMPOS[c].tipo;
+  var v = emb[c];
+  var inicial;
+  if (tipo === 'semaforo') {
+    td.classList.add('editando');
+    var ops = ['ok', 'pendiente', 'atencion', 'vacio'];
+    td.innerHTML = '<select class="edit-cel" data-editcel="1">' + ops.map(function (o) {
+      return '<option value="' + o + '"' + ((v || 'vacio') === o ? ' selected' : '') + '>' +
+        esc(etiqueta(c, o)) + '</option>';
+    }).join('') + '</select>';
+  } else {
+    if (v instanceof Date) inicial = fmtFecha(v);
+    else if (tipo === 'numero' && typeof v === 'number') {
+      inicial = v.toLocaleString('es-AR', { maximumFractionDigits: 4, useGrouping: false });
+    } else inicial = v == null ? '' : String(v && v.invalida ? v.crudo : v);
+    td.classList.add('editando');
+    td.innerHTML = '<input class="edit-cel" data-editcel="1" autocomplete="off" value="' +
+      esc(inicial) + '"' + (tipo === 'fecha' ? ' placeholder="DD/MM/AAAA"' : '') + '>';
+  }
+  S.editCel = { id: emb._id, c: c, td: td, previo: null };
+  var inp = td.querySelector('.edit-cel');
+  inp.focus();
+  if (inp.select) inp.select();
+}
+
+// Guarda (o descarta) lo que se escribió en la celda.
+function cerrarEdicionCelda(guardar) {
+  var E = S.editCel;
+  if (!E) return;
+  S.editCel = null;
+  var inp = E.td.querySelector('.edit-cel');
+  if (!guardar || !inp) return refrescarPlanilla();
+  var emb = filaPorId(E.id), c = E.c, tipo = CAMPOS[c].tipo, val = inp.value;
+
+  // Validar antes de escribir: un dato mal en la planilla es peor que ninguno.
+  if (tipo === 'fecha' && String(val).trim() && !esFecha(normFecha(val))) {
+    S.editCel = E; inp.classList.add('mal'); inp.focus();
+    return avisoCelda(E.td, 'Esa fecha no existe. Usá DD/MM/AAAA.');
+  }
+  if (tipo === 'numero' && String(val).trim() && numAR(val) === null) {
+    S.editCel = E; inp.classList.add('mal'); inp.focus();
+    return avisoCelda(E.td, 'Eso no es un número.');
+  }
+  var actual = emb[c];
+  var mismo = tipo === 'semaforo' ? (actual || 'vacio') === val
+    : tipo === 'fecha' ? (esFecha(actual) ? fmtFecha(actual) : '') === val.trim()
+    : tipo === 'numero' ? numAR(val) === (typeof actual === 'number' ? actual : numAR(actual))
+    : String(actual == null ? '' : actual) === val;
+  if (mismo) return refrescarPlanilla();
+  aplicarCambio(E.id, c, val);
+}
+
+// Un aviso chico al lado de la celda, que se va solo.
+function avisoCelda(td, texto, contrato) {
+  var viejo = document.querySelector('.aviso-cel');
+  if (viejo) viejo.parentNode.removeChild(viejo);
+  var r = td.getBoundingClientRect();
+  var div = document.createElement('div');
+  div.className = 'aviso-cel';
+  div.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 330)) + 'px';
+  div.style.top = (r.bottom + 6) + 'px';
+  div.innerHTML = '<span class="ac-ico">' + ico('candado') + '</span><span>' + esc(texto) + '</span>' +
+    (contrato && S.ctrEditables && S.ctrEditables.has(contrato)
+      ? '<button data-act="ctrabrir" data-k="' + esc(contrato) + '">Abrir el contrato</button>' : '');
+  document.body.appendChild(div);
+  clearTimeout(S.tAvisoCel);
+  S.tAvisoCel = setTimeout(function () { if (div.parentNode) div.parentNode.removeChild(div); }, 5200);
+}
+
 function celdaPlanilla(emb, src, c) {
+  return celdaPlanillaBase(emb, src, c).replace(/^<td/, '<td data-c="' + c + '"');
+}
+
+function celdaPlanillaBase(emb, src, c) {
   if (src.mapa[c] === undefined) return '<td class="na"></td>';
   if (SEMAFOROS.indexOf(c) >= 0) {
     if (src.noAplica[c]) return '<td class="na"></td>';
@@ -8927,6 +9101,30 @@ function pintar() {
   }
 }
 
+// Doble clic en una celda de la planilla: se edita ahí mismo.
+document.addEventListener('dblclick', function (ev) {
+  var td = ev.target.closest && ev.target.closest('.tbl-hoja td[data-c]');
+  if (!td || td.classList.contains('editando')) return;
+  clearTimeout(S.tAbrir);
+  ev.preventDefault();
+  // El doble clic del navegador también selecciona el texto: se saca.
+  try { window.getSelection().removeAllRanges(); } catch (e) {}
+  editarCelda(td);
+});
+
+// Enter guarda, Escape descarta, Tab guarda y deja seguir.
+document.addEventListener('keydown', function (ev) {
+  if (!S.editCel || !ev.target.classList || !ev.target.classList.contains('edit-cel')) return;
+  if (ev.key === 'Enter' || ev.key === 'Tab') { ev.preventDefault(); ev.stopPropagation(); cerrarEdicionCelda(true); }
+  else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); cerrarEdicionCelda(false); }
+}, true);
+
+// Elegir un estado en un semáforo lo guarda en el acto.
+document.addEventListener('change', function (ev) {
+  if (S.editCel && ev.target.classList && ev.target.classList.contains('edit-cel') &&
+      ev.target.tagName === 'SELECT') cerrarEdicionCelda(true);
+});
+
 document.addEventListener('fullscreenchange', function () {
   if (!document.fullscreenElement && S.planillaFull) { S.planillaFull = false; pintar(); }
 });
@@ -8948,6 +9146,23 @@ document.addEventListener('focusin', function (e) {
 });
 
 document.addEventListener('click', function (ev) {
+  if (!ev.target.closest) return;
+  // Editando una celda: un clic afuera guarda, como en Sheets.
+  if (S.editCel && !ev.target.closest('.edit-cel')) cerrarEdicionCelda(true);
+  if (ev.target.closest('td.editando')) return;
+  // Celda de la planilla: el clic simple abre el detalle, pero espera un
+  // instante por si es el primero de un doble clic (que edita).
+  var tdP = ev.target.closest('.tbl-hoja td[data-c]');
+  if (tdP && !S.menuCol && !ev.target.closest('.col-check')) {
+    var idP = tdP.closest('tr').getAttribute('data-f');
+    clearTimeout(S.tAbrir);
+    S.tAbrir = setTimeout(function () {
+      if (S.editCel) return;
+      S.sel = idP; pintar();
+    }, 260);
+    ev.stopPropagation();
+    return;
+  }
   // Menú de filtro abierto: un clic afuera lo cierra sin aplicar, como en
   // Sheets, y no hace nada más (no abre la fila que estaba debajo).
   if (S.menuCol && ev.target.closest) {
@@ -9094,6 +9309,9 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'adviceMulti') {
     return enviarAdvice(Object.keys(S.marcados).filter(function (k) { return S.marcados[k]; }), true);
+  }
+  if (el.closest && el.closest('.aviso-cel')) {
+    var av = el.closest('.aviso-cel'); if (av.parentNode) av.parentNode.removeChild(av);
   }
   if (act === 'planfull') {
     S.planillaFull = !S.planillaFull; S.menuCol = null;
