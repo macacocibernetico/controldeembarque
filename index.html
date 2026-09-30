@@ -483,7 +483,7 @@ html{overflow-x:clip}
 .edit-cel{width:100%;min-width:120px;height:100%;min-height:34px;border:0;border-radius:0;
   padding:0 10px;font:inherit;background:#fff;outline:none;box-shadow:none}
 .edit-cel.mal{background:#fdecea;color:var(--pend)}
-.tbl-hoja td[data-c]{cursor:cell}
+.tbl-hoja td[data-c]{cursor:default}
 
 /* Aviso al lado de una celda que no se puede editar */
 .aviso-cel{position:fixed;z-index:70;max-width:320px;display:flex;flex-wrap:wrap;gap:8px;
@@ -493,8 +493,7 @@ html{overflow-x:clip}
 .aviso-cel .ac-ico .ico{width:13px;height:13px;stroke-width:2.2}
 .aviso-cel > span:nth-child(2){flex:1 1 calc(100% - 25px);min-width:0}
 .aviso-cel button{min-height:28px;font-size:12px;background:#fff;color:#202124;border:0;margin-left:21px}
-.tbl-hoja td[data-c]{-webkit-user-select:none;user-select:none}
-.tbl-hoja td.editando{-webkit-user-select:text;user-select:text}
+.tbl-hoja td{-webkit-user-select:text;user-select:text}
 
 /* Pantalla completa: la planilla tapa todo y la tabla usa el alto que queda.
    Su barra horizontal queda siempre al pie de la pantalla. */
@@ -1257,6 +1256,14 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .panel.anim{animation:subir .34s var(--ease)}
   .pe-top{margin:0 -22px;padding:12px 22px}
   .gen-pie{margin:22px -22px 0;padding:14px 22px calc(14px + var(--safe))}
+  /* La cabecera no entra en una línea: los botones bajan y se reparten el ancho. */
+  .pe-top{flex-wrap:wrap;row-gap:10px}
+  .pe-acc{flex-wrap:wrap;width:100%}
+  .pe-acc > button{flex:1 1 auto;min-width:0}
+  .pe-acc .pe-estado{flex-basis:100%}
+  /* Con la columna fija, sumada al número y la casilla, casi no quedaba pantalla
+     para tocar las demás columnas. */
+  .tbl-hoja .col-fija{position:static;max-width:none;box-shadow:none}
   .exp-cli{grid-template-columns:auto minmax(0,1fr) auto auto;gap:9px}
   .exp-cli .cli-barra{display:none}
   .cargas-det{padding-left:10px}
@@ -1429,6 +1436,49 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 @media(prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important}
 }
+
+/* Aviso flotante */
+#toasts{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:95;display:flex;
+  flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 24px)}
+.toast{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:12px;background:#202124;
+  color:#fff;font-size:13.5px;line-height:1.35;box-shadow:0 8px 24px rgba(0,0,0,.28);pointer-events:auto;
+  animation:toastIn .22s var(--ease)}
+.toast .ti{display:inline-flex;width:20px;height:20px;border-radius:50%;background:#34a853;flex:none;
+  align-items:center;justify-content:center}
+.toast.error .ti{background:#ea4335}
+.toast .ti .ico{width:12px;height:12px;stroke-width:3;color:#fff}
+.toast.sale{opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* Cartel de confirmación de cambios */
+.modal-velo{position:fixed;inset:0;z-index:88;background:rgba(0,0,0,.42);animation:fundir .18s}
+.modal-caja{position:fixed;inset:0;z-index:89;display:flex;align-items:center;justify-content:center;
+  padding:14px;pointer-events:none}
+.modal-cambio{pointer-events:auto;width:min(470px,100%);max-height:calc(100vh - 28px);overflow:auto;
+  background:var(--sup);border-radius:16px;padding:22px 22px 18px;box-shadow:0 18px 60px rgba(0,0,0,.32);
+  animation:aparecer .16s var(--ease)}
+.modal-cambio h3{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em}
+.mcm-donde{margin:3px 0 16px;font-size:12.5px;color:var(--tinta3);overflow-wrap:anywhere}
+.mcm-cambio{display:flex;align-items:center;gap:12px;background:var(--sup2);border-radius:12px;padding:14px 16px}
+.mcm-cambio > div{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.mcm-cambio em{font-style:normal;font-size:11.5px;color:var(--tinta4);font-weight:500}
+.mcm-cambio b{font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.mcm-cambio > span{color:var(--tinta4);font-size:18px;flex:none}
+.mcm-total{margin:10px 2px 0;font-size:13px;color:var(--tinta2)}
+.mcm-aviso{display:flex;gap:11px;margin-top:14px;padding:13px 14px;border-radius:12px;background:var(--narbg);
+  box-shadow:0 0 0 1px rgba(217,119,6,.28)}
+.mcm-ico{display:inline-flex;color:var(--nar);margin-top:2px;flex:none}
+.mcm-ico .ico{width:16px;height:16px;stroke-width:2}
+.mcm-aviso p{margin:0;font-size:13.5px;line-height:1.45;color:var(--tinta)}
+.mcm-aviso .mcm-sub{margin-top:6px;font-size:12.5px;color:var(--tinta3)}
+.mcm-aviso button{margin-top:9px;min-height:30px;font-size:12.5px}
+.modal-cambio .chk.entiendo{margin-top:12px}
+.mcm-acc{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+.mcm-acc button{min-height:40px;min-width:104px}
+.btn-a{display:inline-flex;align-items:center;min-height:34px;padding:0 14px;margin-top:9px;border-radius:980px;
+  border:1px solid var(--linea3);background:var(--sup);color:var(--tinta);font-weight:500;font-size:13px;text-decoration:none}
+.btn-a:hover{background:var(--sup2)}
+@media(max-width:900px){#toasts{bottom:calc(84px + var(--safe))}}
 </style>
 </head>
 <body>
@@ -1490,10 +1540,15 @@ var S = {
   ordenCtr: 'recientes',
   fuentesFact: [],
   guardadoOk: false,
+  altaError: null,
+  avisoOk: null,
+  editCtrError: null,
+  faltaDrive: false,
   animarPanel: false,
   menuCol: null,
   planillaFull: false,
   editCel: null,
+  confirmar: null,
   tAbrir: null,
   tAvisoCel: null,
   tFiltro: null,
@@ -1762,6 +1817,7 @@ function normFecha(v) {
     return new Date(EPOCH + v * 86400000);
   }
   var s = String(v).trim(); if (!s) return null;
+  if (/^\d{5}(\.\d+)?$/.test(s)) return normFecha(Number(s));
   var m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
   if (m) {
     var d = +m[1], mes = +m[2], a = +m[3]; if (a < 100) a += 2000;
@@ -2211,7 +2267,7 @@ function pedirToken(interactivo) {
       // se vuelve a pedir mostrando el consentimiento, una sola vez.
       try {
         if (!interactivo && resp.access_token && google.accounts.oauth2.hasGrantedAllScopes &&
-            !google.accounts.oauth2.hasGrantedAllScopes(resp, GMAIL_SCOPE, DRIVE_SCOPE)) {
+            !google.accounts.oauth2.hasGrantedAllScopes(resp, GMAIL_SCOPE)) {
           listo = true;
           return pedirToken(true).then(resolve, reject);
         }
@@ -2283,30 +2339,73 @@ async function conToken() {
   return pedirToken(false);
 }
 
+/* Traduce los errores de Google a algo que se entienda. Nunca se vuelca el
+   JSON crudo de la API: eso mostraba "líneas de código" en pantalla. */
+function apiDeUrl(url) {
+  var u = String(url);
+  if (u.indexOf('gmail.googleapis.com') >= 0) return { nombre: 'Gmail API', servicio: 'gmail.googleapis.com' };
+  if (u.indexOf('googleapis.com/upload/drive') >= 0 || u.indexOf('googleapis.com/drive') >= 0) {
+    return { nombre: 'Google Drive API', servicio: 'drive.googleapis.com' };
+  }
+  return { nombre: 'Google Sheets API', servicio: 'sheets.googleapis.com' };
+}
+
+function errorGoogle(status, msg, url) {
+  var api = apiDeUrl(url), crudo = String(msg || ''), m = crudo.split('\n')[0].trim(), e;
+  if (status === 403 && /has not been used|is disabled|SERVICE_DISABLED/i.test(crudo)) {
+    // La API está apagada en el proyecto de Google Cloud: no es un tema de la
+    // cuenta ni de permisos. Se dice cuál es y se da el enlace directo.
+    var link = (crudo.match(/https:\/\/console\.(?:developers|cloud)\.google\.com\/[^\s"']+/) || [])[0] ||
+      'https://console.cloud.google.com/apis/library/' + api.servicio;
+    e = new Error('Falta habilitar la ' + api.nombre + ' en tu proyecto de Google Cloud. ' +
+      'No es un problema de permisos de tu cuenta. Habilitala, esperá un minuto y probá de nuevo.');
+    e.habilitar = { api: api.nombre, url: link };
+  } else if (status === 403 && /insufficient|scope/i.test(crudo)) {
+    e = new Error('Falta un permiso en tu sesión de Google (' + api.nombre + ').');
+    e.permiso = true;
+  } else if (status === 403) {
+    e = new Error(api.servicio === 'sheets.googleapis.com'
+      ? 'Tu cuenta no tiene permiso sobre esta planilla. ' + m
+      : 'Google no autorizó el pedido (' + api.nombre + '). ' + m);
+  } else if (status === 401) {
+    e = new Error('La sesión con Google venció. Recargá la página y volvé a entrar.');
+    e.permiso = true;
+  } else if (status === 404) {
+    e = new Error(api.servicio === 'sheets.googleapis.com'
+      ? 'No existe una planilla con ese id, o tu cuenta no tiene acceso.'
+      : 'Google no encontró lo que se pidió (' + api.nombre + ').');
+  } else if (status === 429) {
+    e = new Error('Google está limitando los pedidos. Esperá unos segundos y probá de nuevo.');
+  } else if (status >= 500) {
+    e = new Error('Google tuvo un problema momentáneo (' + status + '). Probá de nuevo en un rato.');
+  } else {
+    e = new Error('Google rechazó el pedido: ' + (m.slice(0, 240) || 'error ' + status));
+  }
+  e.status = status; e.api = api.nombre;
+  return e;
+}
+
 async function api(url, opciones) {
   var token = await conToken();
   var o = opciones || {};
   o.headers = Object.assign({ Authorization: 'Bearer ' + token }, o.headers || {});
-  var r = await fetch(url, o);
+  var pedir = async function () {
+    try { return await fetch(url, o); }
+    catch (e) { throw new Error('No se pudo conectar con Google. Revisá tu conexión e intentá de nuevo.'); }
+  };
+  var r = await pedir();
 
   if (r.status === 401) {           // token vencido: pedir de nuevo y reintentar
     S.token = null;
     token = await pedirToken(false);
     o.headers.Authorization = 'Bearer ' + token;
-    r = await fetch(url, o);
+    r = await pedir();
   }
 
   var cuerpo = null;
   try { cuerpo = await r.json(); } catch (e) {}
   if (!r.ok) {
-    var msg = (cuerpo && cuerpo.error && cuerpo.error.message) || ('Error ' + r.status);
-    if (r.status === 403) {
-      msg = /has not been used|is disabled/i.test(msg)
-        ? 'Falta habilitar la Google Sheets API en tu proyecto de Google Cloud. Abrí Biblioteca, buscá "Google Sheets API" y dale Habilitar. Puede tardar un minuto en tomar efecto.'
-        : 'Tu cuenta no tiene permiso sobre esta planilla. ' + msg;
-    }
-    if (r.status === 404) msg = 'No existe una planilla con ese id, o tu cuenta no tiene acceso.';
-    throw new Error(msg);
+    throw errorGoogle(r.status, (cuerpo && cuerpo.error && cuerpo.error.message) || '', url);
   }
   return cuerpo;
 }
@@ -3174,6 +3273,33 @@ function resumenMudanza(emb) {
 /* El corazón: mueve una fila entre dos pestañas.
    `origen`  = { tab, sheetId, mapa, fila, celdas, colores }
    `destino` = nombre de la pestaña. */
+/* Ubica la fila en la hoja tal como está AHORA. El número de fila que la app
+   tenía guardado puede haber quedado viejo (alguien agregó o borró filas), y
+   borrar por número podría llevarse otra carga. Se identifica por contrato, BL,
+   cliente y toneladas. */
+function ubicarFila(h, mapa, esp, nro) {
+  var val = function (f, c) {
+    var i = mapa[c]; return i === undefined || f.celdas[i] == null ? '' : f.celdas[i];
+  };
+  var mismo = function (f) {
+    return clave(val(f, 'contract')) === clave(esp.contract) &&
+           clave(val(f, 'bl')) === clave(esp.bl) &&
+           clave(val(f, 'importer')) === clave(esp.importer) &&
+           Math.abs((normNum(val(f, 'tns')) || 0) - (normNum(esp.tns) || 0)) < 0.0001;
+  };
+  var cand = h.filas.filter(mismo);
+  var enSuLugar = cand.filter(function (f) { return f.fila === nro; })[0];
+  if (enSuLugar) return enSuLugar;
+  if (cand.length === 1) return cand[0];
+  throw new Error(cand.length
+    ? 'Hay ' + cand.length + ' cargas iguales y no sé cuál mover. Actualizá y probá de nuevo.'
+    : 'Esa carga ya no está donde estaba: alguien la movió o la cambió. Actualizá y probá de nuevo.');
+}
+
+/* Mueve una fila de una pestaña a otra: insertar el hueco, escribir los campos
+   con sus colores, el total como fórmula y borrar el origen van en UN SOLO
+   pedido. Si algo falla, Google no aplica nada: no puede quedar una fila vacía
+   a medias (que es lo que pasaba cuando el hueco se insertaba aparte). */
 async function moverFila(origen, destinoTab) {
   var hd = await leerHoja(S.cfg.sheetId, destinoTab);
   var mapaD = detectar(hd.encabezados, CAMPOS).mapa;
@@ -3183,70 +3309,58 @@ async function moverFila(origen, destinoTab) {
     ? Math.max.apply(null, hd.filas.map(function (f) { return f.fila; })) + 1
     : (hd.filaEncabezado || 1) + 1);
 
-  // 1. Hueco arriba del TOTAL.
-  await api(BASE + S.cfg.sheetId + ':batchUpdate', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ requests: [{
-      insertDimension: {
-        range: { sheetId: hd.sheetId, dimension: 'ROWS',
-                 startIndex: fila - 1, endIndex: fila },
-        inheritFromBefore: true
-      }
-    }] })
-  });
+  var BLANCO = { red: 1, green: 1, blue: 1 };
+  var rangoCelda = function (col) {
+    return { sheetId: hd.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
+             startColumnIndex: col, endColumnIndex: col + 1 };
+  };
+  var reqs = [{
+    insertDimension: {
+      range: { sheetId: hd.sheetId, dimension: 'ROWS', startIndex: fila - 1, endIndex: fila },
+      inheritFromBefore: true
+    }
+  }];
 
-  // 2. Campo por campo, porque los encabezados no se llaman igual en las dos
-  //    pestañas ("Exporter" / "Exportador", "Port" / "Destino").
-  var reqs = [];
+  // Campo por campo, porque los encabezados no se llaman igual en las dos
+  // pestañas ("Exporter" / "Exportador", "Port" / "Destino").
   CAMPOS_MUDANZA.forEach(function (campo) {
     var iO = origen.mapa[campo], iD = mapaD[campo];
     if (iO === undefined || iD === undefined) return;
 
     var v = origen.celdas[iO];
-    if (v !== null && v !== undefined && v !== '') {
-      reqs.push({
-        updateCells: {
-          range: { sheetId: hd.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
-                   startColumnIndex: iD, endColumnIndex: iD + 1 },
-          rows: [{ values: [{ userEnteredValue: aValorSheets(v) }] }],
-          fields: 'userEnteredValue'
-        }
-      });
+    if (v !== null && v !== undefined && v !== '' && !(v && v.invalida)) {
+      reqs.push({ updateCells: {
+        range: rangoCelda(iD),
+        rows: [{ values: [{ userEnteredValue: aValorSheets(v) }] }],
+        fields: 'userEnteredValue'
+      } });
     }
-    // El color, que en Docs, Fotos y T.R. ES el dato.
+    // El color, que en Docs, Fotos y T.R. ES el dato. Siempre se escribe (si
+    // no tenía, blanco): si no, la fila nueva heredaría el color de la de arriba.
     var bg = origen.colores ? origen.colores[iO] : null;
-    if (bg) {
-      reqs.push({
-        updateCells: {
-          range: { sheetId: hd.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
-                   startColumnIndex: iD, endColumnIndex: iD + 1 },
-          cell: { userEnteredFormat: { backgroundColor: bg } },
-          fields: 'userEnteredFormat.backgroundColor'
-        }
-      });
-    }
+    reqs.push({ repeatCell: {
+      range: rangoCelda(iD),
+      cell: { userEnteredFormat: { backgroundColor: bg
+        ? { red: bg.red || 0, green: bg.green || 0, blue: bg.blue || 0 } : BLANCO } },
+      fields: 'userEnteredFormat.backgroundColor'
+    } });
   });
 
-  // 3. El Total, como fórmula.
+  // El Total, como fórmula.
   if (mapaD.total !== undefined && mapaD.price !== undefined && mapaD.tns !== undefined) {
-    reqs.push({
-      updateCells: {
-        range: { sheetId: hd.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
-                 startColumnIndex: mapaD.total, endColumnIndex: mapaD.total + 1 },
-        rows: [{ values: [{ userEnteredValue: { formulaValue:
-          '=' + letraCol(mapaD.price) + fila + '*' + letraCol(mapaD.tns) + fila } }] }],
-        fields: 'userEnteredValue'
-      }
-    });
+    reqs.push({ updateCells: {
+      range: rangoCelda(mapaD.total),
+      rows: [{ values: [{ userEnteredValue: { formulaValue:
+        '=' + letraCol(mapaD.price) + fila + '*' + letraCol(mapaD.tns) + fila } }] }],
+      fields: 'userEnteredValue'
+    } });
   }
 
-  // 4. Borrar la de origen.
-  reqs.push({
-    deleteDimension: {
-      range: { sheetId: origen.sheetId, dimension: 'ROWS',
-               startIndex: origen.fila - 1, endIndex: origen.fila }
-    }
-  });
+  // Y recién al final, sacar la de origen.
+  reqs.push({ deleteDimension: {
+    range: { sheetId: origen.sheetId, dimension: 'ROWS',
+             startIndex: origen.fila - 1, endIndex: origen.fila }
+  } });
 
   await api(BASE + S.cfg.sheetId + ':batchUpdate', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -3259,16 +3373,19 @@ async function moverFila(origen, destinoTab) {
 async function pasarAFacturar(id, avisar, enviar) {
   var emb = filaPorId(id);
   if (!emb) return;
-  var src = fuenteDe(emb);
   var destino = (S.fuentesFact || [])[0];
   if (!destino) { S.factError = 'No hay ninguna pestaña de "A facturar" configurada.'; return pintar(); }
 
   S.pasando = id; S.factError = null; pintar();
   try {
     var res = resumenMudanza(emb);
+    // La fila se relee justo antes de tocar nada.
+    var h = await leerHoja(S.cfg.sheetId, emb._tab);
+    var mp = detectar(h.encabezados, CAMPOS).mapa;
+    var fresca = ubicarFila(h, mp, emb, emb._fila);
     await moverFila({
-      tab: emb._tab, sheetId: emb._sheetId, mapa: src.mapa,
-      fila: emb._fila, celdas: emb._celdas, colores: emb._colores
+      tab: emb._tab, sheetId: h.sheetId, mapa: mp,
+      fila: fresca.fila, celdas: fresca.celdas, colores: fresca.colores
     }, destino.tab);
 
     var aviso = '';
@@ -3281,8 +3398,10 @@ async function pasarAFacturar(id, avisar, enviar) {
     S.ultimoMov = { desde: res.desde, quien: res.quien, contrato: res.contrato, bl: res.bl };
     S.sel = null; S.pasar = null;
     await cargarTodo();
+    toast('Enviada a «' + destino.tab + '»: ' + (res.contrato || res.quien), 'ok');
   } catch (e) {
     S.factError = 'No se pudo pasar: ' + e.message;
+    toast('No se pudo enviar a facturar', 'error');
   } finally {
     S.pasando = null; pintar();
   }
@@ -3297,19 +3416,24 @@ async function devolverDeFacturar(nroFila, destinoTab) {
     // Se relee: la fila pudo haberse movido desde la última carga.
     var hf = await leerHoja(S.cfg.sheetId, fact.tab);
     var mapaF = detectar(hf.encabezados, CAMPOS).mapa;
-    var cruda = hf.filas.filter(function (f) { return f.fila === nroFila; })[0];
-    if (!cruda) throw new Error('Esa fila ya no está donde estaba. Actualizá y probá de nuevo.');
+    // Lo que la app cree que hay en esa fila; se compara con lo que hay de verdad.
+    var vieja = fact.filas.filter(function (f) { return f.fila === nroFila; })[0];
+    if (!vieja) throw new Error('Esa fila ya no está donde estaba. Actualizá y probá de nuevo.');
+    var gv = function (c) { return fact.mapa[c] === undefined ? '' : (vieja.celdas[fact.mapa[c]] == null ? '' : vieja.celdas[fact.mapa[c]]); };
+    var cruda = ubicarFila(hf, mapaF, { contract: gv('contract'), bl: gv('bl'), importer: gv('importer'), tns: gv('tns') }, nroFila);
 
     await moverFila({
       tab: fact.tab, sheetId: hf.sheetId, mapa: mapaF,
-      fila: nroFila, celdas: cruda.celdas, colores: cruda.colores
+      fila: cruda.fila, celdas: cruda.celdas, colores: cruda.colores
     }, destinoTab);
 
     S.avisoOk = 'Devuelta a "' + destinoTab + '".';
     S.ultimoMov = null;
     await cargarTodo();
+    toast('Devuelta a «' + destinoTab + '»', 'ok');
   } catch (e) {
     S.factError = 'No se pudo devolver: ' + e.message;
+    toast('No se pudo devolver la carga', 'error');
   } finally {
     S.pasando = null; pintar();
   }
@@ -3796,9 +3920,12 @@ async function subirMultipart(meta, blob) {
   });
   var j = null; try { j = await r.json(); } catch (e) {}
   if (!r.ok) {
-    var msg = (j && j.error && j.error.message) || ('Error ' + r.status);
-    if (r.status === 403 || r.status === 401) { S.faltaDrive = true; msg = 'Falta el permiso de Drive para armar el PDF.'; }
-    throw new Error(msg);
+    var eD = errorGoogle(r.status, (j && j.error && j.error.message) || '',
+                         'https://www.googleapis.com/upload/drive/v3/files');
+    if (!eD.habilitar && (r.status === 403 || r.status === 401)) {
+      S.faltaDrive = true; eD = new Error('Falta el permiso de Drive para armar el PDF.');
+    }
+    throw eD;
   }
   return j;
 }
@@ -4015,7 +4142,7 @@ function panelGenerador() {
           '<span class="cbx">' + ico('check') + '</span>' +
           '<span class="nom" title="' + esc(d.t) + '">' + esc(d.t) + '</span></label>';
       }).join('') + '</div>' +
-      '<div class="gen-docmas"><input id="g-docnuevo" placeholder="Otro documento…">' +
+      '<div class="gen-docmas"><input id="g-docnuevo" aria-label="Agregar otro documento" placeholder="Otro documento…">' +
         '<button data-act="gendocmas">' + ico('plus') + 'Agregar</button></div>' +
     '</div>' +
 
@@ -4098,7 +4225,7 @@ function guardarFechaPanel(input, campo, texto) {
       String(emb[campo].getUTCDate()).padStart(2, '0')
     : '';
   if (iso === actual) return;
-  aplicarCambio(id, campo, iso);
+  pedirCambio(id, campo, iso);
 }
 
 function campoFecha(id, attr, campo, label, valor, extra) {
@@ -4433,17 +4560,15 @@ function bandera(cod) {
 }
 
 /* --- Shipment advice ------------------------------------------------------
-   Reutiliza el Apps Script que ya está en la planilla, publicado como Web App.
-   La app le manda los datos del embarque y el script genera el borrador con la
-   plantilla de siempre. No se duplica la lógica del mail acá.
-
-   Se manda como text/plain a propósito: con application/json el navegador hace
-   un preflight OPTIONS que Apps Script no contesta, y la llamada falla por CORS.
+   El borrador se arma acá y se crea directo en el Gmail de quien aprieta el
+   botón, con la API de Gmail. El texto replica al del script de la planilla
+   (asunto, cumplimiento parcial o total, firma), así sale igual que siempre.
+   El registro queda en la pestaña "Advices enviados".
    -------------------------------------------------------------------------- */
 
-// El script combina varias filas en un solo advice cuando son de la misma
-// carga. Estas son las candidatas: misma pestaña, mismo BL, buque, ETD y ETA.
-// Es la misma regla que valida el script del lado de la planilla.
+// Varias filas de la misma carga van en un solo advice. Estas son las
+// candidatas: misma pestaña, mismo BL, buque, ETD y ETA — la misma regla que
+// usaba el script de la planilla.
 function hermanasAdvice(emb) {
   var f = function (d) { return esFecha(d) ? d.getTime() : String(d || ''); };
   return S.datos.filas.filter(function (o) {
@@ -4486,8 +4611,8 @@ async function enviarAdvice(ids, desdeBarra) {
   if (!sel.length) return;
 
   var marca = desdeBarra ? { barra: true } : { id: sel[0]._id };
-  var fallar = function (msg) {
-    S.adviceMsg = Object.assign({ error: msg }, marca);
+  var fallar = function (msg, extra) {
+    S.adviceMsg = Object.assign({ error: msg }, extra || {}, marca);
     S.adviceEnviando = null;
     pintar();
   };
@@ -4501,6 +4626,16 @@ async function enviarAdvice(ids, desdeBarra) {
     return fallar('Falta el destinatario: la fila no tiene "Mails CC" y ' +
       (d.importer || 'el cliente') + ' no tiene mails para envío documental en Database_old.');
   }
+
+  // Gmail rechaza un «Para» que no sea una lista limpia de mails (Invalid To
+  // header). Se aceptan comas, punto y coma, saltos de línea y «Nombre <mail>».
+  var pd = parsearMails(destino);
+  if (pd.raros.length) {
+    return fallar('Hay mails mal escritos en «Para»: ' + pd.raros.join(', ') +
+      '. Corregilos en el campo Destinatarios.');
+  }
+  if (!pd.mails.length) return fallar('No hay ningún mail válido en «Para».');
+  destino = pd.mails.join(', ');
 
   S.adviceEnviando = desdeBarra ? 'barra' : sel[0]._id;
   S.adviceMsg = null; pintar();
@@ -4533,8 +4668,13 @@ async function enviarAdvice(ids, desdeBarra) {
       url: url
     }, marca);
 
-    // Queda anotado para todos, en la planilla.
-    await registrarAdvice(sel, destino, cc.join(', '));
+    // Queda anotado para todos, en la planilla. Si eso falla, el borrador ya
+    // existe: se avisa aparte en vez de mostrar todo como un error.
+    var avisoReg = await registrarAdvice(sel, destino, cc.join(', '));
+    if (avisoReg) {
+      S.adviceMsg.texto += '\n⚠ No se pudo anotar en «' + HOJA_ADVICES + '»: ' + avisoReg;
+    }
+    toast('Borrador del shipment advice creado en tu Gmail', 'ok');
 
     var ahora = new Date();
     var reg = { fecha: ahora.toLocaleDateString('es-AR'),
@@ -4546,11 +4686,11 @@ async function enviarAdvice(ids, desdeBarra) {
     if (desdeBarra) S.marcados = {};
   } catch (e) {
     var msg = e.message || String(e);
-    if (/insufficient|scope|permission|403|401/i.test(msg)) {
+    if (e.permiso || (!e.habilitar && /insufficient|scope/i.test(msg))) {
       S.faltaGmail = true;
       msg = 'Falta el permiso de Gmail para crear borradores.';
     }
-    return fallar(msg);
+    return fallar(msg, { habilitar: e.habilitar || null });
   } finally {
     S.adviceEnviando = null; pintar();
   }
@@ -4593,7 +4733,10 @@ async function registrarAdvice(sel, destino, cc) {
         S.usuario ? S.usuario.email : ''
       ]] })
     });
-  } catch (e) { /* el registro no debe voltear el borrador */ }
+    return null;
+  } catch (e) {
+    return e.message || 'error desconocido';   // el registro no debe voltear el borrador
+  }
 }
 
 // Bloque del panel.
@@ -4616,6 +4759,13 @@ function botonFacturar(emb) {
   return '<button class="btn-fact' + (abierto ? ' on' : '') + '" data-act="pasar" ' +
     'data-f="' + esc(emb._id) + '" aria-expanded="' + abierto + '">' +
     ico('mover') + 'Enviar a facturar</button>';
+}
+
+// Si el error es una API apagada en Google Cloud, un botón lleva directo a prenderla.
+function accionesError(x) {
+  if (!x || !x.habilitar) return '';
+  return '<br><a class="btn-a" href="' + esc(x.habilitar.url) + '" target="_blank" rel="noopener">' +
+    'Habilitar ' + esc(x.habilitar.api) + '</a>';
 }
 
 function bloqueAdvice(emb, ev) {
@@ -4647,6 +4797,7 @@ function bloqueAdvice(emb, ev) {
   }
   if (msg && msg.error) {
     h += '<div class="error" style="margin:0 0 12px;white-space:pre-line">' + esc(msg.error) +
+      accionesError(msg) +
       (S.faltaGmail
         ? '<br><button data-act="permiso-gmail" style="margin-top:9px">Autorizar Gmail</button>'
         : '') + '</div>';
@@ -5235,6 +5386,163 @@ function filaPorId(id) {
   return S.datos.filas.filter(function (x) { return x._id === id; })[0];
 }
 
+/* --- Aviso flotante ("toast") -----------------------------------------------
+   Vive fuera de #root: así ningún redibujo lo borra a mitad de camino. */
+function toast(texto, tipo, ms) {
+  if (typeof document === 'undefined' || !document.body) return;
+  var caja = document.getElementById('toasts');
+  if (!caja) {
+    caja = document.createElement('div');
+    caja.id = 'toasts';
+    caja.setAttribute('role', 'status');
+    caja.setAttribute('aria-live', 'polite');
+    document.body.appendChild(caja);
+  }
+  var t = document.createElement('div');
+  t.className = 'toast ' + (tipo || 'ok');
+  t.innerHTML = '<span class="ti">' + ico(tipo === 'error' ? 'x' : 'check') + '</span><span>' + esc(texto) + '</span>';
+  caja.appendChild(t);
+  setTimeout(function () {
+    t.classList.add('sale');
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 320);
+  }, ms || (tipo === 'error' ? 6000 : 3800));
+}
+
+/* --- Cambiar un dato de una carga, con confirmación ---------------------------
+   Todo cambio pide confirmar. Si el dato sale del contrato (precio, puerto,
+   exportador...), la confirmación avisa qué dice el contrato y pide tildar que
+   se entiende que la carga va a quedar distinta; después deja seguir, porque
+   hay ajustes puntuales que son legítimos. Al terminar de guardar sale un aviso. */
+var CAMPOS_DEL_CONTRATO = ['contract', 'exporter', 'importer', 'price', 'tipo',
+                           'product', 'incoterm', 'port'];
+
+function txtV(v) {
+  if (v === null || v === undefined || v === '') return '(vacío)';
+  if (v instanceof Date) return fmtFecha(v);
+  if (v && v.invalida) return String(v.crudo);
+  if (typeof v === 'number') return fmtNum(v);
+  return String(v);
+}
+
+function contratoDeCarga(emb) {
+  var k = String(emb.contract || '').trim();
+  if (!k) return null;
+  if (S.contratos.has(k)) return S.contratos.get(k);
+  var kk = clave(k), hallado = null;
+  S.contratos.forEach(function (c, n) { if (!hallado && clave(n) === kk) hallado = c; });
+  return hallado;
+}
+
+// Qué dice el contrato de esta carga sobre ese dato.
+function valorDelContrato(emb, campo) {
+  var c = contratoDeCarga(emb);
+  if (!c) return { hay: false };
+  var v = null;
+  if (campo === 'price') v = c.precio;
+  else if (campo === 'exporter') v = c.exportador;
+  else if (campo === 'importer') v = c.importador;
+  else if (campo === 'product') v = c.producto;
+  else if (campo === 'tipo') v = c.tipo;
+  else if (campo === 'incoterm') v = c.incoterm;
+  else if (campo === 'port') v = (partirIncoterm(c.incoterm) || {}).lugar || '';
+  else if (campo === 'contract') v = c.contrato;
+  return { hay: true, valor: v, texto: (v === null || v === undefined || v === '') ? '' : txtV(v) };
+}
+
+function igualAlContrato(campo, nuevo, delContrato) {
+  if (delContrato === null || delContrato === undefined || delContrato === '') return false;
+  if (campo === 'price') return Math.abs((normNum(nuevo) || 0) - (normNum(delContrato) || 0)) < 0.005;
+  return clave(nuevo) === clave(delContrato);
+}
+
+function pedirCambio(id, campo, valor) {
+  var emb = filaPorId(id);
+  if (!emb) return;
+  var def = CAMPOS[campo];
+  if (!def || def.tipo === 'semaforo') return aplicarCambio(id, campo, valor);
+  if (S.confirmar && S.confirmar.id === id && S.confirmar.campo === campo) return;
+
+  var nuevo = def.tipo === 'numero' ? numAR(valor)
+    : def.tipo === 'fecha' ? convertir(valor, 'fecha')
+    : String(valor == null ? '' : valor).trim();
+  var antes = emb[campo];
+  var mismo = def.tipo === 'fecha' ? txtV(antes) === txtV(nuevo)
+    : def.tipo === 'numero' ? (normNum(antes) === nuevo)
+    : String(antes == null ? '' : antes).trim() === nuevo;
+  if (mismo) return pintar();
+
+  var C = { id: id, campo: campo, valor: valor, etiqueta: def.label,
+            antes: txtV(antes), despues: txtV(nuevo), contrato: emb.contract || '',
+            donde: emb._tab + ' · fila ' + emb._fila, entiendo: false };
+
+  if (campo === 'tns' || campo === 'price') {
+    var tn = campo === 'tns' ? nuevo : normNum(emb.tns), pr = campo === 'price' ? nuevo : normNum(emb.price);
+    var t0 = normNum(emb.total);
+    if (t0 === null && normNum(emb.tns) !== null && normNum(emb.price) !== null) t0 = normNum(emb.tns) * normNum(emb.price);
+    if (tn !== null && pr !== null) C.total = { antes: t0, despues: Math.round(tn * pr * 100) / 100 };
+  }
+
+  if (CAMPOS_DEL_CONTRATO.indexOf(campo) >= 0) {
+    C.atado = true;
+    if (campo === 'contract') {
+      C.aviso = 'Esto cambia a qué contrato pertenece la carga: el entregado y el saldo de los dos contratos se recalculan.';
+    } else {
+      var dc = valorDelContrato(emb, campo);
+      C.hayContrato = dc.hay; C.enContrato = dc.texto;
+      if (!dc.hay) {
+        C.aviso = 'No encontré el contrato «' + C.contrato + '» para comparar. ' + def.label +
+          ' sale del contrato, así que no pude verificar este cambio.';
+      } else if (!dc.texto) {
+        C.aviso = 'En el contrato ' + C.contrato + ' no figura ' + def.label.toLowerCase() + '. Esta carga va a tener uno propio.';
+      } else if (igualAlContrato(campo, nuevo, dc.valor)) {
+        C.atado = false;               // coincide con el contrato: es un cambio normal
+      } else {
+        C.aviso = 'En el contrato ' + C.contrato + ' ' + def.label.toLowerCase() + ' dice «' + dc.texto +
+          '». Vas a dejar esta carga con un valor distinto al del contrato.';
+      }
+    }
+  }
+  S.confirmar = C;
+  pintar();
+}
+
+function modalCambio() {
+  var C = S.confirmar;
+  if (!C) return '';
+  var ctrEd = C.contrato && S.ctrEditables && S.ctrEditables.has(C.contrato);
+  return '<div class="modal-velo" data-act="cambiono"></div>' +
+    '<div class="modal-caja"><div class="modal-cambio" role="alertdialog" aria-modal="true" aria-labelledby="mcm-t">' +
+      '<h3 id="mcm-t">¿Cambiar ' + esc(C.etiqueta.toLowerCase()) + '?</h3>' +
+      '<p class="mcm-donde">' + esc(C.donde) + (C.contrato ? ' · ' + esc(C.contrato) : '') + '</p>' +
+      '<div class="mcm-cambio"><div><em>Antes</em><b>' + esc(C.antes) + '</b></div>' +
+        '<span aria-hidden="true">→</span><div><em>Después</em><b>' + esc(C.despues) + '</b></div></div>' +
+      (C.total ? '<p class="mcm-total">El total pasa de <b>' + (C.total.antes === null ? '—' : fmtNum(C.total.antes)) +
+        '</b> a <b>' + fmtNum(C.total.despues) + '</b> (se recalcula solo).</p>' : '') +
+      (C.atado
+        ? '<div class="mcm-aviso"><span class="mcm-ico">' + ico('enlace') + '</span><div>' +
+            '<p>' + esc(C.aviso) + '</p>' +
+            '<p class="mcm-sub">Este dato sale del contrato. Si el contrato está mal, conviene corregirlo allá; ' +
+            'si es un ajuste puntual de esta carga, podés seguir.</p>' +
+            (ctrEd ? '<button data-act="ctrabrir" data-k="' + esc(C.contrato) + '">Abrir el contrato</button>' : '') +
+          '</div></div>' +
+          '<label class="chk entiendo"><input type="checkbox" data-cambioentiendo="1"' + (C.entiendo ? ' checked' : '') + '>' +
+            '<span>Entiendo que esta carga va a diferir del contrato</span></label>'
+        : '') +
+      '<div class="mcm-acc">' +
+        '<button data-act="cambiono">Cancelar</button>' +
+        '<button class="primario" data-act="cambiook"' + (C.atado && !C.entiendo ? ' disabled' : '') + '>Cambiar</button>' +
+      '</div></div></div>';
+}
+
+// ¿Hay texto seleccionado con el mouse dentro de la tabla? Si sí, el clic que
+// cierra esa selección es de quien está copiando: no debe abrir nada.
+function textoSeleccionadoEnTabla() {
+  var sel = window.getSelection && window.getSelection();
+  if (!sel || sel.isCollapsed || !String(sel).length) return false;
+  var n = sel.anchorNode; n = n && (n.nodeType === 3 ? n.parentNode : n);
+  return !!(n && n.closest && n.closest('.tbl-hoja'));
+}
+
 async function aplicarCambio(id, campo, valor) {
   S.guardadoOk = false;
   var f = filaPorId(id);
@@ -5271,14 +5579,24 @@ async function aplicarCambio(id, campo, valor) {
   }
   S.guardando++; pintar();
 
+  var fallo = false;
   try {
     await escribirCeldas(S.cfg.sheetId, f._sheetId, f._fila, valores, colores);
+    // Recién acá el cambio está en la planilla: recién acá se avisa.
+    var etq = campo === '_faltaComprobante' ? 'Comprobante' : CAMPOS[campo].label;
+    var det = (campo === '_faltaComprobante') ? (valor ? 'falta' : 'ok')
+      : tipo === 'semaforo' ? etiqueta(campo, valor)
+      : txtV(antes) + ' → ' + txtV(f[campo]);
+    toast(etq + ' actualizado: ' + det + (f.total !== antesTotal && (campo === 'tns' || campo === 'price')
+      ? ' · Total ' + fmtNum(f.total) : ''), 'ok');
   } catch (e) {
+    fallo = true;
     f[campo] = antes; f.total = antesTotal;
     S.error = 'No se pudo guardar: ' + e.message;
+    toast('No se pudo guardar el cambio. ' + e.message.split('\n')[0].slice(0, 120), 'error');
   } finally {
     S.guardando--;
-    if (!S.guardando) {
+    if (!S.guardando && !fallo) {
       S.guardadoOk = true;
       clearTimeout(S.tGuardado);
       S.tGuardado = setTimeout(function () { S.guardadoOk = false; pintar(); }, 2500);
@@ -5346,6 +5664,7 @@ var ICONOS = {
   agrandar: 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4',
   achicar:  'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4',
   candado:  'M4.5 7V5a3.5 3.5 0 0 1 7 0v2M3.5 7h9v7h-9z',
+  enlace:   'M6.6 9.4l2.8-2.8M5.2 7.8L3.9 9.1a2.2 2.2 0 0 0 3.1 3.1L8.3 11M10.8 8.2l1.3-1.3A2.2 2.2 0 0 0 9 3.8L7.7 5.1',
   az:     'M3 12l2.5-8 2.5 8M3.8 9.5h3.4M10 4h3.5L10 12h3.5'
 };
 
@@ -5727,7 +6046,8 @@ function vistaApp() {
       tituloVista() +
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
-    (S.modo === 'planilla' && S.vista === 'carga' ? menuColumna() : '');
+    (S.modo === 'planilla' && S.vista === 'carga' ? menuColumna() : '') +
+    modalCambio();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -6067,6 +6387,7 @@ function barraAdvice(evs) {
   }
   if (msg && msg.error) {
     h += '<div class="error" style="margin:0 0 10px;white-space:pre-line">' + esc(msg.error) +
+      accionesError(msg) +
       (S.faltaGmail
         ? ' <button data-act="permiso-gmail" style="margin-top:8px">Autorizar Gmail</button>'
         : '') + '</div>';
@@ -6151,15 +6472,22 @@ function segmentoPestanas(evs) {
 
   var op = function (val, label, n) {
     return '<button data-act="ftab" data-t="' + esc(val) + '" aria-pressed="' +
-      (S.filtroTab === val) + '">' + esc(label) +
+      (S.filtroTab === val && !S.verFact) + '">' + esc(label) +
       '<span class="cnt">' + n + '</span></button>';
   };
 
+  // En el celular la barra lateral no se ve: «A facturar» tiene que estar acá
+  // también, si no no había forma de devolver una carga.
+  var fact = (S.fuentesFact || [])[0];
   return '<div class="segmento solo-movil">' +
     op('', 'Todo', evs.length) +
     S.fuentes.map(function (f) {
       return op(f.tab, nombreCorto(f.tab), cuenta[f.tab] || 0);
     }).join('') +
+    (fact
+      ? '<button data-act="vfact" aria-pressed="' + !!S.verFact + '">' +
+        esc(nombreCorto(fact.tab)) + '<span class="cnt">' + fact.filas.length + '</span></button>'
+      : '') +
     '</div>';
 }
 
@@ -8298,14 +8626,16 @@ function vistaPlanilla(filas) {
     var flecha = act ? (S.ordenCol.dir === 1 ? ' ↑' : ' ↓') : '';
     var filtrada = filtroColActivo(S.fCol[c]);
     var abierta = S.menuCol && S.menuCol.c === c;
-    var bloqueada = CAMPOS_DEL_CONTRATO.indexOf(c) >= 0 || c === 'total';
+    var bloqueada = c === 'total';
+    var delCtr = CAMPOS_DEL_CONTRATO.indexOf(c) >= 0;
     var clsTh = [filtrada ? 'th-filtrada' : '', i === 0 ? 'col-fija' : '',
                  bloqueada ? 'th-bloq' : ''].filter(Boolean).join(' ');
     return '<th' + (clsTh ? ' class="' + clsTh + '"' : '') + '><div class="th-in">' +
       '<button class="th-ord" data-act="ordcol" data-c="' + c + '" title="' +
-        (bloqueada ? (c === 'total' ? 'Se calcula solo: precio × toneladas'
-                                    : 'Viene del contrato: se cambia desde Contratos') : 'Ordenar') + '">' +
-        (bloqueada ? '<span class="th-candado">' + ico('candado') + '</span>' : '') +
+        (bloqueada ? 'Se calcula solo: precio × toneladas'
+          : delCtr ? 'Viene del contrato: cambiarlo acá pide confirmación' : 'Ordenar') + '">' +
+        (bloqueada ? '<span class="th-candado">' + ico('candado') + '</span>'
+          : delCtr ? '<span class="th-candado">' + ico('enlace') + '</span>' : '') +
         CAMPOS[c].label + flecha + '</button>' +
       // El embudo abre el menú de filtro, como en Sheets.
       '<button class="th-filtro' + (filtrada ? ' on' : '') + (abierta ? ' abierta' : '') + '" ' +
@@ -8329,7 +8659,7 @@ function vistaPlanilla(filas) {
     'El número de la izquierda es la fila real. Clic en el nombre de una columna ordena, ' +
     'el embudo filtra y la × la oculta. Clic en una fila abre el detalle; ' +
     '<b>doble clic en una celda la edita</b> (Enter guarda, Esc cancela). ' +
-    'Las columnas con candado vienen del contrato y se cambian desde Contratos. ' +
+    'Las columnas con enlace vienen del contrato: se pueden cambiar, pero piden confirmación. ' +
     'La casilla de al lado elige filas para el shipment advice: las que no son del mismo ' +
     'embarque se apagan solas.</p>' +
     '</div>';
@@ -8340,6 +8670,22 @@ function vistaPlanilla(filas) {
 /* El menú de filtro de una columna. Va con posición fija, fuera de la tabla,
    para que el scroll horizontal de la planilla no lo corte. Se edita sobre
    un borrador: recién al tocar Aceptar se aplica, como en Sheets. */
+/* El menú se abre debajo del encabezado; si no entra, arriba; y si tampoco, se
+   achica la lista. Lo que no puede pasar es que «Aceptar» quede fuera de la
+   pantalla (pasaba cuando la tabla estaba más abajo en la página). */
+function acomodarMenuCol() {
+  var m = document.querySelector && document.querySelector('.menu-col');
+  if (!m || !S.menuCol) return;
+  var alto = window.innerHeight, h = m.offsetHeight, margen = 8;
+  var abajo = S.menuCol.y, arriba = S.menuCol.yArriba;
+  if (abajo + h <= alto - margen) return;
+  if (arriba && arriba - h >= margen) { m.style.top = (arriba - h) + 'px'; return; }
+  var lista = m.querySelector('.mc-lista');
+  var espacio = alto - 2 * margen;
+  if (lista && h > espacio) lista.style.maxHeight = Math.max(90, lista.offsetHeight - (h - espacio)) + 'px';
+  m.style.top = Math.max(margen, alto - m.offsetHeight - margen) + 'px';
+}
+
 function menuColumna() {
   var M = S.menuCol;
   if (!M) return '';
@@ -8376,7 +8722,7 @@ function menuColumna() {
           }).join('') +
       '</select>' +
       (B.cond === 'contiene' || B.cond === 'nocontiene'
-        ? '<input id="mc-texto" data-mctexto="1" placeholder="Valor" value="' + esc(B.texto || '') + '">'
+        ? '<input id="mc-texto" data-mctexto="1" aria-label="Texto de la condición" placeholder="Valor" value="' + esc(B.texto || '') + '">'
         : '') +
     '</div>' +
 
@@ -8387,7 +8733,7 @@ function menuColumna() {
         '<button data-act="mcnada">Borrar</button>' +
         '<span>' + nMarc + ' de ' + valores.length + '</span>' +
       '</div>' +
-      '<input id="mc-buscar" data-mcbuscar="1" placeholder="Buscar" autocomplete="off">' +
+      '<input id="mc-buscar" data-mcbuscar="1" aria-label="Buscar entre los valores" placeholder="Buscar" autocomplete="off">' +
       '<div class="mc-lista">' + valores.map(function (o) {
         var txt = o.v === '' ? '(Vacías)' : o.v;
         return '<label class="mc-item" data-txt="' + esc(clave(txt)) + '">' +
@@ -8466,25 +8812,15 @@ function filasHtmlPlanilla(filas, cols) {
   }).join('');
 }
 
-/* Edición desde la planilla, con doble clic como en Sheets.
-   Lo que sale del contrato no se toca desde la carga: si el precio está mal,
-   está mal en el contrato, y corregirlo solo acá dejaría las dos cosas
-   distintas. El total tampoco: es precio × toneladas y se calcula solo. */
-var CAMPOS_DEL_CONTRATO = ['contract', 'exporter', 'importer', 'price', 'tipo',
-                           'product', 'incoterm'];
+/* Edición desde la planilla, con doble clic como en Sheets. Lo que sale del
+   contrato se puede cambiar, pero pide confirmación (ver pedirCambio). El total
+   no: es precio × toneladas y se calcula solo. */
 
 function motivoNoEditable(emb, c) {
   var src = fuenteDe(emb);
   if (src.mapa[c] === undefined) return 'Esta columna no existe en «' + emb._tab + '».';
   if (src.noAplica && src.noAplica[c]) return 'Esta columna no aplica en «' + emb._tab + '».';
   if (c === 'total') return 'El total se calcula solo: precio × toneladas. Cambiá la cantidad y se actualiza.';
-  if (CAMPOS_DEL_CONTRATO.indexOf(c) >= 0) {
-    var etq = CAMPOS[c].label;
-    return (c === 'price'
-      ? 'El precio sale del contrato' : etq + ' sale del contrato') +
-      (emb.contract ? ' ' + emb.contract : '') +
-      '. Si está mal, corregilo en el contrato y se actualiza en sus cargas.';
-  }
   return null;
 }
 
@@ -8503,7 +8839,8 @@ function editarCelda(td) {
   if (tipo === 'semaforo') {
     td.classList.add('editando');
     var ops = ['ok', 'pendiente', 'atencion', 'vacio'];
-    td.innerHTML = '<select class="edit-cel" data-editcel="1">' + ops.map(function (o) {
+    td.innerHTML = '<select class="edit-cel" data-editcel="1" aria-label="' + esc(CAMPOS[c].label) + '">' +
+      ops.map(function (o) {
       return '<option value="' + o + '"' + ((v || 'vacio') === o ? ' selected' : '') + '>' +
         esc(etiqueta(c, o)) + '</option>';
     }).join('') + '</select>';
@@ -8513,7 +8850,8 @@ function editarCelda(td) {
       inicial = v.toLocaleString('es-AR', { maximumFractionDigits: 4, useGrouping: false });
     } else inicial = v == null ? '' : String(v && v.invalida ? v.crudo : v);
     td.classList.add('editando');
-    td.innerHTML = '<input class="edit-cel" data-editcel="1" autocomplete="off" value="' +
+    td.innerHTML = '<input class="edit-cel" data-editcel="1" autocomplete="off" aria-label="' +
+      esc(CAMPOS[c].label) + '" value="' +
       esc(inicial) + '"' + (tipo === 'fecha' ? ' placeholder="DD/MM/AAAA"' : '') + '>';
   }
   S.editCel = { id: emb._id, c: c, td: td, previo: null };
@@ -8546,7 +8884,7 @@ function cerrarEdicionCelda(guardar) {
     : tipo === 'numero' ? numAR(val) === (typeof actual === 'number' ? actual : numAR(actual))
     : String(actual == null ? '' : actual) === val;
   if (mismo) return refrescarPlanilla();
-  aplicarCambio(E.id, c, val);
+  pedirCambio(E.id, c, val);
 }
 
 // Un aviso chico al lado de la celda, que se va solo.
@@ -9076,6 +9414,12 @@ function pintar() {
 
   document.getElementById('root').innerHTML = html;
   S.animarPanel = false;   // la entrada se anima una sola vez
+  acomodarMenuCol();
+  // El cartel de confirmación toma el foco: Enter confirma, Esc cancela.
+  if (S.confirmar) {
+    var fc0 = document.querySelector('.modal-cambio ' + (S.confirmar.atado ? 'input[type="checkbox"]' : '.primario'));
+    if (fc0) fc0.focus();
+  }
   try {
     var sb = window.innerWidth - document.documentElement.clientWidth;
     document.documentElement.style.setProperty('--sb', Math.max(0, sb) + 'px');
@@ -9150,6 +9494,8 @@ document.addEventListener('click', function (ev) {
   // Editando una celda: un clic afuera guarda, como en Sheets.
   if (S.editCel && !ev.target.closest('.edit-cel')) cerrarEdicionCelda(true);
   if (ev.target.closest('td.editando')) return;
+  // Arrastrar el mouse para seleccionar texto y copiarlo: ese clic no abre nada.
+  if (ev.target.closest('.tbl-hoja') && textoSeleccionadoEnTabla()) { ev.stopPropagation(); return; }
   // Celda de la planilla: el clic simple abre el detalle, pero espera un
   // instante por si es el primero de un doble clic (que edita).
   var tdP = ev.target.closest('.tbl-hoja td[data-c]');
@@ -9327,12 +9673,20 @@ document.addEventListener('click', function (ev) {
     } catch (e) {}
     return pintar();
   }
+  if (act === 'cambiono') { S.confirmar = null; return pintar(); }
+  if (act === 'cambiook') {
+    var Cc = S.confirmar;
+    if (!Cc || (Cc.atado && !Cc.entiendo)) return;
+    S.confirmar = null;
+    return aplicarCambio(Cc.id, Cc.campo, Cc.valor);
+  }
   if (act === 'menucol') {
     var cM = el.getAttribute('data-c');
     if (S.menuCol && S.menuCol.c === cM) { S.menuCol = null; return pintar(); }
     var r = el.getBoundingClientRect ? el.getBoundingClientRect() : { left: 100, bottom: 100 };
     var act0 = S.fCol[cM] || {};
     S.menuCol = { c: cM, x: Math.round(r.left - 220), y: Math.round(r.bottom + 6),
+      yArriba: Math.round(r.top - 6),
       borrador: { cond: act0.cond || '', texto: act0.texto || '',
                   vals: act0.vals ? Object.assign({}, act0.vals) : null } };
     return pintar();
@@ -9824,12 +10178,6 @@ document.addEventListener('input', function (e) {
   }
   var al = e.target.getAttribute && e.target.getAttribute('data-alta');
   if (al && e.target.tagName === 'INPUT') { S.alta = S.alta || {}; S.alta[al] = e.target.value; }
-  var fc = e.target.getAttribute && e.target.getAttribute('data-fcol');
-  if (fc && e.target.tagName === 'INPUT') {
-    S.fCol[fc] = e.target.value;
-    clearTimeout(S.tFiltro);
-    S.tFiltro = setTimeout(refrescarPlanilla, 90);
-  }
   if (e.target.id === 'cid' || e.target.id === 'url') S.setup.entrada = e.target.value;
 });
 
@@ -9843,8 +10191,6 @@ document.addEventListener('change', function (e) {
   if (e.target.id === 'ffalta') { S.f.falta = e.target.value; return pintar(); }
   var alS = e.target.getAttribute && e.target.getAttribute('data-alta');
   if (alS) { S.alta = S.alta || {}; S.alta[alS] = e.target.value; return pintar(); }
-  var fcs = e.target.getAttribute && e.target.getAttribute('data-fcol');
-  if (fcs && e.target.tagName === 'SELECT') { S.fCol[fcs] = e.target.value; return pintar(); }
   var mv = e.target.getAttribute && e.target.getAttribute('data-mcval');
   if (mv !== null && mv !== undefined && S.menuCol) {
     var Bm = S.menuCol.borrador;
@@ -9863,6 +10209,12 @@ document.addEventListener('change', function (e) {
   }
   if (e.target.getAttribute && e.target.getAttribute('data-mccond') && S.menuCol) {
     S.menuCol.borrador.cond = e.target.value; return pintar();
+  }
+  if (e.target.getAttribute && e.target.getAttribute('data-cambioentiendo') && S.confirmar) {
+    S.confirmar.entiendo = e.target.checked;
+    var bOkc = document.querySelector('.modal-cambio [data-act="cambiook"]');
+    if (bOkc) bOkc.disabled = !e.target.checked;
+    return;
   }
   var gd = e.target.getAttribute && e.target.getAttribute('data-gendoc');
   if (gd !== null && gd !== undefined && gd !== '' && S.gen) {
@@ -9958,7 +10310,7 @@ document.addEventListener('change', function (e) {
     var nuevo = e.target.value === '' ? '' : parseFloat(e.target.value);
     if (nuevo !== '' && isNaN(nuevo)) return;
     if (String(nuevo) === String(fn[cn] === null || fn[cn] === undefined ? '' : fn[cn])) return;
-    return aplicarCambio(idn2, cn, nuevo);
+    return pedirCambio(idn2, cn, nuevo);
   }
 
   var cf = e.target.getAttribute && e.target.getAttribute('data-fecha');
@@ -9971,7 +10323,7 @@ document.addEventListener('change', function (e) {
       String(ff[cf].getUTCMonth() + 1).padStart(2, '0') + '-' +
       String(ff[cf].getUTCDate()).padStart(2, '0')
     : '';
-  if (e.target.value !== actualISO) aplicarCambio(idf, cf, e.target.value);
+  if (e.target.value !== actualISO) pedirCambio(idf, cf, e.target.value);
 }, true);
 
 document.addEventListener('blur', function (e) {
@@ -9990,7 +10342,7 @@ document.addEventListener('blur', function (e) {
   var f = filaPorId(id);
   var actual = f ? f[campo] : '';
   var actualTxt = actual instanceof Date ? fmtFecha(actual) : (actual || '');
-  if (e.target.value !== actualTxt) aplicarCambio(id, campo, e.target.value);
+  if (e.target.value !== actualTxt) pedirCambio(id, campo, e.target.value);
 }, true);
 
 document.addEventListener('keydown', function (e) {
@@ -10004,6 +10356,7 @@ document.addEventListener('keydown', function (e) {
     e.preventDefault();
     return comentar(e.target.getAttribute('data-com'), e.target.value);
   }
+  if (e.key === 'Escape' && S.confirmar) { S.confirmar = null; return pintar(); }
   if (e.key === 'Escape' && S.combo) { S.combo = null; return pintar(); }
   if (e.key === 'Escape' && S.menuSem) { S.menuSem = null; return pintar(); }
   if (e.key === 'Escape' && S.sel !== null) { S.sel = null; pintar(); }
