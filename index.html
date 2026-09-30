@@ -461,10 +461,13 @@ html{overflow-x:clip}
   overflow:hidden;text-overflow:ellipsis;color:var(--tinta)}
 .tbl-hoja tbody tr:hover td{background:#fafafa}
 .tbl-hoja tbody tr.sel td{background:var(--acentobg)}
-.tbl-hoja .nrofila{position:sticky;left:0;z-index:1;background:#f5f5f7;color:var(--tinta3);
+.tbl-hoja .nrofila{background:#f5f5f7;color:var(--tinta3);
   text-align:center;font-size:12px;min-width:40px;
   border-right:1px solid var(--linea2);font-weight:500}
 .tbl-hoja th.nrofila{z-index:3}
+/* Inmovilizar es una opción (Configuración): sin ella, nada se queda fijo. */
+.tbl-hoja.cong .nrofila{position:sticky;left:0;z-index:1}
+.tbl-hoja.cong .sel-col{position:sticky;left:41px;z-index:1}
 
 /* Cuadrícula como la de Sheets: líneas visibles entre filas y columnas, y
    encabezados en negrita. */
@@ -509,8 +512,9 @@ body.con-barra .full.pantalla-completa{padding-bottom:calc(210px + var(--safe))}
 
 /* La primera columna de datos queda fija al moverse a la derecha, como una
    columna inmovilizada en Sheets: siempre se ve de quién es cada fila. */
-.tbl-hoja .col-fija{position:sticky;left:75px;z-index:1;max-width:220px;
+.tbl-hoja .col-fija{max-width:220px;
   overflow:hidden;text-overflow:ellipsis;box-shadow:inset -1px 0 0 var(--linea2)}
+.tbl-hoja.cong .col-fija{position:sticky;left:75px;z-index:1}
 .tbl-hoja td.col-fija{background:#fff}
 .tbl-hoja th.col-fija{z-index:3;background:#f5f5f7}
 .tbl-hoja tbody tr:hover td.col-fija{background:#f7f9fc}
@@ -573,7 +577,7 @@ body.con-barra .full.pantalla-completa{padding-bottom:calc(210px + var(--safe))}
 .mc-limpiar{background:none;border-color:transparent;color:var(--pend)}
 .mc-limpiar:hover{background:var(--pendbg)}
 /* Columna de selección, fija junto al número de fila */
-.tbl-hoja .sel-col{position:sticky;left:41px;z-index:1;background:#fafafa;width:34px;
+.tbl-hoja .sel-col{background:#fafafa;width:34px;
   min-width:34px;padding:4px 7px;text-align:center;border-right:1px solid var(--linea2)}
 .tbl-hoja th.sel-col{z-index:3;background:#f5f5f7;color:var(--tinta4)}
 .tbl-hoja th.sel-col .ico{width:13px;height:13px}
@@ -946,17 +950,6 @@ th.ord:hover{background:#ebebed}
 .sw-peter.on .et{color:var(--acento);font-weight:600}
 
 /* Sugerencias de advice */
-.pill.sug{color:var(--acento);gap:5px;font-weight:500}
-.pill.sug .ico{width:13px;height:13px}
-.aviso-sug{display:flex;gap:12px;align-items:center;flex-wrap:wrap;
-  background:var(--acentobg);border-radius:var(--r2);padding:13px 16px;margin-bottom:16px;
-  font-size:13.5px;color:var(--acento);line-height:1.45}
-.aviso-sug .ico{width:17px;height:17px;flex:none}
-.aviso-sug span{flex:1;min-width:180px}
-.aviso-sug b{font-weight:600}
-.aviso-sug button{margin-left:auto;background:var(--sup);border-color:transparent;
-  font-size:13px;min-height:32px}
-.aviso-sug button[aria-pressed=true]{background:var(--acento);color:#fff}
 
 /* Copia del shipment advice: se ve exactamente lo que va a salir */
 .cc-vista{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin:0 0 12px;
@@ -1263,7 +1256,8 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .pe-acc .pe-estado{flex-basis:100%}
   /* Con la columna fija, sumada al número y la casilla, casi no quedaba pantalla
      para tocar las demás columnas. */
-  .tbl-hoja .col-fija{position:static;max-width:none;box-shadow:none}
+  .tbl-hoja .col-fija{max-width:none;box-shadow:none}
+  .tbl-hoja.cong .nrofila,.tbl-hoja.cong .sel-col,.tbl-hoja.cong .col-fija{left:auto !important}
   .exp-cli{grid-template-columns:auto minmax(0,1fr) auto auto;gap:9px}
   .exp-cli .cli-barra{display:none}
   .cargas-det{padding-left:10px}
@@ -1479,6 +1473,96 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   border:1px solid var(--linea3);background:var(--sup);color:var(--tinta);font-weight:500;font-size:13px;text-decoration:none}
 .btn-a:hover{background:var(--sup2)}
 @media(max-width:900px){#toasts{bottom:calc(84px + var(--safe))}}
+
+/* ETA: fondo gris y negrita, para que salte a la vista */
+.tbl-hoja td[data-c="eta"]{background:#e6e9ed;font-weight:700;color:var(--tinta)}
+.tbl-hoja tbody tr:hover td[data-c="eta"]{background:#dce1e7}
+.tbl-hoja tbody tr.sel td[data-c="eta"]{background:#d3e2fb}
+.tbl-hoja tbody tr.marcado td[data-c="eta"]{background:#d3e1fa}
+.tbl-hoja td.editando[data-c="eta"]{background:#fff !important;font-weight:400}
+
+/* Menú «Configuración» */
+.cfg-wrap{position:relative;flex:none}
+.btn-cfg{gap:7px;min-height:38px}
+.btn-cfg .ico{width:15px;height:15px}
+.btn-cfg[aria-expanded="true"]{background:var(--tinta);border-color:var(--tinta);color:#fff}
+.menu-cfg{position:absolute;right:0;top:calc(100% + 8px);z-index:60;width:min(340px,calc(100vw - 24px));
+  max-height:calc(100vh - 120px);overflow-y:auto;background:var(--sup);border-radius:14px;
+  box-shadow:0 12px 40px rgba(0,0,0,.2),0 0 0 1px rgba(0,0,0,.06);animation:aparecer .14s var(--ease);
+  text-align:left}
+.cfg-sec{padding:14px 16px}
+.cfg-sec + .cfg-sec{border-top:1px solid var(--linea2)}
+.cfg-sec h4{margin:0;font-size:13.5px;font-weight:700}
+.cfg-cab{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
+.cfg-n{font-size:12px;color:var(--tinta3)}
+.cfg-acc{display:flex;gap:8px;margin-bottom:8px}
+.cfg-acc button{flex:1;min-height:30px;font-size:12.5px}
+.cfg-cols{display:flex;flex-direction:column;max-height:min(232px,32vh);overflow-y:auto;margin:0 -8px;padding:0 4px}
+.cfg-col{display:flex;align-items:center;gap:10px;min-height:34px;padding:0 8px;border-radius:8px;cursor:pointer}
+.cfg-col:hover{background:var(--sup2)}
+.cfg-col input{position:absolute;opacity:0;pointer-events:none}
+.cfg-col .cbx{width:18px;height:18px;flex:none;border-radius:5px;border:1.5px solid var(--linea3);
+  background:var(--sup);display:inline-flex;align-items:center;justify-content:center}
+.cfg-col .cbx .ico{width:12px;height:12px;stroke-width:3;color:#fff;opacity:0}
+.cfg-col input:checked + .cbx{background:#1a73e8;border-color:#1a73e8}
+.cfg-col input:checked + .cbx .ico{opacity:1}
+.cfg-col input:focus-visible + .cbx{box-shadow:0 0 0 2px rgba(26,115,232,.4)}
+.cfg-col .et{flex:1;font-size:13.5px;font-weight:500}
+.cfg-col .est{font-size:11.5px;color:#137333;font-weight:600}
+.cfg-col.off .et{color:var(--tinta4);font-weight:400}
+.cfg-col.off .est{color:var(--tinta4);font-weight:500}
+.cfg-sec select{width:100%;margin-top:8px;min-height:36px}
+.cfg-ayuda{margin:8px 0 0;font-size:12px;color:var(--tinta3);line-height:1.4}
+.cfg-csv{margin-top:8px;width:100%;justify-content:center;gap:7px}
+
+/* Tipo de contrato */
+.pill.tipo-mani{color:#92400e}   .pill.tipo-mani .pt{background:#d97706}
+.pill.tipo-aceite{color:#3f6212} .pill.tipo-aceite .pt{background:#84a913}
+.pill.tipo-expeller{color:#5b3a1f} .pill.tipo-expeller .pt{background:#8b5a2b}
+.pill.tipo-otro{color:var(--tinta3)} .pill.tipo-otro .pt{background:var(--tinta4)}
+.tipos-ctr{margin-top:0}
+
+/* Abierto / Cerrado */
+.pill .letra{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;
+  border-radius:50%;font-size:10.5px;font-weight:800;line-height:1;margin-right:6px}
+.pill.est-a{color:#137333}  .pill.est-a .letra{background:#e6f4ea;color:#137333}
+.pill.est-c{color:#b3261e}  .pill.est-c .letra{background:#fce8e6;color:#b3261e}
+
+/* Contratos en el desplegable del alta de embarque */
+.combo-lista button.co-op{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.co-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.co-est{flex:none;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:800;line-height:1}
+.co-est.a{background:#e6f4ea;color:#137333}
+.co-est.c{background:#fce8e6;color:#b3261e}
+.co-leyenda{margin:4px 0 2px;padding:6px 12px 2px;border-top:1px solid var(--linea);font-size:11.5px;color:var(--tinta3)}
+.co-leyenda b{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+  border-radius:50%;font-size:10px;margin-right:2px}
+.co-leyenda b.a{background:#e6f4ea;color:#137333}
+.co-leyenda b.c{background:#fce8e6;color:#b3261e}
+
+/* Pasar contrato de Abiertos a Cerrados */
+.btn-estado{min-height:32px;padding:0 13px;font-size:13px;font-weight:600;gap:6px}
+.btn-estado .letra{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+  border-radius:50%;font-size:11px;font-weight:800}
+.btn-estado.c{background:#fce8e6;border-color:rgba(179,38,30,.3);color:#b3261e}
+.btn-estado.c .letra{background:#fff;color:#b3261e}
+.btn-estado.a{background:#e6f4ea;border-color:rgba(19,115,51,.3);color:#137333}
+.btn-estado.a .letra{background:#fff;color:#137333}
+.mover-ctr-lista{margin:0 0 12px;padding:10px 14px 10px 30px;background:var(--sup2);border-radius:12px;
+  font-size:13.5px;line-height:1.5}
+.mover-que{margin:0 0 4px;padding-left:20px;font-size:13px;color:var(--tinta2);line-height:1.5}
+.mover-que li{margin-bottom:4px}
+.mover-que .ce,.mover-que .ca{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+  border-radius:50%;font-size:10px;margin-right:2px}
+.mover-que .ce{background:#fce8e6;color:#b3261e}
+.mover-que .ca{background:#e6f4ea;color:#137333}
+
+@media(max-width:900px){
+  /* En el celular es una hoja fija sobre la barra de abajo: no depende de dónde esté el botón. */
+  .menu-cfg{position:fixed;left:12px;right:12px;top:auto;bottom:calc(78px + var(--safe));width:auto;
+    max-height:68vh;z-index:70}
+}
 </style>
 </head>
 <body>
@@ -1531,12 +1615,12 @@ var S = {
   busca: '',
   filtroTab: '',
   filtroTipo: '',
-  soloSug: false,
   expSoloActivas: true,
   expDesde: '',
   expAbierto: null,
   verFirmas: false,
   fVia: '',
+  fTipoCtr: '',
   ordenCtr: 'recientes',
   fuentesFact: [],
   guardadoOk: false,
@@ -1548,6 +1632,8 @@ var S = {
   menuCol: null,
   planillaFull: false,
   editCel: null,
+  moverCtr: null,
+  ultimoMovCtr: null,
   confirmar: null,
   tAbrir: null,
   tAvisoCel: null,
@@ -1570,11 +1656,11 @@ var S = {
   avisarPia: true,
   enviarPia: false,
   tGuardado: null,
-  filtroEtapa: '',
   filtroNivel: '',
   modo: 'tarjetas',
   colsOcultas: {},
-  colsPanel: false,
+  menuCfg: false,
+  planCong: 0,
   fCol: {},
   ordenCol: null,
   orden: 'eta_asc',
@@ -2493,6 +2579,48 @@ function normVia(v) {
 
 var VIA_TXT = { maritimo: 'Marítimo', terrestre: 'Terrestre' };
 
+/* Tipo de contrato: sale de la columna «Tipo» (Maní, Aceite, Expeller). Todo lo
+   que no es una de esas tres —Birdfood, Cancelado, vacío— cae en «otros». */
+var TIPOS_CTR = [['mani', 'Maní'], ['aceite', 'Aceite'], ['expeller', 'Expeller'], ['otro', 'Otros / sin tipo']];
+function tipoCtr(v) {
+  var k = clave(v);
+  if (k.indexOf('mani') === 0) return 'mani';
+  if (k.indexOf('aceite') === 0 || k === 'oil') return 'aceite';
+  if (k.indexOf('expeller') === 0) return 'expeller';
+  return 'otro';
+}
+
+/* Abierto o cerrado lo dice la pestaña donde vive el contrato, no un campo. */
+function esTabAbiertos(t) { var k = clave(t); return k.indexOf('abiert') >= 0 && k.indexOf('contrat') >= 0; }
+function esTabCerrados(t) { var k = clave(t); return k.indexOf('cerrad') >= 0 && k.indexOf('contrat') >= 0; }
+
+function estadoContrato(nombre) {
+  var ref = S.ctrEditables && S.ctrEditables.get(String(nombre == null ? '' : nombre).trim());
+  if (!ref) return '';
+  var tabs = [ref.tab].concat((ref.otras || []).map(function (o) { return o.tab; }));
+  if (tabs.some(esTabAbiertos)) return 'A';
+  if (tabs.some(esTabCerrados)) return 'C';
+  return '';
+}
+
+/* Si está cargada una sola de las dos pestañas (Abiertos o Cerrados), se suma
+   la otra: hace falta conocer las dos para saber cuál es cuál y para poder
+   pasar un contrato de una a la otra. */
+async function tabsEditablesEfectivas() {
+  var base = (S.cfg.tabsCtrEdit || []).slice();
+  var abre = base.some(esTabAbiertos), cierra = base.some(esTabCerrados);
+  S.hermanaAuto = null;
+  if (abre !== cierra) {
+    try {
+      var lp = await listarPestanas(S.cfg.sheetId);
+      var hermana = lp.pestanas.map(function (x) { return x.nombre; })
+        .filter(abre ? esTabCerrados : esTabAbiertos)[0];
+      if (hermana && base.indexOf(hermana) < 0) { base.push(hermana); S.hermanaAuto = hermana; }
+    } catch (e) { /* sin la hermana, se sigue con lo configurado */ }
+  }
+  return base;
+}
+
 function esVerdadero(v) {
   if (v === true) return true;
   if (v === 1) return true;
@@ -3018,8 +3146,13 @@ function contratosDe(exp, imp) {
     if (kImp && clave(c.importador) !== kImp) return;
     out.push(k);
   });
-  // Los más nuevos primero: es lo que se está cargando.
-  return out.sort(function (x, y) { return y.localeCompare(x, 'es', { numeric: true }); });
+  // Primero los abiertos, después los cerrados (y al final los que no se sabe),
+  // y dentro de cada grupo los más nuevos: es lo que se está cargando.
+  var rango = { A: 0, C: 1, '': 2 };
+  return out.sort(function (x, y) {
+    return (rango[estadoContrato(x)] - rango[estadoContrato(y)]) ||
+           y.localeCompare(x, 'es', { numeric: true });
+  });
 }
 
 function productosDe(contrato) {
@@ -5158,6 +5291,8 @@ async function cargarTodo() {
         if (S.contratos.has(k)) {
           var prev = S.contratos.get(k);
           prev.partes = (prev.partes || 1) + 1;
+          var tN = tipoCtr(g('tipo'));
+          if (prev.tipos.indexOf(tN) < 0) prev.tipos.push(tN);
           prev.tns = (normNum(prev.tns) || 0) + (normNum(g('tns')) || 0);
           prev.comision = (normNum(prev.comision) || 0) + (normNum(g('comision')) || 0);
           if (normNum(g('entregado')) !== null) {
@@ -5181,6 +5316,7 @@ async function cargarTodo() {
           importador: g('importador'),
           producto: g('producto'),
           tipo: g('tipo'),
+          tipos: [tipoCtr(g('tipo'))],
           incoterm: g('incoterm'),
           precio: normNum(g('precio')),
           tns: normNum(g('tns')),
@@ -5282,8 +5418,9 @@ async function cargarTodo() {
     S.ctrEditables = new Map();
     S.formasPago = [];
     var frecuencia = {};
-    for (var m = 0; m < (S.cfg.tabsCtrEdit || []).length; m++) {
-      var te = S.cfg.tabsCtrEdit[m], he;
+    var tabsEd = await tabsEditablesEfectivas();
+    for (var m = 0; m < tabsEd.length; m++) {
+      var te = tabsEd[m], he;
       try {
         he = await leerHoja(S.cfg.sheetId, te);
       } catch (e4) {
@@ -6043,11 +6180,12 @@ function vistaApp() {
       (S.avisoOk ? '<div class="ok-aviso">' + esc(S.avisoOk) +
         ' <button data-act="cerraviso">Cerrar</button></div>' : '') +
       barraDeshacer() +
+      barraCtrMovido() +
       tituloVista() +
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     (S.modo === 'planilla' && S.vista === 'carga' ? menuColumna() : '') +
-    modalCambio();
+    modalCambio() + modalMoverCtr();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -6055,50 +6193,6 @@ function vistaApp() {
 // el panel de filtros.
 // Barra flotante: aparece cuando hay embarques marcados. Es la forma natural
 // de armar un advice con varias filas sin tener que entrar a cada tarjeta.
-/* ¿A este embarque le corresponde mandar el advice?
-   El advice se manda cuando el barco ya salió y están el BL y las fotos: es lo
-   que el cliente necesita para preparar la llegada. Antes de eso sale
-   incompleto; mucho después ya no sirve de aviso.
-
-   Se mira lo que la planilla ya dice, no hace falta cargar nada nuevo. */
-function sugerenciaAdvice(emb, ev) {
-  if (adviceDe(emb)) return null;                 // ya se mandó
-  var src = fuenteDe(emb);
-  if (src.mapa.bl === undefined || src.noAplica.bl) return null;  // terrestres
-
-  var hoy = new Date();
-  if (!lleno(emb, 'bl')) return null;             // sin BL no hay advice
-  if (!esFecha(emb.etd) || emb.etd > hoy) return null;   // todavía no salió
-
-  var faltan = faltantesAdvice(emb);
-  var dias = Math.round((hoy - emb.etd) / 86400000);
-
-  // El propio equipo lo marca en Docs con "Enviar Shipment Advice".
-  var marcado = /enviar\s*shipment\s*advice/i.test((emb._notas && emb._notas.docs) || '');
-
-  if (marcado) {
-    return { nivel: 'ya', texto: 'La planilla lo marca para enviar' };
-  }
-  if (faltan.length) {
-    return { nivel: 'falta', texto: 'Falta ' + faltan.join(', ').toLowerCase() };
-  }
-  if (esFecha(emb.eta) && emb.eta < hoy) {
-    var desde = Math.round((hoy - emb.eta) / 86400000);
-    // Pasadas tres semanas del arribo el advice ya no avisa nada: el cliente
-    // hace rato que sabe. Se deja de sugerir para no llenar la lista de ruido.
-    if (desde > 21) return null;
-    return { nivel: 'tarde', texto: 'Llegó hace ' + desde + ' días y no se avisó' };
-  }
-  return { nivel: 'ya', texto: 'Zarpó hace ' + dias + ' días, con BL y datos completos' };
-}
-
-function sugeridos(evs) {
-  return evs.filter(function (x) {
-    var sg = sugerenciaAdvice(x.emb, x.ev);
-    return sg && sg.nivel !== 'falta';
-  });
-}
-
 // Interruptor de copia a Peter. Era un checkbox nativo y dependía del evento
 // change, que se pierde fácil; ahora es un botón con su propia acción, y
 // además se ve encendido o apagado de un vistazo.
@@ -6208,6 +6302,326 @@ function vistaCC(importador, destino) {
 // planilla ya se movió y volver atrás sería peor que dejarlo.
 // Atajo justo después de mover una carga: devolverla sin ir a buscarla.
 // No guarda copia de nada; abre la lista de "A facturar" con esa fila filtrada.
+/* --- Pasar un contrato de «Abiertos» a «Cerrados» (y al revés) ---------------
+   Misma dinámica que «A facturar»: se copia la fila a la otra pestaña, se borra
+   la de origen y todo va en UN solo pedido, así no puede quedar una fila vacía
+   ni una copia a medias.
+
+   Las dos pestañas NO son iguales: en Abiertos el ENT (entregado) es una
+   fórmula y en Cerrados un valor fijo; Abiertos tiene columnas que Cerrados no
+   (Facturación pendiente, % completado, las firmas) y "Importador" se llama
+   "Cliente". Por eso no se pega la fila entera a ciegas: cada columna se
+   empareja por lo que es y se decide qué llevar. */
+function esFormula(x) { return typeof x === 'string' && x.charAt(0) === '='; }
+
+// Columnas con encabezado, identificadas por su nombre. Si un nombre se repite
+// («Periodo de embarque» está dos veces) se distingue por el orden.
+function colsNombradas(enc) {
+  var vistos = {}, out = [];
+  (enc || []).forEach(function (h, i) {
+    var t = clave(h == null ? '' : String(h));
+    if (!t) return;
+    vistos[t] = (vistos[t] || 0) + 1;
+    out.push({ i: i, k: t + '#' + vistos[t], nombre: String(h) });
+  });
+  return out;
+}
+
+async function formulasDeRango(tab, desde, hasta) {
+  var r = await api(BASE + S.cfg.sheetId + '/values/' +
+    encodeURIComponent("'" + tab.replace(/'/g, "''") + "'!A" + desde + ':' + letraCol(MAX_COLS - 1) + hasta) +
+    '?valueRenderOption=FORMULA');
+  return r.values || [];
+}
+async function formulasDeFila(tab, fila) {
+  return (await formulasDeRango(tab, fila, fila))[0] || [];
+}
+
+// Todo lo que hay que saber antes de mover: se lee de las dos pestañas tal
+// como están AHORA. Sirve para el cartel y para ejecutar.
+async function planMoverContrato(nombre) {
+  var ref = S.ctrEditables.get(String(nombre).trim());
+  if (!ref) throw new Error('Ese contrato no está en las pestañas editables.');
+  var deAbiertos = esTabAbiertos(ref.tab);
+  if (!deAbiertos && !esTabCerrados(ref.tab)) {
+    throw new Error('«' + ref.tab + '» no es una pestaña de contratos Abiertos ni Cerrados: no sé a dónde pasarlo.');
+  }
+  var lp = await listarPestanas(S.cfg.sheetId);
+  var destinoTab = lp.pestanas.map(function (x) { return x.nombre; })
+    .filter(deAbiertos ? esTabCerrados : esTabAbiertos)[0];
+  if (!destinoTab) throw new Error('No encuentro la pestaña de contratos ' + (deAbiertos ? 'Cerrados' : 'Abiertos') + '.');
+
+  var ho = await leerHoja(S.cfg.sheetId, ref.tab), hd = await leerHoja(S.cfg.sheetId, destinoTab);
+  var mo = detectar(ho.encabezados, CAMPOS_CTR).mapa, md = detectar(hd.encabezados, CAMPOS_CTR).mapa;
+  if (mo.contrato === undefined || md.contrato === undefined) {
+    throw new Error('No encuentro la columna de contrato en una de las dos pestañas.');
+  }
+  var k = clave(nombre);
+  var filasO = ho.filas.filter(function (f) { return clave(f.celdas[mo.contrato]) === k; });
+  if (!filasO.length) throw new Error('El contrato ya no está en «' + ref.tab + '». Actualizá y probá de nuevo.');
+  if (hd.filas.some(function (f) { return clave(f.celdas[md.contrato]) === k; })) {
+    throw new Error('Ya hay un contrato ' + nombre + ' en «' + destinoTab + '». No lo paso para no duplicarlo.');
+  }
+
+  // Emparejar columnas: primero las conocidas (Importador = Cliente), después
+  // por nombre.
+  var eo = colsNombradas(ho.encabezados), ed = colsNombradas(hd.encabezados);
+  var pares = [], usO = {}, usD = {};
+  Object.keys(mo).forEach(function (campo) {
+    if (md[campo] === undefined || usO[mo[campo]] || usD[md[campo]]) return;
+    pares.push({ o: mo[campo], d: md[campo], campo: campo });
+    usO[mo[campo]] = usD[md[campo]] = 1;
+  });
+  ed.forEach(function (cd) {
+    if (usD[cd.i]) return;
+    var co = eo.filter(function (x) { return !usO[x.i] && x.k === cd.k; })[0];
+    if (co) { pares.push({ o: co.i, d: cd.i, campo: '' }); usO[co.i] = usD[cd.i] = 1; }
+  });
+  var soloD = ed.filter(function (c) { return !usD[c.i]; });
+  var soloO = eo.filter(function (c) { return !usO[c.i]; });
+
+  // Dónde va: arriba de la fila TOTAL de la pestaña de destino (como los
+  // contratos nuevos), o a continuación de la última si no hay TOTAL.
+  var filaTotal = await filaTotalDe(destinoTab);
+  var filaDestino = filaTotal || (hd.filas.length ? Math.max.apply(null, hd.filas.map(function (f) { return f.fila; })) + 1
+                                                  : (hd.filaEncabezado || 1) + 1);
+  /* Cómo se arma una fila en el destino: se mira cómo son sus últimas filas.
+     Una columna es «de fórmula» si lo es en la mayoría de ellas (el ENT, por
+     ejemplo, es fórmula en las cerradas hace poco y valor fijo en las viejas:
+     se hace lo que se hace hoy). De la fila más reciente que la tenga sale la
+     fórmula para las columnas que solo existen en el destino. */
+  var recientes = hd.filas.filter(function (f) { return f.fila < filaDestino && f.celdas[md.contrato]; })
+    .sort(function (a, b) { return b.fila - a.fila; }).slice(0, 25);
+  var colForm = {}, modeloFila = {};
+  if (recientes.length) {
+    var desde = recientes[recientes.length - 1].fila, hasta = recientes[0].fila;
+    var esReciente = {};
+    recientes.forEach(function (f) { esReciente[f.fila] = 1; });
+    var bloque = await formulasDeRango(destinoTab, desde, hasta);
+    var nn = {}, nf = {};
+    bloque.forEach(function (fila, r) {
+      var nro = desde + r;
+      if (!esReciente[nro]) return;
+      (fila || []).forEach(function (v, c) {
+        if (v === '' || v === null || v === undefined) return;
+        nn[c] = (nn[c] || 0) + 1;
+        if (esFormula(v)) { nf[c] = (nf[c] || 0) + 1; modeloFila[c] = Math.max(modeloFila[c] || 0, nro); }
+      });
+    });
+    Object.keys(nn).forEach(function (c) { colForm[c] = (nf[c] || 0) / nn[c] >= 0.5; });
+  }
+
+  var formulasO = [];
+  for (var i = 0; i < filasO.length; i++) formulasO.push(await formulasDeFila(ref.tab, filasO[i].fila));
+
+  // Lo que se pierde: datos de columnas que el destino no tiene.
+  var perdidas = [];
+  soloO.forEach(function (c) {
+    // Las firmas no cuentan como pérdida: un contrato cerrado se da por firmado por los dos.
+    if (c.i === mo.firmaExp || c.i === mo.firmaImp) return;
+    // Solo lo que alguien escribió: una columna de fórmula se recalcula, no se pierde.
+    var vals = filasO.map(function (f, r) {
+      return esFormula((formulasO[r] || [])[c.i]) ? null : f.celdas[c.i];
+    }).filter(function (v) { return v !== null && v !== undefined && v !== ''; });
+    if (!vals.length) return;
+    perdidas.push({ nombre: c.nombre.trim(), valor: vals.map(function (v) {
+      return v === true ? 'sí' : v === false ? 'no' : String(v); }).join(', ') });
+  });
+
+  var reg = calcularContratos().filter(function (r) { return clave(r.contrato) === k; })[0] || {};
+  var ent = pares.filter(function (pr) { return pr.campo === 'entregado'; })[0];
+  return {
+    contrato: String(nombre).trim(), origenTab: ref.tab, destinoTab: destinoTab,
+    haciaCerrados: deAbiertos, ho: ho, hd: hd, mo: mo, md: md,
+    filasO: filasO, formulasO: formulasO, colForm: colForm, modeloFila: modeloFila,
+    pares: pares, soloD: soloD, soloO: soloO, perdidas: perdidas,
+    filaDestino: filaDestino,
+    productos: filasO.map(function (f) {
+      return { producto: mo.producto === undefined ? '' : f.celdas[mo.producto],
+               tns: mo.tns === undefined ? null : f.celdas[mo.tns] };
+    }),
+    saldo: reg.saldo, embarquesActivos: (reg.embarques || []).length,
+    entFormulaOrigen: !!(ent && formulasO[0] && esFormula(formulasO[0][ent.o])),
+    entFormulaDestino: !!(ent && colForm[ent.d])
+  };
+}
+
+// Los pedidos a Google, en el orden en que tienen que ir.
+function pedidosMoverContrato(plan) {
+  var hd = plan.hd, ho = plan.ho, reqs = [];
+  var celda = function (sheetId, fila, col) {
+    return { sheetId: sheetId, startRowIndex: fila - 1, endRowIndex: fila,
+             startColumnIndex: col, endColumnIndex: col + 1 };
+  };
+  var copiar = function (de, a, tipo) {
+    return { copyPaste: { source: de, destination: a, pasteType: tipo, pasteOrientation: 'NORMAL' } };
+  };
+  var n = plan.filasO.length, pos = plan.filaDestino;
+
+  reqs.push({ insertDimension: {
+    range: { sheetId: hd.sheetId, dimension: 'ROWS', startIndex: pos - 1, endIndex: pos - 1 + n },
+    inheritFromBefore: true
+  } });
+
+  plan.filasO.forEach(function (fo, r) {
+    var dFila = pos + r, fO = plan.formulasO[r] || [];
+    plan.pares.forEach(function (pr) {
+      var sF = esFormula(fO[pr.o]);
+      // Si el destino no tiene datos en esa columna para comparar, se deja como viene.
+      var tF = plan.colForm[pr.d] === undefined ? sF : plan.colForm[pr.d];
+      var de = celda(ho.sheetId, fo.fila, pr.o), a = celda(hd.sheetId, dFila, pr.d);
+      if (sF && !tF) {
+        // Fórmula que en el destino es un dato (el ENT en Cerrados): queda el
+        // valor de hoy, fijo.
+        var v = fo.celdas[pr.o];
+        reqs.push({ updateCells: { range: a,
+          rows: [{ values: [{ userEnteredValue: (v === null || v === undefined || v === '')
+            ? { stringValue: '' } : (esFormula(v) ? { stringValue: v } : aValorSheets(v)) }] }],
+          fields: 'userEnteredValue' } });
+      } else if (!sF && tF && pr.campo === 'entregado' && plan.modeloFila[pr.d]) {
+        // El ENT vuelve a ser fórmula al reabrir: se toma la del destino.
+        reqs.push(copiar(celda(hd.sheetId, plan.modeloFila[pr.d], pr.d), a, 'PASTE_FORMULA'));
+      } else {
+        reqs.push(copiar(de, a, 'PASTE_NORMAL'));
+      }
+    });
+    // Columnas que solo tiene el destino: si tienen fórmula, se arma; las
+    // firmas arrancan sin tildar.
+    plan.soloD.forEach(function (cd) {
+      var a = celda(hd.sheetId, dFila, cd.i);
+      if (plan.md.firmaExp === cd.i || plan.md.firmaImp === cd.i) {
+        // Venía de Cerrados: se da por firmado por los dos.
+        reqs.push({ updateCells: { range: a, rows: [{ values: [{ userEnteredValue: { boolValue: true } }] }],
+          fields: 'userEnteredValue' } });
+      } else if (plan.colForm[cd.i] && plan.modeloFila[cd.i]) {
+        reqs.push(copiar(celda(hd.sheetId, plan.modeloFila[cd.i], cd.i), a, 'PASTE_FORMULA'));
+      }
+    });
+  });
+
+  // Y recién al final, sacar las de origen (de abajo hacia arriba).
+  plan.filasO.slice().sort(function (a, b) { return b.fila - a.fila; }).forEach(function (fo) {
+    reqs.push({ deleteDimension: { range: { sheetId: ho.sheetId, dimension: 'ROWS',
+      startIndex: fo.fila - 1, endIndex: fo.fila } } });
+  });
+  return reqs;
+}
+
+async function ejecutarMoverContrato(nombre) {
+  var M = S.moverCtr;
+  M.moviendo = true; M.error = null; pintar();
+  try {
+    // Se vuelve a leer todo: entre que se abrió el cartel y este clic alguien
+    // pudo haber tocado la planilla.
+    var plan = await planMoverContrato(nombre);
+    await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: pedidosMoverContrato(plan) })
+    });
+    var haciaC = plan.haciaCerrados;
+    S.moverCtr = null; S.editCtr = null;
+    S.ultimoMovCtr = { contrato: plan.contrato, hacia: haciaC ? 'C' : 'A', desde: plan.origenTab };
+    await cargarTodo();
+    toast(plan.contrato + ' pasó a «' + plan.destinoTab + '»' +
+      (plan.filasO.length > 1 ? ' (' + plan.filasO.length + ' filas)' : ''), 'ok');
+  } catch (e) {
+    M.moviendo = false; M.error = e.message;
+    toast('No se pudo pasar el contrato', 'error');
+  }
+  pintar();
+}
+
+async function abrirMoverContrato(nombre) {
+  if (S.editCtr && Object.keys(S.editCtr.cambios).length) {
+    return toast('Guardá o descartá primero los cambios del contrato.', 'error');
+  }
+  S.moverCtr = { contrato: nombre, cargando: true, entiendo: false };
+  pintar();
+  try {
+    var plan = await planMoverContrato(nombre);
+    S.moverCtr = { contrato: nombre, plan: plan, entiendo: false };
+  } catch (e) {
+    S.moverCtr = null;
+    toast(e.message, 'error');
+  }
+  pintar();
+}
+
+function modalMoverCtr() {
+  var M = S.moverCtr;
+  if (!M) return '';
+  if (M.cargando) {
+    return '<div class="modal-velo"></div><div class="modal-caja"><div class="modal-cambio">' +
+      '<h3>Revisando las dos pestañas…</h3><p class="mcm-donde">Un momento.</p></div></div>';
+  }
+  var P = M.plan, haciaC = P.haciaCerrados;
+  var A = haciaC ? 'Contratos Cerrados' : 'Contratos Abiertos';
+  var lista = P.productos.map(function (x) {
+    return '<li>' + esc(String(x.producto || 'sin producto')) +
+      (x.tns !== null && x.tns !== undefined && x.tns !== '' ? ' · ' + fmtNum(normNum(x.tns)) + ' tn' : '') + '</li>';
+  }).join('');
+  var conSaldo = haciaC && ((P.saldo || 0) > 0.5 || P.embarquesActivos > 0);
+  var pierde = P.perdidas.length
+    ? P.perdidas.slice(0, 6).map(function (x) { return '«' + esc(x.nombre) + '» (' + esc(x.valor) + ')'; }).join(', ') +
+      (P.perdidas.length > 6 ? ' y ' + (P.perdidas.length - 6) + ' más' : '') : '';
+  return '<div class="modal-velo" data-act="ctrmoverno"></div>' +
+    '<div class="modal-caja"><div class="modal-cambio" role="alertdialog" aria-modal="true" aria-labelledby="mcm-t">' +
+      '<h3 id="mcm-t">¿Pasar ' + esc(P.contrato) + ' a ' + (haciaC ? 'Cerrados' : 'Abiertos') + '?</h3>' +
+      '<p class="mcm-donde">De «' + esc(P.origenTab) + '» a «' + esc(P.destinoTab) + '» · ' +
+        P.filasO.length + (P.filasO.length === 1 ? ' fila' : ' filas') + '</p>' +
+      '<ul class="mover-ctr-lista">' + lista + '</ul>' +
+      '<ul class="mover-que">' +
+        '<li>Se copia entero a «' + esc(A) + '» —datos, fórmulas y formato— y se borra de «' +
+          esc(P.origenTab) + '». No queda ninguna fila vacía.</li>' +
+        (P.entFormulaOrigen && !P.entFormulaDestino
+          ? '<li>El entregado (ENT) queda fijo con el valor de hoy: en «' + esc(A) + '» es un dato, no una fórmula.</li>' : '') +
+        (!P.entFormulaOrigen && P.entFormulaDestino
+          ? '<li>El entregado (ENT) vuelve a calcularse solo con los embarques.</li>' : '') +
+        (!P.haciaCerrados && (P.md.firmaExp !== undefined || P.md.firmaImp !== undefined) &&
+         P.soloD.some(function (c) { return c.i === P.md.firmaExp || c.i === P.md.firmaImp; })
+          ? '<li>Las casillas de firma quedan tildadas: los cerrados se dan por firmados por exportador e importador.</li>' : '') +
+        '<li>El estado del contrato cambia a ' + (haciaC ? '<b class="ce">C</b> cerrado' : '<b class="ca">A</b> abierto') +
+          '; se puede volver a pasar cuando haga falta.</li>' +
+      '</ul>' +
+      (conSaldo
+        ? '<div class="mcm-aviso"><span class="mcm-ico">' + ico('enlace') + '</span><div><p>Ojo: todavía ' +
+            ((P.saldo || 0) > 0.5 ? 'le faltan <b>' + fmtNum(P.saldo) + ' tn</b> por embarcar' : '') +
+            ((P.saldo || 0) > 0.5 && P.embarquesActivos > 0 ? ' y ' : '') +
+            (P.embarquesActivos > 0 ? 'tiene <b>' + P.embarquesActivos + (P.embarquesActivos === 1 ? ' embarque' : ' embarques') + '</b> en curso' : '') +
+            '.</p><p class="mcm-sub">Cerrarlo ahora lo saca de la lista de abiertos.</p></div></div>' : '') +
+      (pierde
+        ? '<div class="mcm-aviso"><span class="mcm-ico">' + ico('enlace') + '</span><div><p>«' + esc(A) +
+            '» no tiene estas columnas, así que se pierde lo cargado en ellas: ' + pierde + '.</p></div></div>' : '') +
+      (M.error ? '<div class="error" style="margin-top:12px">' + esc(M.error) + '</div>' : '') +
+      '<label class="chk entiendo"><input type="checkbox" data-moverentiendo="1"' + (M.entiendo ? ' checked' : '') + '>' +
+        '<span>Entiendo que se borra de «' + esc(P.origenTab) + '»</span></label>' +
+      '<div class="mcm-acc"><button data-act="ctrmoverno"' + (M.moviendo ? ' disabled' : '') + '>Cancelar</button>' +
+        '<button class="primario" data-act="ctrmoverok"' + (!M.entiendo || M.moviendo ? ' disabled' : '') + '>' +
+          (M.moviendo ? 'Pasando…' : 'Pasar a ' + (haciaC ? 'Cerrados' : 'Abiertos')) + '</button></div>' +
+    '</div></div>';
+}
+
+// Botón del editor: dice a dónde va.
+function botonEstadoCtr(nombre) {
+  var est = estadoContrato(nombre);
+  if (!est) return '';
+  var haciaC = est === 'A';
+  return '<button class="btn-estado ' + (haciaC ? 'c' : 'a') + '" data-act="ctrmover" data-k="' + esc(nombre) + '" ' +
+    'title="' + (haciaC ? 'Pasa a «Contratos Cerrados»' : 'Vuelve a «Contratos Abiertos»') + '">' +
+    '<span class="letra">' + (haciaC ? 'C' : 'A') + '</span>' + (haciaC ? 'Pasar a Cerrados' : 'Pasar a Abiertos') + '</button>';
+}
+
+// Después de pasarlo: un atajo para devolverlo, como en «A facturar».
+function barraCtrMovido() {
+  var m = S.ultimoMovCtr;
+  if (!m || S.vista !== 'contratos') return '';
+  return '<div class="deshacer-barra">' + ico('volver') +
+    '<span><b>' + esc(m.contrato) + '</b> pasó a ' + (m.hacia === 'C' ? 'Cerrados' : 'Abiertos') + '.</span>' +
+    '<button data-act="ctrdevolver" data-k="' + esc(m.contrato) + '">Devolverlo a ' +
+      (m.hacia === 'C' ? 'Abiertos' : 'Cerrados') + '</button>' +
+    '<button data-act="ctrmovok" aria-label="Listo">' + ico('x') + '</button></div>';
+}
+
 function barraDeshacer() {
   var m = S.ultimoMov;
   if (!m || S.verFact) return '';
@@ -6940,12 +7354,6 @@ function filaEmbarque(x, opts) {
           ? '<span class="pill nar"><span class="pt"></span>Falta comprobante</span>' : '') +
         (emb._aFacturar
           ? '<span class="pill ok"><span class="pt"></span>Cliente pagó</span>' : '') +
-        (function () {
-          var sg = sugerenciaAdvice(emb, ev);
-          if (!sg || sg.nivel === 'falta') return '';
-          return '<span class="pill sug" title="' + esc(sg.texto) + '">' +
-            ico('mail') + 'Conviene el advice</span>';
-        })() +
         ((S.fuentesFact || []).length && !emb._aFacturar && opts.acciones !== false
           ? '<button class="ir-fact" data-act="abrirpasar" data-f="' + esc(emb._id) + '" ' +
             'title="Pasar a ' + esc(S.fuentesFact[0].tab) + '">' + ico('mover') +
@@ -7128,7 +7536,6 @@ function aplicarFiltros(evs) {
       if (!campos.some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; })) return false;
     }
     if (S.filtroTab && emb._tab !== S.filtroTab) return false;
-    if (S.filtroEtapa && x.ev.etapa !== S.filtroEtapa) return false;
 
     // Estado de cada semáforo. "na" = la pestaña no lo usa.
     for (var i = 0; i < SEMAFOROS.length; i++) {
@@ -7166,18 +7573,12 @@ function filtrosActivos() {
   if (S.f.fact) n++;
   if (S.f.falta) n++;
   if (S.filtroTab) n++;
-  if (S.filtroEtapa) n++;
   Object.keys(S.fCol).forEach(function (k) { if (filtroColActivo(S.fCol[k])) n++; });
   return n;
 }
 
 function vistaGrilla(evs) {
   var filas = ordenar(aplicarFiltros(evs), S.orden);
-  if (S.soloSug) {
-    var ids = {};
-    sugeridos(evs).forEach(function (x) { ids[x.emb._id] = 1; });
-    filas = filas.filter(function (x) { return ids[x.emb._id]; });
-  }
 
   // Con el formulario abierto, dibujar 70 tarjetas detrás hace lento cada
   // tecleo. Se muestran unas pocas.
@@ -7216,8 +7617,7 @@ function vistaGrilla(evs) {
             (S.modo === m[0]) + '">' + m[1] + '</button>';
         }).join('') +
     '</span>' +
-    (S.modo === 'exportadores' ? ''
-      : '<button data-act="csv">' + ico('down') + 'Exportar CSV</button>') +
+    (S.modo === 'exportadores' || S.modo === 'planilla' ? '' : menuConfigHtml(false)) +
     '</div>';
 
   if (S.panelFiltros) h += panelFiltros(evs);
@@ -7225,30 +7625,6 @@ function vistaGrilla(evs) {
   // "Por exportador" agrupa las mismas cargas, así que respeta el buscador y
   // los filtros, pero no tiene sentido ordenarlas ni contarlas una por una.
   if (S.modo === 'exportadores') return h + vistaExportadores(aplicarFiltros(evs));
-
-  // Etapas: siempre visibles, es el filtro que más se usa.
-  var cuentaEtapa = {};
-  evs.forEach(function (x) { cuentaEtapa[x.ev.etapa] = (cuentaEtapa[x.ev.etapa] || 0) + 1; });
-  h += '<div class="chips">' +
-    '<button data-act="fetapa" data-e="" aria-pressed="' + (!S.filtroEtapa) + '">Todas · ' + evs.length + '</button>' +
-    ETAPAS.filter(function (e) { return cuentaEtapa[e.id]; }).map(function (e) {
-      return '<button data-act="fetapa" data-e="' + e.id + '" aria-pressed="' +
-        (S.filtroEtapa === e.id) + '">' + e.label + ' · ' + cuentaEtapa[e.id] + '</button>';
-    }).join('') + '</div>';
-
-  // Atajo: los que conviene avisar hoy.
-  var sug = sugeridos(evs);
-  if (sug.length) {
-    h += '<div class="aviso-sug">' + ico('mail') +
-      '<span><b>' + sug.length + (sug.length === 1
-        ? ' embarque listo para el shipment advice</b>'
-        : ' embarques listos para el shipment advice</b>') +
-      ' — zarparon, tienen BL y todavía no se avisó.</span>' +
-      '<button data-act="fsug" aria-pressed="' + (S.soloSug === true) + '">' +
-        (S.soloSug ? 'Ver todos' : 'Ver cuáles') + '</button>' +
-      (S.soloSug ? '<button data-act="marcarsug">Elegirlos todos</button>' : '') +
-      '</div>';
-  }
 
   h += '<p class="conteo">' + filas.length +
     (filas.length === 1 ? ' embarque' : ' embarques') +
@@ -7384,6 +7760,7 @@ function calcularContratos() {
   S.contratos.forEach(function (c, k) {
     mapa.set(k, {
       contrato: k, origen: c.origen, cond: c.cond,
+      tipo: c.tipo, tipos: (c.tipos || [tipoCtr(c.tipo)]).slice(),
       contratado: c.tns, importador: c.importador, exportador: c.exportador,
       producto: c.producto, periodo: c.periodo, comision: c.comision,
       entregadoHoja: c.entregadoHoja, saldoHoja: c.saldoHoja,
@@ -7403,6 +7780,7 @@ function calcularContratos() {
     var reg = mapa.get(k);
     if (!reg) {
       reg = { contrato: k, huerfano: true, contratado: null,
+              tipo: emb.tipo, tipos: [tipoCtr(emb.tipo)],
               entregado: 0, embarques: [], aFacturar: 0 };
       mapa.set(k, reg);
     }
@@ -7788,6 +8166,13 @@ function vistaContratos() {
   // Solo tienen sentido los contratos con movimiento o con saldo pendiente.
   if (!S.fContrato) lista = lista.filter(function (r) { return r.embarques.length || r.saldo > 0.5; });
 
+  // Por tipo (Maní / Aceite / Expeller): se cuenta sobre lo que dejan pasar los
+  // otros filtros, y recién después se aplica.
+  var cuentaTipo = { mani: 0, aceite: 0, expeller: 0, otro: 0 };
+  lista.forEach(function (r) { r.tipos.forEach(function (t) { cuentaTipo[t]++; }); });
+  var totalTipo = lista.length;
+  if (S.fTipoCtr) lista = lista.filter(function (r) { return r.tipos.indexOf(S.fTipoCtr) >= 0; });
+
   var conEmb = lista.filter(function (r) { return r.embarques.length; }).length;
 
   var h = panelFirmas();
@@ -7821,6 +8206,14 @@ function vistaContratos() {
           return '<button data-act="fvia" data-v="' + o[0] + '" aria-pressed="' +
             ((S.fVia || '') === o[0]) + '">' + o[1] + '<span class="cnt">' + o[2] + '</span></button>';
         }).join('') +
+    '</div>' +
+    '<div class="segmento sub tipos-ctr" aria-label="Tipo de contrato">' +
+      '<button data-act="ftipoctr" data-t="" aria-pressed="' + !S.fTipoCtr + '">Todos' +
+        '<span class="cnt">' + totalTipo + '</span></button>' +
+      TIPOS_CTR.filter(function (t) { return cuentaTipo[t[0]] || S.fTipoCtr === t[0]; }).map(function (t) {
+        return '<button data-act="ftipoctr" data-t="' + t[0] + '" aria-pressed="' + (S.fTipoCtr === t[0]) + '">' +
+          t[1] + '<span class="cnt">' + cuentaTipo[t[0]] + '</span></button>';
+      }).join('') +
     '</div>' +
     '<div class="filtros">' +
     '<input id="busca-ctr" placeholder="Buscar contrato, cliente" value="' + esc(S.busca) + '" aria-label="Buscar">' +
@@ -8121,6 +8514,7 @@ function panelContrato() {
                       : 'Sin cambios') + '</span>' +
       '</div>' +
       '<div class="pe-acc">' +
+        botonEstadoCtr(e.contrato) +
         '<button class="btn-doc" data-act="genabrir" data-k="' + esc(e.contrato) + '" ' +
           'title="Generar el documento del contrato">' + ico('doc') + 'Documento</button>' +
         '<button data-act="ctrcerrar">Cancelar</button>' +
@@ -8196,15 +8590,34 @@ function opcionesCombo(opciones, val) {
   return empiezan.concat(contienen).slice(0, 9);
 }
 
+// Contratos: los abiertos primero y los cerrados después, aunque se esté
+// escribiendo (si no, al buscar se mezclarían).
+function opcionesContrato(opciones, val) {
+  var q = clave(val), rango = { A: 0, C: 1, '': 2 };
+  return (opciones || []).map(function (o, i) {
+    var pos = q ? clave(o).indexOf(q) : 0;
+    return { o: o, i: i, pos: pos };
+  }).filter(function (x) { return x.pos >= 0; }).sort(function (a, b) {
+    return (rango[estadoContrato(a.o)] - rango[estadoContrato(b.o)]) ||
+           ((a.pos === 0 ? 0 : 1) - (b.pos === 0 ? 0 : 1)) || (a.i - b.i);
+  }).slice(0, 12).map(function (x) { return x.o; });
+}
+
 function htmlListaCombo(id, campo, opciones, val, ctx, libre) {
   var q = clave(val);
-  var sug = opcionesCombo(opciones, val);
+  var esCtr = campo === 'contract';
+  var sug = esCtr ? opcionesContrato(opciones, val) : opcionesCombo(opciones, val);
 
   if (sug.length) {
     return '<div class="combo-lista">' + sug.map(function (o) {
-      return '<button data-act="combosel2" data-c="' + ctx + ':' + campo + '" ' +
-        'data-v="' + esc(o) + '">' + resaltar(o, q) + '</button>';
-    }).join('') + '</div>';
+      var est = esCtr ? estadoContrato(o) : '';
+      return '<button' + (esCtr ? ' class="co-op"' : '') + ' data-act="combosel2" data-c="' + ctx + ':' + campo + '" ' +
+        'data-v="' + esc(o) + '"><span class="co-txt">' + resaltar(o, q) + '</span>' +
+        (est ? '<span class="co-est ' + est.toLowerCase() + '" title="' +
+          (est === 'A' ? 'Abierto' : 'Cerrado') + '">' + est + '</span>' : '') + '</button>';
+    }).join('') +
+    (esCtr ? '<p class="co-leyenda"><b class="a">A</b> abierto · <b class="c">C</b> cerrado</p>' : '') +
+    '</div>';
   }
   if (q) {
     return '<div class="combo-lista"><p class="sin-match">' +
@@ -8503,6 +8916,17 @@ function filaContrato(r) {
           (ctr.firmaExp ? 'el importador' : 'el exportador') + '</span>';
       })()
     : '';
+  var tipoPills = r.tipos.map(function (t) {
+    var txt = t === 'mani' ? 'Maní' : t === 'aceite' ? 'Aceite' : t === 'expeller' ? 'Expeller'
+      : (String(r.tipo || '').trim() || 'Sin tipo');
+    return '<span class="pill tipo-' + t + '"><span class="pt"></span>' + esc(txt) + '</span>';
+  }).join('');
+  var est = estadoContrato(r.contrato);
+  var estPill = est
+    ? '<span class="pill est-' + est.toLowerCase() + '" title="' + (est === 'A'
+        ? 'Contrato abierto (está en «Contratos Abiertos»)' : 'Contrato cerrado (está en «Contratos Cerrados»)') + '">' +
+      '<span class="letra">' + est + '</span>' + (est === 'A' ? 'Abierto' : 'Cerrado') + '</span>'
+    : '';
   var num = partirNumero(r.contrato);
   return '<article class="emb ctr-fila' + (editable ? ' editable' : '') + '"' +
     (editable ? ' data-act="ctrabrir" data-k="' + esc(r.contrato) + '" tabindex="0"' : '') + '>' +
@@ -8551,6 +8975,8 @@ function filaContrato(r) {
             (r.embarques.length === 1 ? ' embarque activo' : ' embarques activos') + '</span>' : '') +
         (r.aFacturar
           ? '<span class="pill ok"><span class="pt"></span>' + r.aFacturar + ' a facturar</span>' : '') +
+        tipoPills +
+        estPill +
         viaPill +
         partes +
         firmas +
@@ -8592,34 +9018,31 @@ function columnasDisponibles() {
   });
 }
 
+// Cuántas columnas se inmovilizan de verdad (nunca más de las que se ven).
+var encabezadoPlanilla = null;
+var congActual = 0;   // cuántas columnas inmovilizadas tiene la tabla que se está armando
+function congEfectiva(cols) { return Math.min(S.planCong | 0, cols.length); }
+
+function htmlTablaPlanilla(filas, cols, enc, cuerpo) {
+  return '<table class="tbl-hoja' + (congEfectiva(cols) ? ' cong' : '') + '"><thead>' +
+    (enc || encabezadoPlanilla(cols)) + '</thead><tbody>' +
+    (cuerpo !== undefined ? cuerpo : filasHtmlPlanilla(filas, cols)) + '</tbody></table>';
+}
+
 function vistaPlanilla(filas) {
   var todas = columnasDisponibles();
   var cols = todas.filter(function (c) { return !S.colsOcultas[c]; });
-  var ocultas = todas.length - cols.length;
 
   var barra = '<div class="hoja-barra">' +
     '<button class="btn-full" data-act="planfull" aria-pressed="' + !!S.planillaFull + '" ' +
       'title="' + (S.planillaFull ? 'Salir (Esc)' : 'Ver la planilla en pantalla completa') + '">' +
       ico(S.planillaFull ? 'achicar' : 'agrandar') +
       (S.planillaFull ? 'Salir de pantalla completa' : 'Pantalla completa') + '</button>' +
-    '<button data-act="cols" aria-pressed="' + S.colsPanel + '">' + ico('cols') + 'Columnas' +
-      (ocultas ? ' · ' + ocultas + ' ocultas' : '') + '</button>' +
     (Object.keys(S.fCol).some(function (k) { return filtroColActivo(S.fCol[k]); }) || S.ordenCol
       ? '<button data-act="limpiarcol">Quitar filtros de columna</button>' : '') +
     '<span class="ayuda" style="margin-left:auto">' + filas.length + ' filas</span>' +
+    menuConfigHtml(true) +
     '</div>';
-
-  if (S.colsPanel) {
-    barra += '<div class="cols-panel">' +
-      todas.map(function (c) {
-        return '<label class="chk"><input type="checkbox" data-col="' + c + '"' +
-          (S.colsOcultas[c] ? '' : ' checked') + '><span>' + CAMPOS[c].label + '</span></label>';
-      }).join('') +
-      '<div class="cols-acc">' +
-        '<button data-act="colstodas">Mostrar todas</button>' +
-        '<button data-act="colsminimas">Solo lo esencial</button>' +
-      '</div></div>';
-  }
 
   function encabezado(c, i) {
     var act = S.ordenCol && S.ordenCol.campo === c;
@@ -8628,9 +9051,11 @@ function vistaPlanilla(filas) {
     var abierta = S.menuCol && S.menuCol.c === c;
     var bloqueada = c === 'total';
     var delCtr = CAMPOS_DEL_CONTRATO.indexOf(c) >= 0;
-    var clsTh = [filtrada ? 'th-filtrada' : '', i === 0 ? 'col-fija' : '',
+    var fija = i < congActual;
+    var clsTh = [filtrada ? 'th-filtrada' : '', fija ? 'col-fija' : '',
                  bloqueada ? 'th-bloq' : ''].filter(Boolean).join(' ');
-    return '<th' + (clsTh ? ' class="' + clsTh + '"' : '') + '><div class="th-in">' +
+    return '<th' + (clsTh ? ' class="' + clsTh + '"' : '') + (fija ? ' data-fz="' + i + '"' : '') +
+      '><div class="th-in">' +
       '<button class="th-ord" data-act="ordcol" data-c="' + c + '" title="' +
         (bloqueada ? 'Se calcula solo: precio × toneladas'
           : delCtr ? 'Viene del contrato: cambiarlo acá pide confirmación' : 'Ordenar') + '">' +
@@ -8646,6 +9071,13 @@ function vistaPlanilla(filas) {
       '</div></th>';
   }
 
+  encabezadoPlanilla = function (colsX) {
+    congActual = congEfectiva(colsX);
+    return '<tr><th class="nrofila">#</th>' +
+      '<th class="sel-col" title="Elegir para el shipment advice">' + ico('mail') + '</th>' +
+      colsX.map(encabezado).join('') + '</tr>';
+  };
+  congActual = congEfectiva(cols);
   var enc = '<tr><th class="nrofila">#</th>' +
               '<th class="sel-col" title="Elegir para el shipment advice">' + ico('mail') + '</th>' +
               cols.map(encabezado).join('') + '</tr>';
@@ -8653,8 +9085,7 @@ function vistaPlanilla(filas) {
   var cuerpo = filasHtmlPlanilla(filas, cols);
 
   return '<div class="full' + (S.planillaFull ? ' pantalla-completa' : '') + '">' + barra +
-    '<div class="hoja"><table class="tbl-hoja"><thead>' + enc +
-    '</thead><tbody>' + cuerpo + '</tbody></table></div>' +
+    '<div class="hoja">' + htmlTablaPlanilla(filas, cols, enc, cuerpo) + '</div>' +
     '<p class="ayuda" style="margin-top:9px">Los colores son los mismos de la planilla. ' +
     'El número de la izquierda es la fila real. Clic en el nombre de una columna ordena, ' +
     'el embudo filtra y la × la oculta. Clic en una fila abre el detalle; ' +
@@ -8761,11 +9192,6 @@ function filasVisiblesPlanilla() {
     return true;
   });
   var filas = ordenar(aplicarFiltros(evs), S.orden);
-  if (S.soloSug) {
-    var ids = {};
-    sugeridos(evs).forEach(function (x) { ids[x.emb._id] = 1; });
-    filas = filas.filter(function (x) { return ids[x.emb._id]; });
-  }
   return filas;
 }
 
@@ -8779,9 +9205,112 @@ function refrescarPlanilla() {
   tb.innerHTML = filasHtmlPlanilla(filas, cols);
   var cnt = document.querySelector('.hoja-barra .ayuda');
   if (cnt) cnt.textContent = filas.length + ' filas';
+  medirFijas();
+}
+
+function columnasVisibles() {
+  return columnasDisponibles().filter(function (c) { return !S.colsOcultas[c]; });
+}
+
+// Cambió qué columnas se ven o cuántas se inmovilizan: se rehace la tabla y
+// nada más, así el menú de Configuración sigue abierto y no salta.
+function refrescarTablaPlanilla() {
+  var hoja = document.querySelector && document.querySelector('.hoja');
+  if (!hoja) return pintar();
+  var sl = hoja.scrollLeft, st = hoja.scrollTop;
+  hoja.innerHTML = htmlTablaPlanilla(filasVisiblesPlanilla(), columnasVisibles());
+  hoja.scrollLeft = sl; hoja.scrollTop = st;
+  medirFijas();
+}
+
+/* Las columnas inmovilizadas tienen que saber cuánto ocupa lo que tienen a la
+   izquierda para quedarse pegadas a eso: se mide en pantalla, porque el ancho
+   depende del contenido. */
+function medirFijas() {
+  if (typeof document === 'undefined' || !document.querySelector) return;
+  var tb = document.querySelector('.tbl-hoja.cong');
+  if (!tb) return;
+  var nr = tb.querySelector('thead th.nrofila'), sc = tb.querySelector('thead th.sel-col');
+  var left = nr ? nr.offsetWidth : 41;
+  if (sc) {
+    Array.prototype.forEach.call(tb.querySelectorAll('.sel-col'), function (c) { c.style.left = left + 'px'; });
+    left += sc.offsetWidth;
+  }
+  var i = 0, th;
+  while ((th = tb.querySelector('thead th[data-fz="' + i + '"]'))) {
+    var celdas = tb.querySelectorAll('[data-fz="' + i + '"]');
+    for (var k = 0; k < celdas.length; k++) celdas[k].style.left = left + 'px';
+    left += th.offsetWidth; i++;
+  }
+}
+
+/* --- Menú «Configuración» -----------------------------------------------------
+   Vive en la esquina de arriba a la derecha. En la planilla junta lo que antes
+   estaba suelto: qué columnas se ven (con el estado bien claro), cuántas se
+   inmovilizan (ninguna por defecto) y exportar a CSV. */
+/* En escritorio el menú se abre debajo del botón; si no entra, va arriba, y si
+   tampoco, se achica y scrollea. En el celular es una hoja fija (ver estilos). */
+function acomodarMenuCfg() {
+  var m = document.querySelector && document.querySelector('.menu-cfg');
+  if (!m || window.innerWidth <= 900) return;
+  var btn = m.parentNode.querySelector('.btn-cfg');
+  if (!btn) return;
+  var r = btn.getBoundingClientRect(), alto = window.innerHeight;
+  var debajo = alto - r.bottom - 20, arriba = r.top - 20;
+  m.style.maxHeight = ''; m.style.top = ''; m.style.bottom = '';
+  var h = m.scrollHeight;
+  if (h <= debajo) return;
+  if (h <= arriba) { m.style.top = 'auto'; m.style.bottom = 'calc(100% + 8px)'; return; }
+  if (debajo >= arriba) { m.style.maxHeight = Math.max(220, debajo) + 'px'; return; }
+  m.style.top = 'auto'; m.style.bottom = 'calc(100% + 8px)'; m.style.maxHeight = Math.max(220, arriba) + 'px';
+}
+
+function opcionesCong(vis) {
+  var ops = '<option value="0"' + (!S.planCong ? ' selected' : '') + '>Ninguna</option>';
+  for (var i = 1; i <= Math.min(6, vis.length); i++) {
+    ops += '<option value="' + i + '"' + ((S.planCong | 0) === i ? ' selected' : '') + '>' +
+      (i === 1 ? 'Solo ' : 'Hasta ') + esc(CAMPOS[vis[i - 1]].label) +
+      ' (' + i + (i === 1 ? ' columna' : ' columnas') + ')</option>';
+  }
+  return ops;
+}
+
+function menuConfigHtml(planilla) {
+  var abierto = !!S.menuCfg;
+  var h = '<div class="cfg-wrap"><button class="btn-cfg" data-act="menucfg" aria-haspopup="true" ' +
+    'aria-expanded="' + abierto + '">' + ico('gear') + 'Configuración</button>';
+  if (abierto) {
+    h += '<div class="menu-cfg" role="menu" aria-label="Configuración">';
+    // Lo corto arriba, la lista larga de columnas abajo: así nada queda escondido.
+    h += '<section class="cfg-sec"><h4>Exportar</h4>' +
+      '<button class="cfg-csv" data-act="csv">' + ico('down') + 'Exportar CSV</button>' +
+      '<p class="cfg-ayuda">Descarga lo que estás viendo, con los filtros aplicados.</p></section>';
+    if (planilla) {
+      var todas = columnasDisponibles(), vis = columnasVisibles();
+      h += '<section class="cfg-sec"><h4>Inmovilizar columnas</h4>' +
+          '<select id="cfg-cong" data-cong="1" aria-label="Inmovilizar columnas">' + opcionesCong(vis) + '</select>' +
+          '<p class="cfg-ayuda">Las inmovilizadas quedan fijas al moverte hacia la derecha. ' +
+          'Por defecto, ninguna.</p></section>' +
+        '<section class="cfg-sec"><div class="cfg-cab"><h4>Columnas</h4>' +
+          '<span class="cfg-n" id="cfg-n">' + vis.length + ' de ' + todas.length + ' visibles</span></div>' +
+        '<div class="cfg-acc"><button data-act="colstodas">Mostrar todas</button>' +
+          '<button data-act="colsminimas">Solo lo esencial</button></div>' +
+        '<div class="cfg-cols">' + todas.map(function (c) {
+          var on = !S.colsOcultas[c];
+          return '<label class="cfg-col' + (on ? '' : ' off') + '">' +
+            '<input type="checkbox" data-col="' + c + '"' + (on ? ' checked' : '') + '>' +
+            '<span class="cbx">' + ico('check') + '</span>' +
+            '<span class="et">' + esc(CAMPOS[c].label) + '</span>' +
+            '<span class="est">' + (on ? 'Visible' : 'Oculta') + '</span></label>';
+        }).join('') + '</div></section>';
+    }
+    h += '</div>';
+  }
+  return h + '</div>';
 }
 
 function filasHtmlPlanilla(filas, cols) {
+  var cong = congEfectiva(cols);
   return filas.map(function (x) {
     var emb = x.emb, src = x.src;
     var marcado = !!(S.marcados && S.marcados[emb._id]);
@@ -8803,11 +9332,12 @@ function filasHtmlPlanilla(filas, cols) {
           '<span class="cbx">' + ico('check') + '</span></label></td>' +
       cols.map(function (c, i) {
         var td = celdaPlanilla(emb, src, c);
-        if (i !== 0) return td;
-        // Primera columna: se suma la clase que la deja fija.
+        if (i >= cong) return td;
+        // Columnas inmovilizadas: clase para que queden fijas y número para medirlas.
         var conClase = td.indexOf('<td class=') === 0;
-        return conClase ? '<td class=' + td.charAt(10) + 'col-fija ' + td.slice(11)
-                        : '<td class="col-fija"' + td.slice(3);
+        var marca = ' data-fz="' + i + '"';
+        return (conClase ? '<td class=' + td.charAt(10) + 'col-fija ' + td.slice(11)
+                         : '<td class="col-fija"' + td.slice(3)).replace('<td', '<td' + marca);
       }).join('') + '</tr>';
   }).join('');
 }
@@ -9415,10 +9945,15 @@ function pintar() {
   document.getElementById('root').innerHTML = html;
   S.animarPanel = false;   // la entrada se anima una sola vez
   acomodarMenuCol();
+  medirFijas();
+  acomodarMenuCfg();
   // El cartel de confirmación toma el foco: Enter confirma, Esc cancela.
   if (S.confirmar) {
     var fc0 = document.querySelector('.modal-cambio ' + (S.confirmar.atado ? 'input[type="checkbox"]' : '.primario'));
     if (fc0) fc0.focus();
+  } else if (S.moverCtr && S.moverCtr.plan && !S.moverCtr.entiendo) {
+    var fm0 = document.querySelector('.modal-cambio input[type="checkbox"]');
+    if (fm0) fm0.focus();
   }
   try {
     var sb = window.innerWidth - document.documentElement.clientWidth;
@@ -9509,6 +10044,10 @@ document.addEventListener('click', function (ev) {
     ev.stopPropagation();
     return;
   }
+  // Menú «Configuración» abierto: un clic afuera lo cierra.
+  if (S.menuCfg && ev.target.closest && !ev.target.closest('.cfg-wrap')) {
+    S.menuCfg = false; ev.stopPropagation(); return pintar();
+  }
   // Menú de filtro abierto: un clic afuera lo cierra sin aplicar, como en
   // Sheets, y no hace nada más (no abre la fila que estaba debajo).
   if (S.menuCol && ev.target.closest) {
@@ -9582,24 +10121,25 @@ document.addEventListener('click', function (ev) {
     S.vista = el.getAttribute('data-v');
     // Nada se arrastra entre secciones: ni el panel abierto ni los filtros.
     S.sel = null; S.editCtr = null; S.altaEmb = null; S.alta = null;
-    S.soloSug = false; S.busca = ''; S.combo = null; S.menuSem = null;
+    S.busca = ''; S.combo = null; S.menuSem = null;
     S.verFact = false; S.devolver = null;
     return pintar();
   }
-  if (act === 'csv') return exportarCSV();
+  if (act === 'csv') { S.menuCfg = false; pintar(); return exportarCSV(); }
   if (act === 'comentar') {
     var ta = document.getElementById('nuevo-com');
     return comentar(el.getAttribute('data-f'), ta ? ta.value : '');
   }
   if (act === 'modo') {
     S.planillaFull = false; S.modo = el.getAttribute('data-m'); return pintar(); }
-  if (act === 'cols') { S.colsPanel = !S.colsPanel; return pintar(); }
-  if (act === 'ocultar') { S.colsOcultas[el.getAttribute('data-c')] = true; return pintar(); }
-  if (act === 'colstodas') { S.colsOcultas = {}; return pintar(); }
+  if (act === 'menucfg') { S.menuCfg = !S.menuCfg; S.menuCol = null; return pintar(); }
+  if (act === 'ocultar') { S.colsOcultas[el.getAttribute('data-c')] = true; guardarPrefsPlanilla(); return pintar(); }
+  if (act === 'colstodas') { S.colsOcultas = {}; guardarPrefsPlanilla(); return pintar(); }
   if (act === 'colsminimas') {
     var dejar = { importer:1, contract:1, tns:1, etd:1, eta:1, port:1, bl:1, docs:1, tr:1 };
     S.colsOcultas = {};
     columnasDisponibles().forEach(function (c) { if (!dejar[c]) S.colsOcultas[c] = true; });
+    guardarPrefsPlanilla();
     return pintar();
   }
   if (act === 'limpiarcol') { S.fCol = {}; S.ordenCol = null; S.menuCol = null; return pintar(); }
@@ -9616,13 +10156,12 @@ document.addEventListener('click', function (ev) {
   if (act === 'orden') { S.orden = el.getAttribute('data-o'); return pintar(); }
   if (act === 'limpiar') {
     S.f = { docs:'', pics:'', tr:'', cbte:'', falta:'', fact:'' };
-    S.filtroTab = ''; S.filtroEtapa = ''; S.busca = ''; S.fCol = {}; S.ordenCol = null;
+    S.filtroTab = ''; S.busca = ''; S.fCol = {}; S.ordenCol = null;
     return pintar();
   }
   if (act === 'ftab') {
     S.filtroTab = el.getAttribute('data-t') || '';
     S.filtroTipo = '';   // los tipos cambian según la pestaña
-    S.soloSug = false;   // y los sugeridos también
     S.verFact = false;
     return pintar();
   }
@@ -9673,6 +10212,13 @@ document.addEventListener('click', function (ev) {
     } catch (e) {}
     return pintar();
   }
+  if (act === 'ctrmover' || act === 'ctrdevolver') { return abrirMoverContrato(el.getAttribute('data-k')); }
+  if (act === 'ctrmovok') { S.ultimoMovCtr = null; return pintar(); }
+  if (act === 'ctrmoverno') { if (S.moverCtr && !S.moverCtr.moviendo) { S.moverCtr = null; pintar(); } return; }
+  if (act === 'ctrmoverok') {
+    if (!S.moverCtr || !S.moverCtr.entiendo || S.moverCtr.moviendo) return;
+    return ejecutarMoverContrato(S.moverCtr.contrato);
+  }
   if (act === 'cambiono') { S.confirmar = null; return pintar(); }
   if (act === 'cambiook') {
     var Cc = S.confirmar;
@@ -9681,6 +10227,7 @@ document.addEventListener('click', function (ev) {
     return aplicarCambio(Cc.id, Cc.campo, Cc.valor);
   }
   if (act === 'menucol') {
+    S.menuCfg = false;
     var cM = el.getAttribute('data-c');
     if (S.menuCol && S.menuCol.c === cM) { S.menuCol = null; return pintar(); }
     var r = el.getBoundingClientRect ? el.getBoundingClientRect() : { left: 100, bottom: 100 };
@@ -9726,7 +10273,7 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'vercargas') {
     // Del resumen a las cargas de ese par exportador/cliente.
-    S.vista = 'carga'; S.sel = null; S.soloSug = false;
+    S.vista = 'carga'; S.sel = null;
     S.busca = el.getAttribute('data-i') || '';
     S.expDesde = el.getAttribute('data-e') || '';
     return pintar();
@@ -9780,6 +10327,7 @@ document.addEventListener('click', function (ev) {
     return pintar();
   }
   if (act === 'verfirmas') { S.verFirmas = !S.verFirmas; return pintar(); }
+  if (act === 'ftipoctr') { S.fTipoCtr = el.getAttribute('data-t') || ''; S.topeContratos = 40; return pintar(); }
   if (act === 'fvia') { S.fVia = el.getAttribute('data-v') || ''; S.topeContratos = 40; return pintar(); }
   if (act === 'firma') {
     var cF2 = el.getAttribute('data-c');
@@ -9866,7 +10414,6 @@ document.addEventListener('click', function (ev) {
     return pedirToken(true).then(function () { S.adviceMsg = null; pintar(); })
       .catch(function (e) { S.error = e.message; pintar(); });
   }
-  if (act === 'fsug') { S.soloSug = !S.soloSug; return pintar(); }
   if (act === 'altaemb') {
     var hoyE = new Date();
     S.altaEmb = { tab: S.filtroTab || (S.fuentes[0] && S.fuentes[0].tab) || '' };
@@ -9876,24 +10423,6 @@ document.addEventListener('click', function (ev) {
   if (act === 'altaemb-cerrar') { S.altaEmb = null; S.altaEmbError = null; return pintar(); }
   if (act === 'altaemb-tab') { S.altaEmb.tab = el.getAttribute('data-t'); return pintar(); }
   if (act === 'altaemb-guardar') return crearEmbarque();
-  if (act === 'marcarsug') {
-    S.marcados = S.marcados || {};
-    var evsSug = sugeridos(evaluarTodo().filter(function (x) {
-      return (!S.filtroTab || x.emb._tab === S.filtroTab);
-    }));
-    // Solo los que combinan entre sí: mismo BL, buque y fechas.
-    if (evsSug.length) {
-      var base = evsSug[0].emb;
-      var f = function (d) { return esFecha(d) ? d.getTime() : String(d || ''); };
-      evsSug.forEach(function (x) {
-        var o = x.emb;
-        if (clave(o.bl) === clave(base.bl) && clave(o.vessel) === clave(base.vessel) &&
-            f(o.etd) === f(base.etd) && f(o.eta) === f(base.eta)) S.marcados[o._id] = true;
-      });
-      S.adviceTo = null;
-    }
-    return pintar();
-  }
   if (act === 'ctrabrir') {
     var kctr = el.getAttribute('data-k');
     var ref0 = S.ctrEditables.get(kctr);
@@ -9996,10 +10525,6 @@ document.addEventListener('click', function (ev) {
   if (act === 'fcontrato') {
     S.fContrato = el.getAttribute('data-c') || '';
     S.topeContratos = 40;
-    return pintar();
-  }
-  if (act === 'fetapa') {
-    S.filtroEtapa = el.getAttribute('data-e') || '';
     return pintar();
   }
   if (act === 'fnivel') {
@@ -10210,6 +10735,12 @@ document.addEventListener('change', function (e) {
   if (e.target.getAttribute && e.target.getAttribute('data-mccond') && S.menuCol) {
     S.menuCol.borrador.cond = e.target.value; return pintar();
   }
+  if (e.target.getAttribute && e.target.getAttribute('data-moverentiendo') && S.moverCtr) {
+    S.moverCtr.entiendo = e.target.checked;
+    var bMv = document.querySelector('.modal-cambio [data-act="ctrmoverok"]');
+    if (bMv) bMv.disabled = !e.target.checked || !!S.moverCtr.moviendo;
+    return;
+  }
   if (e.target.getAttribute && e.target.getAttribute('data-cambioentiendo') && S.confirmar) {
     S.confirmar.entiendo = e.target.checked;
     var bOkc = document.querySelector('.modal-cambio [data-act="cambiook"]');
@@ -10255,7 +10786,22 @@ document.addEventListener('change', function (e) {
   var col = e.target.getAttribute && e.target.getAttribute('data-col');
   if (col) {
     if (e.target.checked) delete S.colsOcultas[col]; else S.colsOcultas[col] = true;
-    return pintar();
+    guardarPrefsPlanilla();
+    var lab = e.target.closest && e.target.closest('.cfg-col');
+    if (lab) {
+      lab.classList.toggle('off', !e.target.checked);
+      var est = lab.querySelector('.est'); if (est) est.textContent = e.target.checked ? 'Visible' : 'Oculta';
+    }
+    var vis2 = columnasVisibles(), nEl = document.getElementById('cfg-n');
+    if (nEl) nEl.textContent = vis2.length + ' de ' + columnasDisponibles().length + ' visibles';
+    var sel = document.getElementById('cfg-cong');
+    if (sel) sel.innerHTML = opcionesCong(vis2);
+    return refrescarTablaPlanilla();
+  }
+  if (e.target.getAttribute && e.target.getAttribute('data-cong') && e.target.tagName === 'SELECT') {
+    S.planCong = +e.target.value || 0;
+    guardarPrefsPlanilla();
+    return refrescarTablaPlanilla();
   }
   var fe = e.target.getAttribute && e.target.getAttribute('data-festado');
   if (fe) { S.f[fe] = e.target.value; return pintar(); }
@@ -10356,7 +10902,9 @@ document.addEventListener('keydown', function (e) {
     e.preventDefault();
     return comentar(e.target.getAttribute('data-com'), e.target.value);
   }
+  if (e.key === 'Escape' && S.moverCtr && !S.moverCtr.moviendo) { S.moverCtr = null; return pintar(); }
   if (e.key === 'Escape' && S.confirmar) { S.confirmar = null; return pintar(); }
+  if (e.key === 'Escape' && S.menuCfg) { S.menuCfg = false; return pintar(); }
   if (e.key === 'Escape' && S.combo) { S.combo = null; return pintar(); }
   if (e.key === 'Escape' && S.menuSem) { S.menuSem = null; return pintar(); }
   if (e.key === 'Escape' && S.sel !== null) { S.sel = null; pintar(); }
@@ -10429,7 +10977,21 @@ async function buscarPlanilla() {
 
 /* --- Arranque -------------------------------------------------------------- */
 
+/* Preferencias de la planilla (qué columnas se ven y cuántas se inmovilizan).
+   Quedan en el navegador de cada persona: son de cada uno, no de la planilla. */
+var LS_PLAN = 'embarques:planilla';
+function guardarPrefsPlanilla() {
+  try { localStorage.setItem(LS_PLAN, JSON.stringify({ ocultas: S.colsOcultas, cong: S.planCong | 0 })); } catch (e) {}
+}
+function cargarPrefsPlanilla() {
+  try {
+    var pr = JSON.parse(localStorage.getItem(LS_PLAN) || 'null');
+    if (pr) { S.colsOcultas = pr.ocultas || {}; S.planCong = +pr.cong || 0; }
+  } catch (e) {}
+}
+
 function arrancar() {
+  cargarPrefsPlanilla();
   // Config compartida por enlace: se toma una vez y queda guardada, así el
   // resto del equipo no repite el alta.
   var deEnlace = leerConfigDeEnlace();
