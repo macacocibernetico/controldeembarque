@@ -404,9 +404,6 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .barra-alta{align-items:flex-start}
 
 /* Datos del contrato: etiqueta y valor alineados en cuadrícula */
-.ctr-refs{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px 32px}
-.ctr-refs .ref b.txt{font-family:inherit;font-weight:500;font-size:14px;
-  color:var(--tinta);letter-spacing:-.006em}
 
 .ver-mas{display:flex;gap:13px;align-items:center;justify-content:center;margin-top:16px}
 .ver-mas .ayuda{margin:0}
@@ -903,10 +900,6 @@ th.ord:hover{background:#ebebed}
 .ev-txt span{font-size:12px;color:var(--tinta3);font-weight:400}
 .ev-tick{position:absolute;right:12px;color:var(--acento)}
 .ev-tick .ico{width:17px;height:17px;stroke-width:2.6}
-.ctr-tit{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
-  margin:-4px 0 14px;padding-bottom:12px;border-bottom:1px solid var(--linea2)}
-.ctr-tit h3{margin:0;font-size:19px;font-weight:700;letter-spacing:-.02em;
-  font-variant-numeric:tabular-nums;color:var(--tinta);overflow-wrap:anywhere}
 .ct-pre{color:var(--acento);margin-right:1px}
 .ct-anio{color:var(--tinta3);font-weight:600}
 .ct-resto{color:var(--tinta3);font-weight:500;font-size:15px;margin-left:4px}
@@ -1082,14 +1075,6 @@ th.ord:hover{background:#ebebed}
 .no-base{margin:6px 0 0;font-size:13px;color:var(--pend);line-height:1.45}
 
 /* Contratos ----------------------------------------------------------------- */
-.ctr-fila{cursor:default}
-/* Las columnas de la tarjeta de contrato separadas por una línea muy tenue,
-   no por espacio a ojo. */
-.ctr-fila .fila-top{grid-template-columns:minmax(0,1.35fr) minmax(0,1.3fr) minmax(0,.95fr)}
-.ctr-fila .fila-top > div + div{padding-left:28px;border-left:1px solid var(--linea2)}
-.ctr-fila .estados{align-content:flex-start}
-.ctr-fila.editable{cursor:pointer}
-.ctr-fila.editable:hover .ed{opacity:1}
 .ctr-cod{font-family:var(--mono);font-size:13.5px;color:var(--tinta);margin-top:4px}
 .barra{height:6px;background:var(--sup3);border-radius:980px;overflow:hidden;margin-bottom:10px}
 .barra i{display:block;height:100%;background:var(--acento);opacity:.5;border-radius:4px}
@@ -1231,12 +1216,9 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
    =========================================================================== */
 
 @media(max-width:900px){
-  .fila-top,.ctr-fila .fila-top{grid-template-columns:1fr;gap:16px}
-  .via-partes{gap:8px}
+  .fila-top,  .via-partes{gap:8px}
   .partes .exp,.partes .imp{font-size:15.5px}
-  .ctr-fila .fila-top > div + div{padding-left:0;border-left:none;
-    padding-top:16px;border-top:1px solid var(--linea2)}
-  .estados{justify-content:flex-start}
+    .estados{justify-content:flex-start}
   .refs{gap:16px}
 
   /* Desde acá hay barra de pestañas abajo: todo lo que se apoya en el borde
@@ -1318,12 +1300,9 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
     display:flex;align-items:center;justify-content:center;padding:0 4px;
     box-shadow:0 0 0 2px var(--sup)}
 
-  .fila-top,.ctr-fila .fila-top{grid-template-columns:1fr;gap:16px}
-  .via-partes{gap:8px}
+  .fila-top,  .via-partes{gap:8px}
   .partes .exp,.partes .imp{font-size:15.5px}
-  .ctr-fila .fila-top > div + div{padding-left:0;border-left:none;
-    padding-top:16px;border-top:1px solid var(--linea2)}
-  .estados{justify-content:flex-start}
+    .estados{justify-content:flex-start}
   .refs{gap:16px}
 
   /* Desde acá hay barra de pestañas abajo: todo lo que se apoya en el borde
@@ -1563,6 +1542,137 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .menu-cfg{position:fixed;left:12px;right:12px;top:auto;bottom:calc(78px + var(--safe));width:auto;
     max-height:68vh;z-index:70}
 }
+
+/* Contratos: tarjeta ------------------------------------------------------------
+   Tres niveles: qué contrato es y cómo está (arriba), el detalle en tres zonas
+   (partes, avance, datos) y de dónde sale (abajo, en voz baja). */
+.ctr-card{background:var(--sup);border-radius:var(--r);box-shadow:var(--s1);padding:20px 26px 12px;
+  display:block;transition:box-shadow .2s var(--ease)}
+.ctr-card.editable{cursor:pointer}
+.ctr-card.editable:hover{box-shadow:var(--s2)}
+.ctr-card:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+
+.ctr-cab{display:flex;align-items:center;justify-content:space-between;gap:10px 20px;flex-wrap:wrap;
+  padding-bottom:14px;margin-bottom:16px;border-bottom:1px solid var(--linea2)}
+.ctr-id{display:flex;align-items:baseline;gap:12px;min-width:0;flex:0 1 auto}
+.ctr-num{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--tinta);
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ctr-num .ct-pre{margin-right:1px}
+.ctr-num .ct-resto{font-size:14px;margin-left:6px}
+.ctr-card .ct-fecha{font-size:13px;color:var(--tinta4)}
+.ctr-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;min-width:0}
+
+/* Las etiquetas: todas con la misma forma; el color es lo que informa. */
+.ctr-card .pill{padding:3px 11px 3px 9px;border-radius:980px;background:var(--sup2);font-size:12.5px;
+  font-weight:500;line-height:1.45;color:var(--tinta2)}
+.ctr-card .pill.ok{background:#e6f4ea;color:#137333}
+.ctr-card .pill.pend{background:#fce8e6;color:#b3261e}
+.ctr-card .pill.sol{background:#e3f2f7;color:#0c6a80}
+.ctr-card .pill.nar{background:#fef3e2;color:#9a5b00}
+.ctr-card .pill.gris{background:var(--sup2);color:var(--tinta2)}
+.ctr-card .pill.hueco{background:none;box-shadow:inset 0 0 0 1px var(--linea3);color:var(--tinta3)}
+.ctr-card .pill.tipo-mani{background:#fdf1d6;color:#8a4b08}
+.ctr-card .pill.tipo-aceite{background:#eef5d2;color:#44610d}
+.ctr-card .pill.tipo-expeller{background:#f1e6da;color:#5b3a1f}
+.ctr-card .pill.tipo-otro{background:var(--sup2);color:var(--tinta3)}
+.ctr-card .pill.est-a{background:#e6f4ea;color:#137333;font-weight:600}
+.ctr-card .pill.est-c{background:#fce8e6;color:#b3261e;font-weight:600}
+.ctr-card .pill .letra{width:16px;height:16px;margin:0 6px 0 -3px;font-size:10px}
+.ctr-card .pill.est-a .letra{background:#137333;color:#fff}
+.ctr-card .pill.est-c .letra{background:#b3261e;color:#fff}
+.ctr-card .pill.via-maritimo,.ctr-card .pill.via-terrestre{background:var(--sup2);color:var(--tinta2)}
+
+.ctr-cuerpo{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:0 32px;align-items:start}
+.ctr-cuerpo.sin-datos{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+.ctr-zona{min-width:0}
+.ctr-zona + .ctr-zona{border-left:1px solid var(--linea2);padding-left:32px}
+
+.ctr-partes{display:flex;flex-direction:column;gap:12px}
+.ctr-parte{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:baseline;gap:10px}
+.ctr-rol{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--tinta4)}
+.ctr-quien{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;min-width:0}
+.ctr-nom{font-size:15px;font-weight:600;line-height:1.3;color:var(--tinta);overflow-wrap:anywhere}
+.ctr-nom.vacio{font-weight:400;font-style:italic;color:var(--tinta4)}
+
+.ctr-rotulo{font-size:11.5px;font-weight:500;color:var(--tinta4);margin-bottom:2px}
+.ctr-tns{font-size:14px;color:var(--tinta3);font-variant-numeric:tabular-nums;line-height:1.2}
+.ctr-tns b{font-size:24px;font-weight:700;letter-spacing:-.02em;color:var(--tinta)}
+.ctr-prog{display:flex;align-items:center;gap:10px;margin:10px 0 12px}
+.ctr-prog .barra{flex:1;height:8px;margin:0}
+.ctr-prog .barra i{opacity:1}
+.ctr-pct{font-size:12.5px;font-weight:600;color:var(--tinta3);min-width:34px;text-align:right;
+  font-variant-numeric:tabular-nums}
+.ctr-estado{display:flex;flex-wrap:wrap;gap:6px}
+
+.ctr-datos{display:flex;flex-direction:column;gap:14px}
+.ctr-dato{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ctr-dato em{font-style:normal;font-size:11.5px;font-weight:500;color:var(--tinta4)}
+.ctr-dato b{font-size:14.5px;font-weight:500;color:var(--tinta);line-height:1.35;overflow-wrap:anywhere}
+.ctr-dato.aviso b{color:#9a5b00}
+
+.ctr-pie{display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:10px;
+  border-top:1px solid var(--linea2);font-size:12px;color:var(--tinta4);min-height:28px}
+.ctr-pie .orig{margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctr-pie .pill{font-size:11.5px;padding:1px 9px 1px 8px}
+.ctr-pie .ed{opacity:.8;color:var(--acento);font-weight:600;white-space:nowrap}
+.ctr-card.editable:hover .ctr-pie .ed{opacity:1}
+
+/* Código de país: una chapita igual en todos los sistemas */
+.cod2{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--tinta3);background:var(--sup3);
+  padding:1px 6px;border-radius:5px;line-height:1.5}
+
+/* Pantallas medianas: dos zonas arriba y los datos en una fila abajo */
+@media(max-width:1280px){
+  .ctr-cuerpo,.ctr-cuerpo.sin-datos{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
+  .ctr-datos{grid-column:1 / -1;flex-direction:row;flex-wrap:wrap;gap:12px 44px;margin-top:16px;
+    padding:14px 0 0;border-left:0;border-top:1px solid var(--linea2)}
+  .ctr-card .ctr-datos{padding-left:0}
+}
+/* Celular: una sola columna, cada zona separada por una línea */
+@media(max-width:900px){
+  /* Los botones de la barra de arriba no parten su texto, y la lista de orden
+     deja lugar a la flecha. */
+  .filtros button{white-space:nowrap;flex:0 0 auto}
+  .filtros select{padding-right:34px}
+  /* Contratos: el buscador arriba, y abajo el orden y Exportar CSV, cada uno en su lugar. */
+  .filtros-ctr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px}
+  .filtros-ctr input{grid-column:1 / -1}
+  .filtros-ctr select{width:100%;min-width:0;font-size:15px;padding-left:12px;padding-right:30px}
+  .filtros-ctr button{font-size:14px;padding:0 12px}
+  .filtros-ctr button{margin-left:0 !important}
+  .ctr-card{padding:16px 16px 10px}
+  .ctr-num{font-size:20px}
+  .ctr-chips{justify-content:flex-start;width:100%}
+  .ctr-cuerpo,.ctr-cuerpo.sin-datos{grid-template-columns:1fr;gap:0}
+  .ctr-zona + .ctr-zona,.ctr-card .ctr-datos{border-left:0;padding-left:0;border-top:1px solid var(--linea2);
+    margin-top:14px;padding-top:14px}
+  .ctr-datos{flex-direction:column;gap:12px}
+  /* Con poco ancho, el rol va arriba del nombre: los nombres largos respiran. */
+  .ctr-parte{grid-template-columns:1fr;gap:2px}
+}
+
+/* Estado de la sesión de Google */
+.lat-sesion{display:flex;align-items:center;gap:8px}
+.lat-punto{width:8px;height:8px;border-radius:50%;background:var(--tinta4);flex:none}
+.lat-punto.ok{background:#1e8e3e}
+.lat-sesion.mala{color:#b3261e;font-weight:600}
+.lat-sesion.mala .lat-punto{background:#d93025}
+.nav-acc[data-act="reconectar"]{color:#b3261e;font-weight:600}
+.aviso-sesion{display:flex;align-items:center;gap:14px;margin:0 0 16px;padding:14px 18px;border-radius:14px;
+  background:#fef3e2;box-shadow:inset 0 0 0 1px rgba(217,119,6,.35);color:#6b3f00}
+.aviso-sesion p{margin:0;flex:1;font-size:14.5px;line-height:1.45;font-weight:500}
+.aviso-sesion .as-ico{display:inline-flex;width:22px;height:22px;border-radius:50%;background:#d93025;
+  color:#fff;align-items:center;justify-content:center;flex:none}
+.aviso-sesion .as-ico .ico{width:12px;height:12px;stroke-width:3}
+.aviso-sesion button{flex:none;min-height:38px}
+.tm-sesion{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 11px;font-size:12.5px;
+  font-weight:600;color:#b3261e;background:#fce8e6;border-color:transparent}
+.tm-sesion .lat-punto{background:#d93025}
+@media(max-width:900px){
+  .aviso-sesion{flex-wrap:wrap;padding:12px 14px}
+  .aviso-sesion p{flex:1 1 calc(100% - 40px)}
+  .aviso-sesion button{width:100%}
+}
 </style>
 </head>
 <body>
@@ -1607,6 +1717,8 @@ var S = {
   cfg: null,          // {clientId, sheetId, titulo, tabsEmb:[], tabsCtr:[], tabsFact:[]}
   token: null,
   tokenExp: 0,
+  sesionCaida: false,     // la sesión de Google se cortó y no se pudo renovar
+  reconectando: false,
   pestanas: null,
   datos: null,        // {filas, mapa, extras, encabezados}
   contratos: new Map(),
@@ -2314,40 +2426,99 @@ function evaluar(emb, contrato, hoy, mapa, noAplica) {
 
 var tokenClient = null;
 
+/* El token de Google dura una hora. Hay tres piezas que lo mantienen vivo sin
+   que la persona tenga que hacer nada (ni recargar):
+   1. un solo callback del cliente de token, que sabe distinguir una renovación
+      silenciosa de un login normal;
+   2. renovarToken(), que pide uno nuevo sin molestar;
+   3. un fetch envuelto (más abajo) que renueva solo cuando hace falta.
+   Si Google exige un clic y no se puede renovar, se avisa (sesionVencida). */
+var _renovando = null;   // renovación en curso: { promesa, resolver, timer }
+var _loginCb = null;     // qué hacer cuando llega un token del login normal
+var _loginErr = null;    // y cuando el login normal falla (popup bloqueado o cerrado)
+var MSG_SESION = 'Se venció la sesión de Google. Tocá Conectar con Google para seguir (no hace falta recargar).';
+
+function errorSesion() {
+  var e = new Error(MSG_SESION);
+  e.sesion = true;
+  return e;
+}
+
+// Guarda el token y cuándo vence, con 2 minutos de margen para no usarlo justo
+// cuando se cae.
+function guardarToken(resp) {
+  S.token = resp.access_token;
+  S.tokenExp = Date.now() + ((resp.expires_in || 3600) - 120) * 1000;
+  S.sesionCaida = false;
+}
+
+// El único callback del cliente de token. Si hay una renovación en curso, el
+// token es de ella: se guarda y se sale, sin pasar por el login normal (que
+// recargaría datos y pisaría el estado, y acá es la misma persona).
+function _alRecibirToken(resp) {
+  if (_renovando) {
+    if (resp && resp.access_token && !resp.error) {
+      guardarToken(resp);
+      _renovando.resolver(true);
+    } else {
+      _renovando.resolver(false);
+    }
+    return;
+  }
+  if (_loginCb) _loginCb(resp);
+}
+
+// Popup bloqueado o cerrado. Antes quedaba atado a la primera llamada; ahora
+// responde a la que esté en curso.
+function _alFallarToken(err) {
+  if (_renovando) return _renovando.resolver(false);
+  if (_loginErr) _loginErr(err);
+}
+
+// El cliente de token se arma una sola vez (y de nuevo si cambia el Client ID).
+// Lo usan el login y la renovación, así que ninguna depende de que la otra haya
+// pasado antes.
+function asegurarCliente() {
+  if (tokenClient) return tokenClient;
+  if (!window.google || !google.accounts || !google.accounts.oauth2 || !S.cfg || !S.cfg.clientId) return null;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: S.cfg.clientId,
+    scope: SCOPE,
+    callback: _alRecibirToken,
+    // Sin esto, un popup bloqueado o cerrado deja la promesa colgada
+    // para siempre y la app se queda "pensando" sin decir nada.
+    error_callback: _alFallarToken
+  });
+  return tokenClient;
+}
+
 function pedirToken(interactivo) {
   return new Promise(function (resolve, reject) {
     if (!window.google || !google.accounts || !google.accounts.oauth2) {
       return reject(new Error('No cargó la librería de Google. Revisá la conexión y recargá.'));
     }
 
+    // Si había una renovación silenciosa esperando, este login pasa por delante.
+    if (_renovando) _renovando.resolver(false);
+
     var listo = false;
     function fallar(msg) { if (!listo) { listo = true; reject(new Error(msg)); } }
 
-    if (!tokenClient) {
-      try {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: S.cfg.clientId,
-          scope: SCOPE,
-          callback: function () {},
-          // Sin esto, un popup bloqueado o cerrado deja la promesa colgada
-          // para siempre y la app se queda "pensando" sin decir nada.
-          error_callback: function (err) {
-            var t = err && err.type;
-            if (t === 'popup_failed_to_open') {
-              return fallar('El navegador bloqueó la ventana de Google. Permití las ventanas emergentes para este sitio y probá de nuevo.');
-            }
-            if (t === 'popup_closed') {
-              return fallar('Cerraste la ventana de Google antes de terminar.');
-            }
-            fallar('No se pudo abrir el login de Google' + (t ? ' (' + t + ')' : '') + '.');
-          }
-        });
-      } catch (e) {
-        return fallar('El Client ID no es válido: ' + e.message);
-      }
-    }
+    try { asegurarCliente(); }
+    catch (e) { return fallar('El Client ID no es válido: ' + e.message); }
 
-    tokenClient.callback = function (resp) {
+    _loginErr = function (err) {
+      var t = err && err.type;
+      if (t === 'popup_failed_to_open') {
+        return fallar('El navegador bloqueó la ventana de Google. Permití las ventanas emergentes para este sitio y probá de nuevo.');
+      }
+      if (t === 'popup_closed') {
+        return fallar('Cerraste la ventana de Google antes de terminar.');
+      }
+      fallar('No se pudo abrir el login de Google' + (t ? ' (' + t + ')' : '') + '.');
+    };
+
+    _loginCb = function (resp) {
       if (listo) return;
       // Quien ya había entrado antes tiene un permiso viejo sin Gmail. Si falta,
       // se vuelve a pedir mostrando el consentimiento, una sola vez.
@@ -2364,8 +2535,7 @@ function pedirToken(interactivo) {
           : 'Error de autenticación: ' + resp.error);
       }
       listo = true;
-      S.token = resp.access_token;
-      S.tokenExp = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3500000) - 60000;
+      guardarToken(resp);
       resolve(S.token);
     };
 
@@ -2383,6 +2553,126 @@ function pedirToken(interactivo) {
     }
   });
 }
+
+/* Pide un token nuevo en silencio. Devuelve una promesa de true/false: nunca
+   rechaza. Si ya hay una renovación en curso, devuelve esa misma (varias
+   llamadas que fallan a la vez no abren varias ventanas). Si Google necesita un
+   clic —popup bloqueado o cerrado— o no contesta en 20 segundos, es false. */
+function renovarToken() {
+  if (_renovando) return _renovando.promesa;
+  try { if (!asegurarCliente()) return Promise.resolve(false); }   // sin la librería de Google o sin Client ID: no hay cómo
+  catch (e) { return Promise.resolve(false); }
+  var r = {};
+  r.promesa = new Promise(function (resolve) {
+    r.resolver = function (ok) {
+      if (_renovando !== r) return;                  // ya estaba resuelta
+      clearTimeout(r.timer);
+      _renovando = null;
+      resolve(!!ok);
+    };
+  });
+  _renovando = r;
+  r.timer = setTimeout(function () { r.resolver(false); }, 20000);
+  try {
+    tokenClient.requestAccessToken({ prompt: '' });
+  } catch (e) {
+    r.resolver(false);
+  }
+  return r.promesa;
+}
+
+function cancelarRenovacion() { if (_renovando) _renovando.resolver(false); }
+
+/* No hay forma de renovar sin un clic: se corta la sesión a la vista. El token
+   se borra y la pantalla pasa a «Sin autenticar» con un botón para reconectar.
+   Nunca queda diciendo «Conectado» con un token muerto. */
+function sesionVencida() {
+  if (S.sesionCaida) return;
+  S.token = null; S.tokenExp = 0; S.sesionCaida = true; S.reconectando = false;
+  toast(MSG_SESION, 'error', 10000);
+  pintar();
+}
+
+// Se llama desde el botón «Conectar con Google»: el popup sale de ese clic.
+function reconectar() {
+  if (S.reconectando) return;
+  S.reconectando = true; pintar();
+  pedirToken(false).then(function () {
+    S.reconectando = false; S.sesionCaida = false;
+    pintar();
+    toast('Sesión de Google reconectada', 'ok');
+    return identificar().then(function () { pintar(); });
+  }).catch(function (e) {
+    S.reconectando = false; pintar();
+    toast(e.message, 'error');
+  });
+}
+
+/* --- Un solo punto para todas las llamadas a Google -----------------------
+   En vez de tocar cada fetch de la app, se envuelve el fetch del navegador.
+   Sólo interviene en llamadas a googleapis.com que llevan «Authorization:
+   Bearer …»; todo lo demás pasa tal cual. Antes de llamar, si el token venció
+   por reloj, lo renueva; siempre manda el token actual (la llamada pudo
+   haberse armado con el viejo); y si Google contesta 401, renueva y reintenta
+   UNA sola vez. */
+var _fetchReal = globalThis.fetch.bind(globalThis);
+
+function _hostEsGoogle(url) {
+  try { return /(^|\.)googleapis\.com$/i.test(new URL(url, location.href).hostname); }
+  catch (e) { return false; }
+}
+
+// Los headers pueden venir como objeto, como Headers o como lista de pares.
+function _headersPlanos(h) {
+  var out = {};
+  if (!h) return out;
+  if (Array.isArray(h)) h.forEach(function (par) { out[par[0]] = par[1]; });
+  else if (typeof h.forEach === 'function') h.forEach(function (v, k) { out[k] = v; });
+  else Object.keys(h).forEach(function (k) { out[k] = h[k]; });
+  return out;
+}
+
+function _tieneBearer(o) {
+  var h = _headersPlanos(o && o.headers), hay = false;
+  Object.keys(h).forEach(function (k) {
+    if (k.toLowerCase() === 'authorization' && /^Bearer\s+\S/i.test(String(h[k]))) hay = true;
+  });
+  return hay;
+}
+
+function _conToken(o, token) {
+  var h = _headersPlanos(o.headers);
+  Object.keys(h).forEach(function (k) { if (k.toLowerCase() === 'authorization') delete h[k]; });
+  h.Authorization = 'Bearer ' + token;
+  return Object.assign({}, o, { headers: h });
+}
+
+globalThis.fetch = async function (input, opciones) {
+  var o = opciones || {};
+  if (typeof input !== 'string' || !_hostEsGoogle(input) || !_tieneBearer(o) || !S.token) {
+    return _fetchReal(input, opciones);
+  }
+
+  // 1) Venció por reloj: se renueva ANTES de llamar.
+  if (S.tokenExp && Date.now() >= S.tokenExp) {
+    if (!(await renovarToken())) { sesionVencida(); throw errorSesion(); }
+  }
+  var usado = S.token;
+  if (!usado) throw errorSesion();     // otra llamada ya cortó la sesión mientras esperábamos
+
+  var r = await _fetchReal(input, _conToken(o, usado));
+  if (r.status !== 401) return r;
+
+  // 2) 401: el token no sirve. Si otra llamada ya lo renovó mientras la nuestra
+  // volaba, se reintenta con ese; si no, se renueva acá. Un solo reintento.
+  if (!S.token || S.token === usado) {
+    if (!(await renovarToken())) { sesionVencida(); return r; }
+  }
+  if (!S.token) return r;
+  var r2 = await _fetchReal(input, _conToken(o, S.token));
+  if (r2.status === 401) sesionVencida();   // con un token recién renovado, es que no hay sesión
+  return r2;
+};
 
 // El popup solo se abre confiable si sale de un clic directo, sin ningún await
 // en el medio. Por eso el login es un paso propio y no algo que pasa de rebote
@@ -2422,6 +2712,12 @@ async function entrar() {
 
 async function conToken() {
   if (S.token && Date.now() < S.tokenExp) return S.token;
+  if (S.token) {                              // venció por reloj: se renueva sin pedir nada
+    if (await renovarToken()) return S.token;
+    sesionVencida();
+    throw errorSesion();
+  }
+  if (S.sesionCaida) throw errorSesion();     // ya se sabe que no hay sesión: el popup sale sólo del botón
   return pedirToken(false);
 }
 
@@ -2454,8 +2750,7 @@ function errorGoogle(status, msg, url) {
       ? 'Tu cuenta no tiene permiso sobre esta planilla. ' + m
       : 'Google no autorizó el pedido (' + api.nombre + '). ' + m);
   } else if (status === 401) {
-    e = new Error('La sesión con Google venció. Recargá la página y volvé a entrar.');
-    e.permiso = true;
+    e = errorSesion();
   } else if (status === 404) {
     e = new Error(api.servicio === 'sheets.googleapis.com'
       ? 'No existe una planilla con ese id, o tu cuenta no tiene acceso.'
@@ -2475,17 +2770,13 @@ async function api(url, opciones) {
   var token = await conToken();
   var o = opciones || {};
   o.headers = Object.assign({ Authorization: 'Bearer ' + token }, o.headers || {});
-  var pedir = async function () {
-    try { return await fetch(url, o); }
-    catch (e) { throw new Error('No se pudo conectar con Google. Revisá tu conexión e intentá de nuevo.'); }
-  };
-  var r = await pedir();
-
-  if (r.status === 401) {           // token vencido: pedir de nuevo y reintentar
-    S.token = null;
-    token = await pedirToken(false);
-    o.headers.Authorization = 'Bearer ' + token;
-    r = await pedir();
+  // Renovar el token y reintentar un 401 lo hace el fetch envuelto (arriba): acá
+  // sólo hay que distinguir «se cayó la sesión» de «se cayó la conexión».
+  var r;
+  try { r = await fetch(url, o); }
+  catch (e) {
+    if (e && e.sesion) throw e;
+    throw new Error('No se pudo conectar con Google. Revisá tu conexión e intentá de nuevo.');
   }
 
   var cuerpo = null;
@@ -4055,7 +4346,7 @@ async function subirMultipart(meta, blob) {
   if (!r.ok) {
     var eD = errorGoogle(r.status, (j && j.error && j.error.message) || '',
                          'https://www.googleapis.com/upload/drive/v3/files');
-    if (!eD.habilitar && (r.status === 403 || r.status === 401)) {
+    if (!eD.habilitar && !eD.sesion && r.status === 403) {
       S.faltaDrive = true; eD = new Error('Falta el permiso de Drive para armar el PDF.');
     }
     throw eD;
@@ -4687,8 +4978,9 @@ function paisDeEmpresa(nombre) {
 function bandera(cod) {
   if (!cod || !PAISES[cod]) return '';
   var partes = PAISES[cod].split(' ');
+  // Sólo el código: el emoji de bandera no existe en Windows y se veía como
+  // «AR AR» (las letras del emoji más el código).
   return '<span class="pais" title="' + esc(PAISES[cod].replace(partes[0] + ' ', '')) + '">' +
-    '<span class="bnd">' + partes[0] + '</span>' +
     '<span class="cod2">' + cod + '</span></span>';
 }
 
@@ -4819,7 +5111,7 @@ async function enviarAdvice(ids, desdeBarra) {
     if (desdeBarra) S.marcados = {};
   } catch (e) {
     var msg = e.message || String(e);
-    if (e.permiso || (!e.habilitar && /insufficient|scope/i.test(msg))) {
+    if (!e.sesion && (e.permiso || (!e.habilitar && /insufficient|scope/i.test(msg)))) {
       S.faltaGmail = true;
       msg = 'Falta el permiso de Gmail para crear borradores.';
     }
@@ -5171,6 +5463,7 @@ function comentariosDe(emb) {
 async function cargarTodo() {
   S.cargando = true; S.error = null; pintar();
   var avisos = [];
+  var huboSesion = false;   // si la causa es la sesión caída, el aviso grande ya lo explica
   try {
     // Cada pestaña se lee y se mapea por separado: los encabezados de las
     // terrestres no son los mismos que los de las marítimas.
@@ -5181,6 +5474,7 @@ async function cargarTodo() {
       try {
         h = await leerHoja(S.cfg.sheetId, tab);
       } catch (e) {
+        if (e.sesion) huboSesion = true;
         avisos.push('No se pudo leer "' + tab + '": ' + e.message);
         continue;
       }
@@ -5267,6 +5561,7 @@ async function cargarTodo() {
       try {
         hc = await leerHoja(S.cfg.sheetId, tc);
       } catch (e2) {
+        if (e2.sesion) huboSesion = true;
         avisos.push('No se pudo leer "' + tc + '": ' + e2.message);
         continue;
       }
@@ -5348,6 +5643,7 @@ async function cargarTodo() {
       try {
         hf = await leerHoja(S.cfg.sheetId, tf);
       } catch (e3) {
+        if (e3.sesion) huboSesion = true;
         avisos.push('No se pudo leer "' + tf + '": ' + e3.message);
         continue;
       }
@@ -5424,6 +5720,7 @@ async function cargarTodo() {
       try {
         he = await leerHoja(S.cfg.sheetId, te);
       } catch (e4) {
+        if (e4.sesion) huboSesion = true;
         avisos.push('No se pudo leer "' + te + '": ' + e4.message);
         continue;
       }
@@ -5506,7 +5803,8 @@ async function cargarTodo() {
 
     S.avisos = avisos;
   } catch (e) {
-    S.error = e.message;
+    // Con la sesión caída no se apila un cuadro rojo con lo mismo por cada pestaña.
+    S.error = (e.sesion || huboSesion) ? null : e.message;
   } finally {
     S.cargando = false; pintar();
   }
@@ -6123,8 +6421,9 @@ function vistaConfig() {
       '<button data-act="usar" class="primario grande">' + ico('check') +
         (yaConfigurado ? 'Guardar cambios' : 'Empezar a usar') + '</button>' +
       '<button data-act="reset-cid">Desconectar la cuenta</button>' +
-      (S.usuario ? '<span class="ayuda">Conectado como ' +
-        esc(nombreCortoAutor(S.usuario.email)) + '</span>' : '') +
+      (S.sesionCaida ? '<span class="ayuda">Sin autenticar</span>'
+        : S.usuario ? '<span class="ayuda">Conectado como ' +
+          esc(nombreCortoAutor(S.usuario.email)) + '</span>' : '') +
     '</div></div>';
 }
 
@@ -6145,7 +6444,7 @@ function evaluarTodo() {
 function vistaApp() {
   if (!S.datos) {
     return barraMobile() + '<div class="marco-app v-' + colorDeVista(S.vista) + '">' + navLateral([]) +
-      '<main class="app">' +
+      '<main class="app">' + avisoSesion() +
       (S.error ? '<div class="error" style="margin-top:14px">' + esc(S.error) + '</div>' : '') +
       '<p class="centro">' + (S.cargando ? 'Leyendo la planilla…' : 'Sin datos.') + '</p>' +
       '</main></div>' + tabBarInferior();
@@ -6175,7 +6474,7 @@ function vistaApp() {
 
   return barraMobile() +
     '<div class="marco-app v-' + colorDeVista(S.vista) + '">' + navLateral(todosEvs) +
-    '<main class="app">' +
+    '<main class="app">' + avisoSesion() +
       (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
       (S.avisoOk ? '<div class="ok-aviso">' + esc(S.avisoOk) +
         ' <button data-act="cerraviso">Cerrar</button></div>' : '') +
@@ -7047,17 +7346,42 @@ function navLateral(evs) {
       '<button class="nav-acc" data-act="recargar"' + (S.cargando ? ' disabled' : '') + '>' +
         ico('refresh') + (S.cargando ? 'Actualizando…' : 'Actualizar') + '</button>' +
       '<button class="nav-acc" data-act="pestanas">' + ico('gear') + 'Configuración</button>' +
-      (S.usuario ? '<p class="lat-user">' + esc(nombreCortoAutor(S.usuario.email)) + '</p>' : '') +
+      estadoSesionLateral() +
     '</div></nav>';
 }
 
 // Teléfono: barra superior compacta y barra de pestañas abajo, donde llega
 // el pulgar.
+// Estado de la conexión con Google, siempre a la vista. Si se cortó, lo dice y
+// ofrece reconectar: nunca queda un «Conectado» con un token muerto.
+function estadoSesionLateral() {
+  if (S.sesionCaida) {
+    return '<p class="lat-user lat-sesion mala" role="status"><span class="lat-punto"></span>Sin autenticar</p>' +
+      '<button class="nav-acc" data-act="reconectar"' + (S.reconectando ? ' disabled' : '') + '>' +
+        ico('refresh') + (S.reconectando ? 'Esperando a Google…' : 'Conectar con Google') + '</button>';
+  }
+  return S.usuario
+    ? '<p class="lat-user lat-sesion" title="Conectado con Google"><span class="lat-punto ok"></span>' +
+        esc(nombreCortoAutor(S.usuario.email)) + '</p>'
+    : '';
+}
+
+// El aviso grande, arriba de todo, con el botón para seguir sin recargar.
+function avisoSesion() {
+  if (!S.sesionCaida) return '';
+  return '<div class="aviso-sesion" role="alert"><span class="as-ico">' + ico('x') + '</span>' +
+    '<p>' + esc(MSG_SESION) + '</p>' +
+    '<button class="primario" data-act="reconectar"' + (S.reconectando ? ' disabled' : '') + '>' +
+      (S.reconectando ? 'Esperando a Google…' : 'Conectar con Google') + '</button></div>';
+}
+
 function barraMobile() {
   return '<header class="top-movil"><div class="tm-in">' +
     LOGO_SVG + '<b>Embarques</b>' +
     '<span class="tm-acc">' +
       (S.guardando > 0 ? '<span class="tm-guardando">Guardando…</span>' : '') +
+      (S.sesionCaida ? '<button class="tm-sesion" data-act="reconectar"' + (S.reconectando ? ' disabled' : '') +
+        '><span class="lat-punto"></span>Sin autenticar</button>' : '') +
       '<button data-act="recargar" aria-label="Actualizar"' +
         (S.cargando ? ' disabled' : '') + '>' + ico('refresh') + '</button>' +
       '<button data-act="pestanas" aria-label="Configuración">' + ico('gear') + '</button>' +
@@ -8215,7 +8539,7 @@ function vistaContratos() {
           t[1] + '<span class="cnt">' + cuentaTipo[t[0]] + '</span></button>';
       }).join('') +
     '</div>' +
-    '<div class="filtros">' +
+    '<div class="filtros filtros-ctr">' +
     '<input id="busca-ctr" placeholder="Buscar contrato, cliente" value="' + esc(S.busca) + '" aria-label="Buscar">' +
     '<label class="sr-solo" for="orden-ctr">Ordenar</label>' +
     '<select id="orden-ctr" data-ordenctr="1">' + ORDENES_CTR.map(function (o) {
@@ -8928,78 +9252,77 @@ function filaContrato(r) {
       '<span class="letra">' + est + '</span>' + (est === 'A' ? 'Abierto' : 'Cerrado') + '</span>'
     : '';
   var num = partirNumero(r.contrato);
-  return '<article class="emb ctr-fila' + (editable ? ' editable' : '') + '"' +
+  var numHtml = num
+    ? '<span class="ct-pre">' + esc(num.prefijo) + '</span>' + esc(num.cuerpo) +
+      '<span class="ct-anio">' + esc(num.sep + num.anio) + '</span>' +
+      (num.resto ? '<span class="ct-resto">' + esc(num.resto) + '</span>' : '')
+    : esc(r.contrato);
+  var tn = function (n) { return (n || 0).toLocaleString('es-AR', { maximumFractionDigits: 1 }); };
+
+  // Quién le vende a quién, con el rol escrito: sin flechas que adivinar.
+  var parte = function (rol, nombre, vacio) {
+    return '<div class="ctr-parte"><span class="ctr-rol">' + rol + '</span>' +
+      '<span class="ctr-quien"><span class="ctr-nom' + (nombre ? '' : ' vacio') + '">' +
+      esc(nombre || vacio) + '</span>' + (nombre ? bandera(paisDeEmpresa(nombre)) : '') + '</span></div>';
+  };
+
+  var datos = [];
+  if (r.periodo) datos.push(['Período de embarque', String(r.periodo), '']);
+  if (r.cond && !r.cond.desconocida) datos.push(['Condición de pago', r.cond.texto, '']);
+  // Si la planilla trae su propio saldo y no coincide con el calculado,
+  // conviene verlo: alguno de los dos está mirando algo que el otro no.
+  if (r.fuenteSaldo === 'planilla' && r.entregadoActivo > (r.entregado || 0) + 0.5) {
+    datos.push(['Atención', 'las pestañas activas suman ' + tn(r.entregadoActivo) +
+      ' tn, más de lo que dice la columna de entregado', ' aviso']);
+  }
+
+  var ref = S.ctrEditables.get(r.contrato);
+  var origen = ref ? esc(ref.tab) + ' · fila ' + ref.fila
+    : (r.origen ? esc(r.origen) + ' · solo lectura' : '');
+
+  return '<article class="ctr-fila ctr-card' + (editable ? ' editable' : '') + '"' +
     (editable ? ' data-act="ctrabrir" data-k="' + esc(r.contrato) + '" tabindex="0"' : '') + '>' +
-    // El número es lo que identifica al contrato: va como título de la tarjeta.
-    '<header class="ctr-tit">' +
-      '<h3>' + (num
-        ? '<span class="ct-pre">' + esc(num.prefijo) + '</span>' + esc(num.cuerpo) +
-          '<span class="ct-anio">' + esc(num.sep + num.anio) + '</span>' +
-          (num.resto ? '<span class="ct-resto">' + esc(num.resto) + '</span>' : '')
-        : esc(r.contrato)) + '</h3>' +
-      (esFecha(r.fecha) ? '<span class="ct-fecha">' + fmtFecha(r.fecha) + '</span>' : '') +
+
+    // Arriba: qué contrato es y en qué situación está, de un vistazo.
+    '<header class="ctr-cab">' +
+      '<div class="ctr-id"><h3 class="ctr-num" title="' + esc(r.contrato) + '">' + numHtml + '</h3>' +
+        (esFecha(r.fecha) ? '<span class="ct-fecha">' + fmtFecha(r.fecha) + '</span>' : '') + '</div>' +
+      '<div class="ctr-chips">' + estPill + tipoPills + viaPill + partes + firmas + '</div>' +
     '</header>' +
-    '<div class="fila-top" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.3fr) minmax(0,1fr)">' +
-      '<div>' +
-        '<div class="partes"><div class="via-partes">' +
-          (r.exportador
-            ? '<div class="parte"><span class="exp">' + esc(r.exportador) + '</span>' +
-              (function () { var f = bandera(paisDeEmpresa(r.exportador));
-                return f ? '<span class="rot-pais">' + f + '</span>' : ''; })() +
-              '</div><span class="fl">→</span>' : '') +
-          '<div class="parte"><span class="imp">' + esc(r.importador || 'Sin cliente') + '</span>' +
-            (function () { var f = bandera(paisDeEmpresa(r.importador));
-              return f ? '<span class="rot-pais">' + f + '</span>' : ''; })() +
-          '</div>' +
-        '</div></div>' +
-        (function () {
-          var ref = S.ctrEditables.get(r.contrato);
-          if (ref) return '<div class="orig">' + esc(ref.tab) + ' · fila ' + ref.fila +
-            ' <span class="ed">editar</span></div>';
-          return r.origen ? '<div class="orig">' + esc(r.origen) + ' · solo lectura</div>' : '';
-        })() +
-        (r.huerfano ? '<div class="orig">No figura en las pestañas de contratos</div>' : '') +
-      '</div>' +
-      '<div>' + barra +
-        '<div class="tns-linea">' +
-          '<span>' + (r.entregado || 0).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' tn entregadas</span>' +
-          (r.contratado ? '<span class="de"> de ' +
-            r.contratado.toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' tn' +
-            (pctTxt ? ' · ' + pctTxt : '') + '</span>' : '') +
+
+    '<div class="ctr-cuerpo' + (datos.length ? '' : ' sin-datos') + '">' +
+      '<section class="ctr-zona ctr-partes" aria-label="Partes">' +
+        parte('Exportador', r.exportador, 'Sin exportador') +
+        parte('Importador', r.importador, 'Sin cliente') +
+      '</section>' +
+
+      '<section class="ctr-zona ctr-avance" aria-label="Avance">' +
+        '<div class="ctr-rotulo">Entregado</div>' +
+        '<div class="ctr-tns"><b>' + tn(r.entregado) + '</b>' +
+          '<span class="de">' + (r.contratado ? ' de ' + tn(r.contratado) + ' tn' : ' tn') + '</span></div>' +
+        (r.pct !== null ? '<div class="ctr-prog">' + barra + '<span class="ctr-pct">' + pctTxt + '</span></div>' : '') +
+        '<div class="ctr-estado">' +
+          '<span class="pill ' + cls + '"><span class="pt"></span>' + estado + '</span>' +
+          (r.embarques.length
+            ? '<span class="pill gris"><span class="pt"></span>' + r.embarques.length +
+              (r.embarques.length === 1 ? ' embarque activo' : ' embarques activos') + '</span>' : '') +
+          (r.aFacturar
+            ? '<span class="pill ok"><span class="pt"></span>' + r.aFacturar + ' a facturar</span>' : '') +
         '</div>' +
-      '</div>' +
-      '<div class="estados">' +
-        '<span class="pill ' + cls + '"><span class="pt"></span>' + estado + '</span>' +
-        (r.embarques.length
-          ? '<span class="pill gris"><span class="pt"></span>' + r.embarques.length +
-            (r.embarques.length === 1 ? ' embarque activo' : ' embarques activos') + '</span>' : '') +
-        (r.aFacturar
-          ? '<span class="pill ok"><span class="pt"></span>' + r.aFacturar + ' a facturar</span>' : '') +
-        tipoPills +
-        estPill +
-        viaPill +
-        partes +
-        firmas +
-      '</div>' +
+      '</section>' +
+
+      (datos.length
+        ? '<section class="ctr-zona ctr-datos" aria-label="Detalles">' + datos.map(function (d) {
+            return '<div class="ctr-dato' + d[2] + '"><em>' + esc(d[0]) + '</em><b>' + esc(d[1]) + '</b></div>';
+          }).join('') + '</section>' : '') +
     '</div>' +
-    (function () {
-      var items = [];
-      if (r.periodo) items.push(['Período de embarque', String(r.periodo)]);
-      if (r.cond && !r.cond.desconocida) items.push(['Condición de pago', r.cond.texto]);
-      // Si la planilla trae su propio saldo y no coincide con el calculado,
-      // conviene verlo: alguno de los dos está mirando algo que el otro no.
-      if (r.fuenteSaldo === 'planilla' && r.entregadoActivo > (r.entregado || 0) + 0.5) {
-        items.push(['Atención',
-          'las pestañas activas suman ' +
-          r.entregadoActivo.toLocaleString('es-AR', { maximumFractionDigits: 1 }) +
-          ' tn, más de lo que dice la columna de entregado']);
-      }
-      if (!items.length) return '';
-      return '<div class="refs ctr-refs">' + items.map(function (i) {
-        return '<span class="ref"><em>' + esc(i[0]) + '</em>' +
-          '<b class="txt">' + esc(i[1]) + '</b></span>';
-      }).join('') + '</div>';
-    })() +
+
+    // Abajo, en voz baja: de dónde sale y si se puede tocar.
+    '<footer class="ctr-pie">' +
+      '<span class="orig">' + origen + '</span>' +
+      (r.huerfano ? '<span class="pill nar"><span class="pt"></span>No figura en las pestañas de contratos</span>' : '') +
+      (ref ? '<span class="ed">Editar ›</span>' : '') +
+    '</footer>' +
     '</article>';
 }
 
@@ -10092,12 +10415,14 @@ document.addEventListener('click', function (ev) {
 
   if (act === 'reset-cid') {
     S.cfg = null; S.pestanas = null; S.error = null; S.setup.entrada = '';
-    tokenClient = null; S.token = null;
+    tokenClient = null; S.token = null; S.tokenExp = 0; S.sesionCaida = false; S.reconectando = false;
+    cancelarRenovacion();
     try { localStorage.removeItem(LS); } catch (e) {}
     return pintar();
   }
 
   if (act === 'entrar') return entrar();
+  if (act === 'reconectar') return reconectar();
 
   if (act === 'buscar') return buscarPlanilla();
 
@@ -10410,7 +10735,7 @@ document.addEventListener('click', function (ev) {
     return pintar();
   }
   if (act === 'permiso-gmail') {
-    S.faltaGmail = false; S.token = null;
+    S.faltaGmail = false; S.token = null; S.tokenExp = 0;
     return pedirToken(true).then(function () { S.adviceMsg = null; pintar(); })
       .catch(function (e) { S.error = e.message; pintar(); });
   }
@@ -10989,6 +11314,14 @@ function cargarPrefsPlanilla() {
     if (pr) { S.colsOcultas = pr.ocultas || {}; S.planCong = +pr.cong || 0; }
   } catch (e) {}
 }
+
+// Al volver a la pestaña después de un rato, el token pudo haber vencido sin
+// que nadie lo note: se renueva ahora, o se avisa, antes de que algo falle.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState !== 'visible') return;
+  if (!S.token || !S.tokenExp || Date.now() < S.tokenExp) return;
+  renovarToken().then(function (ok) { if (!ok) sesionVencida(); });
+});
 
 function arrancar() {
   cargarPrefsPlanilla();
