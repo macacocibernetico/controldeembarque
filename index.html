@@ -1710,8 +1710,6 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 /* Cambios sin guardar */
 .tbl-hoja td.pend-cel{box-shadow:inset 0 0 0 2px #f5a524}
 .tbl-hoja td.pend-cel:not(.col-fija){position:relative}
-.tbl-hoja td.pend-cel::after{content:'';position:absolute;top:0;right:0;border:5px solid transparent;
-  border-top-color:#f5a524;border-right-color:#f5a524}
 .tbl-hoja td.pend-cel:not([class*="cel-"]){background:#fff8e6 !important}
 .hoja-barra{position:sticky;top:0;z-index:35;background:var(--papel);padding:8px 0;margin-bottom:8px;
   flex-wrap:wrap;align-items:center}
@@ -1906,6 +1904,89 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
   .exp-cli .cli-al{grid-area:al;justify-self:start;padding:2px 10px}
   .exp-cli .cli-al.vacio{display:none}
 }
+
+/* ===== Comentarios por celda ===================================================== */
+/* La marca de Sheets: triangulito amarillo arriba a la derecha. Gris si ya está todo resuelto. */
+.tbl-hoja td.tiene-com:not(.col-fija){position:relative}
+.tbl-hoja td.tiene-com::after{content:'';position:absolute;top:0;right:0;border:6px solid transparent;
+  border-top-color:#f9ab00;border-right-color:#f9ab00;pointer-events:none}
+.tbl-hoja td.tiene-com.com-resueltos::after{border-top-color:#c3c8cf;border-right-color:#c3c8cf}
+.tbl-hoja td.nrofila.tiene-com{cursor:pointer}
+.btn-com{display:inline-flex;align-items:center;gap:7px}
+.btn-com .ico{width:15px;height:15px}
+.btn-com[disabled]{opacity:.5}
+
+/* La ventanita pegada a la celda */
+.com-pop{position:fixed;z-index:84;width:344px;max-width:calc(100vw - 20px);max-height:min(560px,calc(100vh - 20px));
+  display:flex;flex-direction:column;background:var(--sup);border-radius:16px;
+  box-shadow:0 0 0 1px var(--linea2),0 18px 50px rgba(15,23,42,.22),0 3px 10px rgba(15,23,42,.1);overflow:hidden}
+.com-top{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 14px;border-bottom:1px solid var(--linea2);flex:none}
+.com-campo{flex:none;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:#8a5a00;background:#fff3d1;
+  padding:3px 9px;border-radius:980px}
+.com-linea{flex:1;min-width:0;font-size:12.5px;color:var(--tinta3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.com-x{flex:none;width:30px;height:30px;min-height:0;padding:0;border:0;background:none;font-size:20px;line-height:1;color:var(--tinta3);border-radius:50%}
+.com-x:hover{background:var(--sup3)}
+.com-cuerpo{overflow-y:auto;padding:6px 14px 14px;display:flex;flex-direction:column;gap:12px}
+
+.com-hilo{display:flex;flex-direction:column;gap:10px;padding:10px 0 4px;border-bottom:1px solid var(--linea2)}
+.com-hilo:last-child{border-bottom:0}
+.com-hilo.resuelto{opacity:.75}
+.com-c{display:flex;gap:10px;align-items:flex-start}
+.com-av{flex:none;width:28px;height:28px;border-radius:50%;color:#fff;font-size:13px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center}
+.com-cu{flex:1;min-width:0}
+.com-meta{display:flex;align-items:baseline;gap:8px;position:relative}
+.com-autor{font-size:13.5px;color:var(--tinta)}
+.com-t{font-size:12px;color:var(--tinta4);white-space:nowrap}
+.com-hilo .com-txt{margin:2px 0 0;font-size:14px;line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere}
+.com-mas-wrap{margin-left:auto;position:relative}
+.com-mas{width:26px;height:26px;min-height:0;padding:0;border:0;background:none;border-radius:50%;font-size:17px;line-height:1;color:var(--tinta3)}
+.com-mas:hover{background:var(--sup3)}
+.com-menu{position:absolute;right:0;top:28px;z-index:3;min-width:150px;background:var(--sup);border-radius:10px;padding:4px;
+  box-shadow:0 0 0 1px var(--linea2),0 8px 24px rgba(15,23,42,.18);display:flex;flex-direction:column}
+.com-menu button{min-height:34px;text-align:left;border:0;background:none;border-radius:7px;padding:0 10px;font-size:13.5px}
+.com-menu button:hover{background:var(--sup2)}
+.com-menu .peligro{color:var(--pend)}
+
+.com-ta{width:100%;resize:vertical;min-height:38px;font:inherit;font-size:14px;line-height:1.4;padding:8px 10px;
+  border:1px solid var(--linea3);border-radius:10px;background:var(--sup);color:var(--tinta)}
+.com-ta:focus{outline:2px solid var(--acento);outline-offset:-1px;border-color:transparent}
+.com-resp,.com-nuevoc{display:flex;flex-direction:column;gap:8px}
+.com-acc{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:0}
+.com-acc .peq,.com-res .peq{min-height:32px;padding:0 13px;font-size:13px}
+.com-quien2{margin-left:auto;font-size:12px;color:var(--tinta4)}
+.com-res{display:flex;align-items:center;gap:10px;justify-content:space-between;font-size:13px;color:var(--ok);padding-bottom:4px}
+.com-nuevo{align-self:flex-start;min-height:34px;padding:0 13px;font-size:13px;border-radius:980px}
+.com-resueltos{margin-top:4px}
+.com-resueltos summary{cursor:pointer;font-size:13px;color:var(--tinta3);padding:6px 0}
+
+/* Menú de clic derecho */
+.com-ctx{position:fixed;z-index:85;min-width:210px;background:var(--sup);border-radius:12px;padding:5px;
+  box-shadow:0 0 0 1px var(--linea2),0 12px 36px rgba(15,23,42,.22);display:flex;flex-direction:column}
+.com-ctx button{display:flex;align-items:center;gap:9px;min-height:36px;text-align:left;border:0;background:none;
+  border-radius:8px;padding:0 11px;font-size:14px}
+.com-ctx button:hover{background:var(--sup2)}
+.com-ctx .ico{width:15px;height:15px;color:var(--tinta3)}
+.com-ctx .atajo{margin-left:auto;font-size:11.5px;color:var(--tinta4)}
+
+/* En el panel de detalle */
+.bloque .com-hilo{background:var(--sup2);border-radius:var(--r2);padding:12px 14px;border-bottom:0}
+.bloque .com-hilo .com-campo{align-self:flex-start}
+.com-sobre-l{font-size:12px;font-weight:600;color:var(--tinta3)}
+.com-campo-sel{min-height:38px;font-size:14px}
+
+/* Pestaña «A facturar» */
+.ff-com{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 11px;font-size:13px}
+.ff-com .ico{width:15px;height:15px}
+.ff-com.con{color:#8a5a00;background:#fff3d1;border-color:transparent}
+
+/* Celular: la ventanita sube desde abajo, como una hoja */
+@media(max-width:900px){
+  .com-pop{left:0 !important;right:0;top:auto !important;bottom:0;width:100%;max-width:none;max-height:78vh;
+    border-radius:20px 20px 0 0;padding-bottom:var(--safe);z-index:90}
+  .com-ta{font-size:16px}
+  .com-ctx{min-width:220px}
+}
 </style>
 </head>
 <body>
@@ -1941,7 +2022,8 @@ var SCOPE = 'https://www.googleapis.com/auth/spreadsheets ' +
             DRIVE_SCOPE;
 
 var HOJA_COMENTARIOS = 'Comentarios app';
-var ENC_COMENTARIOS = ['Fecha', 'Autor', 'Pestaña', 'Contrato', 'BL', 'Comentario', 'Sobre'];
+var ENC_COMENTARIOS = ['Fecha', 'Autor', 'Pestaña', 'Contrato', 'BL', 'Comentario', 'Sobre',
+                       'Campo', 'Hilo', 'Id', 'Tipo', 'Ref', 'Huella'];
 var LS = 'embarques:cfg';
 var MAX_COLS = 60, MAX_FILAS = 3000;
 
@@ -2033,6 +2115,17 @@ var S = {
   usuario: null,
   comentarios: new Map(),
   hojaComentarios: null,
+  comColsOk: false,       // la pestaña de comentarios ya tiene las columnas nuevas
+  eventosCom: [],         // todo lo que pasó con los comentarios, en orden (cada fila de la pestaña)
+  hilos: [],              // los hilos armados a partir de esos eventos
+  hilosPorCarga: {},      // id de carga -> hilos que le tocan
+  hilosPorFactura: {},    // fila de «A facturar» -> hilos que le tocan
+  comPop: null,           // la ventanita abierta: { tipo:'celda'|'fact', id, campo, nuevo }
+  comUI: {},              // edición / menú / confirmación dentro de los comentarios
+  comBorr: {},            // lo que se está escribiendo en cada cuadro, para no perderlo al redibujar
+  comCtx: null,           // menú de clic derecho sobre una celda
+  comEnviando: false,
+  comVerRes: false,       // los hilos resueltos se ven desplegados
   enviando: false,
   fContrato: '',
   topeContratos: 40,
@@ -5644,102 +5737,663 @@ function fechaAdvice(reg) {
 }
 
 /* --- Comentarios -----------------------------------------------------------
-   Viven en una pestaña propia de la misma planilla: una fila por comentario.
-   Así quedan auditables, se ven desde Sheets y no pisan las celdas de datos.
-   Se atan al embarque por contrato + BL + pestaña, no por número de fila, que
-   cambia cuando alguien inserta u ordena.
+   Como los de Google Sheets: cada comentario cuelga de una CELDA (o de la carga en general),
+   se puede responder, resolver, editar y borrar.
+
+   Viven en una pestaña propia de la misma planilla, así se ven desde Sheets y no pisan los
+   datos. Cada fila es algo que pasó (comentó, respondió, resolvió, editó, borró): se agregan
+   siempre al final, nunca se pisan filas, así dos personas a la vez no se rompen nada.
+
+   A qué carga pertenecen NO depende del número de fila ni de cómo esté ordenada la pantalla:
+   cada fila lleva una «huella» de la carga (contrato, BL, booking, factura, contenedores,
+   cliente, toneladas, fechas) y con ella se la vuelve a reconocer. Si después le cargan el BL,
+   le cambian el contrato o pasa a «A facturar», el comentario la sigue.
    -------------------------------------------------------------------------- */
 
-// Clave estable de un embarque para colgarle comentarios.
+// Compatibilidad: la clave vieja (pestaña + contrato + BL), de cuando no había huella.
 function claveComentario(emb) {
   return [clave(emb._tab), clave(emb.contract), clave(emb.bl || '')].join('|');
 }
 
+function idCom() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function autorCom() { return S.usuario ? (S.usuario.email || S.usuario.nombre) : 'desconocido'; }
+function esMio(autor) { return !!autor && clave(autor) === clave(autorCom()); }
+function isoDia(d) { return esFecha(d) ? d.toISOString().slice(0, 10) : ''; }
+
+// «12/10/2026 14:30» (el formato de siempre en esta pestaña) <-> milisegundos
+function textoFechaCom(ms) {
+  var d = new Date(ms), z = function (n) { return String(n).padStart(2, '0'); };
+  return z(d.getDate()) + '/' + z(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
+}
+// Entiende también lo que escribía la versión anterior («13/10/2026 03:35 p. m.»).
+function msDeTextoCom(t) {
+  var m = String(t || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?:\s*([ap])\.?\s*m)?/i);
+  if (!m) return 0;
+  var hh = +m[4];
+  if (m[6]) { var pm = m[6].toLowerCase() === 'p'; if (pm && hh < 12) hh += 12; if (!pm && hh === 12) hh = 0; }
+  return new Date(+m[3], +m[2] - 1, +m[1], hh, +m[5]).getTime();
+}
+function haceCuanto(ms) {
+  if (!ms) return '';
+  var d = Date.now() - ms, min = Math.floor(d / 60000);
+  if (min < 1) return 'ahora';
+  if (min < 60) return 'hace ' + min + ' min';
+  var f = new Date(ms), h = new Date(Date.now());
+  var hm = String(f.getHours()).padStart(2, '0') + ':' + String(f.getMinutes()).padStart(2, '0');
+  var dia = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+  var dd = Math.round((dia(h) - dia(f)) / 86400000);
+  if (dd === 0) return 'hoy ' + hm;
+  if (dd === 1) return 'ayer ' + hm;
+  return String(f.getDate()).padStart(2, '0') + '/' + String(f.getMonth() + 1).padStart(2, '0') +
+    (f.getFullYear() !== h.getFullYear() ? '/' + String(f.getFullYear()).slice(2) : '') + ' ' + hm;
+}
+
+/* --- La huella de una carga y cómo se la reconoce ------------------------- */
+
+function huellaDe(emb) {
+  return { t: emb._tab || '', c: emb.contract || '', b: emb.bl || '', k: emb.booking || '',
+           f: emb.invoice || '', i: emb.importer || '', n: String(emb.containers || '').slice(0, 60),
+           q: normNum(emb.tns), d: isoDia(emb.etd), e: isoDia(emb.eta) };
+}
+
+// Cuánto se parece una huella guardada a una carga de ahora. Lo que identifica de verdad
+// (BL, booking, factura, contenedores, contrato) pesa más que lo que se repite (cliente, toneladas).
+function puntajeHuella(a, b) {
+  var p = 0;
+  var igual = function (x, y) { x = clave(x); return !!x && x === clave(y); };
+  if (igual(a.c, b.c)) p += 3;
+  if (igual(a.b, b.b)) p += 4;
+  if (igual(a.k, b.k)) p += 4;
+  if (igual(a.f, b.f)) p += 3;
+  if (igual(a.n, b.n)) p += 3;
+  if (igual(a.i, b.i)) p += 1;
+  if (a.q !== null && a.q !== undefined && a.q === b.q) p += 1;
+  if (clave(a.t) === clave(b.t)) p += 1;
+  if (a.d && a.d === b.d) p += 1;
+  if (a.e && a.e === b.e) p += 1;
+  return p;
+}
+
+// La mejor candidata para una huella, o ninguna si no hay una que se le parezca de verdad.
+// Si hay varias idénticas entre sí, se elige por el orden en que estaban.
+function mejorCandidata(ancla, lista) {
+  var mejor = 0, segundo = 0, emp = [];
+  lista.forEach(function (x) {
+    var p = puntajeHuella(ancla, x.hu);
+    if (p > mejor) { segundo = mejor; mejor = p; emp = [x]; }
+    else if (p === mejor && p > 0) emp.push(x);
+    else if (p > segundo) segundo = p;
+  });
+  if (!emp.length) return null;
+  // Con 6 puntos o más se la reconoce. Una carga con pocos datos (sin BL, booking ni factura) puede
+  // quedarse en 4 o 5 si le cambiaron algo: se la acepta sólo si ninguna otra se le parece.
+  if (mejor < 4 || (mejor < 6 && (emp.length > 1 || mejor - segundo < 2))) return null;
+  if (emp.length === 1) return emp[0];
+  emp.sort(function (a, b) { return a.orden - b.orden; });
+  return emp[Math.min(ancla.o || 0, emp.length - 1)];
+}
+
+// Para cuando se escribe: cuál es el lugar de esta carga entre las que son iguales a ella.
+function ordinalDe(emb) {
+  var h = huellaDe(emb), tope = puntajeHuella(h, h);
+  var iguales = (S.datos.filas || []).filter(function (x) { return puntajeHuella(h, huellaDe(x)) === tope; });
+  iguales.sort(function (a, b) { return a._fila - b._fila; });
+  return Math.max(0, iguales.indexOf(emb));
+}
+
+function candidatasCargas() {
+  return ((S.datos && S.datos.filas) || []).map(function (e) {
+    return { ref: e, hu: huellaDe(e), orden: e._fila };
+  });
+}
+function candidatasFactura() {
+  var fact = (S.fuentesFact || [])[0];
+  if (!fact) return [];
+  var m = fact.mapa;
+  var g = function (f, c) { var i = m[c]; return i === undefined || f.celdas[i] == null ? '' : f.celdas[i]; };
+  return fact.filas.map(function (f) {
+    return { ref: f.fila, orden: f.fila, hu: {
+      t: fact.tab, c: String(g(f, 'contract')).trim(), b: String(g(f, 'bl')).trim(), k: String(g(f, 'booking')).trim(),
+      f: String(g(f, 'invoice')).trim(), i: String(g(f, 'importer')).trim(),
+      n: String(g(f, 'containers')).trim().slice(0, 60), q: normNum(g(f, 'tns')),
+      d: isoDia(normFecha(g(f, 'etd'))), e: isoDia(normFecha(g(f, 'eta'))) } };
+  });
+}
+
+/* --- Eventos -> hilos ------------------------------------------------------ */
+
+function eventoDeFila(f, nroFila) {
+  var g = function (i) { return f && f[i] !== undefined && f[i] !== null ? String(f[i]) : ''; };
+  var hu = null;
+  try { hu = g(12) ? JSON.parse(g(12)) : null; } catch (e) { hu = null; }
+  var tipo = clave(g(10)) || (g(5) ? 'comentario' : '');
+  if (!tipo) return null;
+  var id = g(9) || ('leg' + nroFila);
+  return {
+    fecha: g(0), autor: g(1), tab: g(2), contrato: g(3), bl: g(4), texto: g(5), sobre: g(6),
+    campo: g(7), hilo: g(8) || (tipo === 'comentario' ? id : ''), id: id, tipo: tipo, ref: g(11),
+    huella: hu, ts: (hu && hu.ts) || msDeTextoCom(g(0)), legacy: !g(9)
+  };
+}
+
+function armarHilos() {
+  var por = {}, orden = [];
+  S.eventosCom.forEach(function (ev) {
+    var h = por[ev.hilo];
+    var comDe = function () {
+      return { id: ev.id, autor: ev.autor, texto: ev.texto, ts: ev.ts, fecha: ev.fecha, editado: false, eliminado: false };
+    };
+    if (ev.tipo === 'comentario') {
+      if (h) return;
+      h = por[ev.hilo] = {
+        id: ev.hilo, campo: ev.campo || '', comentarios: [comDe()], resuelto: false, eliminado: false,
+        legacy: !!ev.legacy, sobre: ev.sobre || '', creado: ev.ts,
+        ancla: ev.huella || { t: ev.tab, c: ev.contrato, b: ev.bl },
+        claveVieja: [clave(ev.tab), clave(ev.contrato), clave(ev.bl || '')].join('|')
+      };
+      orden.push(h);
+    } else if (!h) {
+      return;
+    } else if (ev.tipo === 'respuesta') {
+      h.comentarios.push(comDe());
+    } else if (ev.tipo === 'editado') {
+      var c1 = h.comentarios.filter(function (x) { return x.id === ev.ref; })[0];
+      if (c1) { c1.texto = ev.texto; c1.editado = true; }
+    } else if (ev.tipo === 'eliminado') {
+      var c2 = h.comentarios.filter(function (x) { return x.id === ev.ref; })[0];
+      if (c2) { c2.eliminado = true; if (c2 === h.comentarios[0]) h.eliminado = true; }
+    } else if (ev.tipo === 'resuelto') {
+      h.resuelto = true; h.resueltoPor = ev.autor; h.resueltoTs = ev.ts;
+    } else if (ev.tipo === 'reabierto') {
+      h.resuelto = false;
+    }
+    // La huella más nueva manda: así el hilo acompaña los cambios de la carga.
+    if (h && ev.huella && ev.tipo !== 'comentario') { h.ancla = ev.huella; h.legacy = false; }
+  });
+  S.hilos = orden;
+  resolverHilos();
+}
+
+function resolverHilos() {
+  S.hilosPorCarga = {}; S.hilosPorFactura = {};
+  var cargas = candidatasCargas(), facts = null;
+  S.hilos.forEach(function (h) {
+    h.embs = []; h.facts = [];
+    if (h.eliminado) return;
+    var propios = [];
+    if (h.legacy) {
+      // Comentarios de antes de la huella: se atan como siempre, por pestaña + contrato + BL.
+      cargas.forEach(function (x) { if (claveComentario(x.ref) === h.claveVieja) propios.push(x.ref); });
+    }
+    if (!propios.length) {
+      var m = mejorCandidata(h.ancla, cargas);
+      if (m) propios = [m.ref];
+    }
+    if (propios.length) {
+      h.embs = propios;
+      propios.forEach(function (e) { (S.hilosPorCarga[e._id] = S.hilosPorCarga[e._id] || []).push(h); });
+      return;
+    }
+    // Ya no está entre las cargas en curso: puede haber pasado a «A facturar».
+    if (!facts) facts = candidatasFactura();
+    var mf = mejorCandidata(h.ancla, facts);
+    if (mf) {
+      h.facts = [mf.ref];
+      (S.hilosPorFactura[mf.ref] = S.hilosPorFactura[mf.ref] || []).push(h);
+    }
+  });
+}
+
+// Lo que se ve: los hilos de una carga / de una celda, los abiertos y los resueltos.
+function hilosDeCarga(emb) { return (S.hilosPorCarga[emb._id] || []).slice(); }
+function hilosDeCelda(emb, campo) {
+  return hilosDeCarga(emb).filter(function (h) { return h.campo === (campo || ''); });
+}
+function comentariosVisibles(h) { return h.comentarios.filter(function (c) { return !c.eliminado; }); }
+// Cuántos comentarios hay pendientes de ver en una carga (los de hilos sin resolver).
+function nComentariosAbiertos(emb) {
+  return hilosDeCarga(emb).filter(function (h) { return !h.resuelto; })
+    .reduce(function (a, h) { return a + comentariosVisibles(h).length; }, 0);
+}
+function comentariosDe(emb) {
+  var out = [];
+  hilosDeCarga(emb).filter(function (h) { return !h.resuelto; }).forEach(function (h) {
+    comentariosVisibles(h).forEach(function (c) { out.push(c); });
+  });
+  return out.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+}
+
+/* --- Leer y escribir la pestaña ------------------------------------------- */
+
 async function cargarComentarios() {
-  S.comentarios = new Map();
+  var antes = S.eventosCom.length;
+  S.hojaComentarios = null; S.comColsOk = false;
+  var evs = [];
   try {
     var meta = await api(BASE + S.cfg.sheetId +
       '?fields=' + encodeURIComponent('sheets(properties(sheetId,title))'));
     var hoja = (meta.sheets || []).filter(function (h) {
       return clave(h.properties.title) === clave(HOJA_COMENTARIOS);
     })[0];
-    if (!hoja) { S.hojaComentarios = null; return; }
+    if (!hoja) { S.eventosCom = []; armarHilos(); return antes !== 0; }
     S.hojaComentarios = hoja.properties.title;
 
     var r = await api(BASE + S.cfg.sheetId + '/values/' +
-      encodeURIComponent("'" + S.hojaComentarios + "'!A2:G5000"));
-    (r.values || []).forEach(function (f) {
-      if (!f || !f[5]) return;
-      var k = [clave(f[2]), clave(f[3]), clave(f[4] || '')].join('|');
-      var lista = S.comentarios.get(k) || [];
-      lista.push({ fecha: f[0], autor: f[1], texto: f[5], sobre: f[6] || '' });
-      S.comentarios.set(k, lista);
+      encodeURIComponent("'" + S.hojaComentarios + "'!A1:M20000"));
+    var filas = r.values || [];
+    var enc = filas[0] || [];
+    S.comColsOk = enc.length >= ENC_COMENTARIOS.length && clave(enc[7]) === 'campo';
+    filas.slice(1).forEach(function (f, i) {
+      var ev = eventoDeFila(f, i + 2);
+      if (ev) evs.push(ev);
     });
   } catch (e) {
-    // Sin comentarios no se cae la app.
-    S.hojaComentarios = null;
+    // Sin comentarios no se cae la app: se queda con lo que ya tenía.
+    return false;
   }
+  var cambio = evs.length !== antes;
+  S.eventosCom = evs;
+  armarHilos();
+  return cambio;
 }
 
 async function crearHojaComentarios() {
-  await api(BASE + S.cfg.sheetId + ':batchUpdate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      requests: [{ addSheet: { properties: { title: HOJA_COMENTARIOS } } }]
-    })
-  });
+  try {
+    await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: HOJA_COMENTARIOS } } }] })
+    });
+  } catch (e) {
+    // Otra persona la creó justo antes: se sigue con la que ya existe.
+    if (!/already exists|ya existe/i.test(e.message || '')) throw e;
+  }
   await api(BASE + S.cfg.sheetId + '/values/' +
-    encodeURIComponent("'" + HOJA_COMENTARIOS + "'!A1") +
-    ':append?valueInputOption=USER_ENTERED', {
+    encodeURIComponent("'" + HOJA_COMENTARIOS + "'!A1") + ':append?valueInputOption=USER_ENTERED', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ values: [ENC_COMENTARIOS] })
   });
-  S.hojaComentarios = HOJA_COMENTARIOS;
+  S.hojaComentarios = HOJA_COMENTARIOS; S.comColsOk = true;
 }
 
-async function comentar(id, texto) {
-  texto = String(texto || '').trim();
-  if (!texto) return;
-  var emb = filaPorId(id);
-  if (!emb) return;
+// La pestaña de antes tenía 7 columnas: se le agregan los encabezados nuevos, sin tocar lo que ya hay.
+async function completarEncabezadosComentarios() {
+  await api(BASE + S.cfg.sheetId + '/values/' +
+    encodeURIComponent("'" + S.hojaComentarios + "'!H1:M1") + '?valueInputOption=RAW', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [ENC_COMENTARIOS.slice(7)] })
+  });
+  S.comColsOk = true;
+}
 
-  S.enviando = true; pintar();
+// Agrega UNA fila a la pestaña (y la muestra enseguida, sin esperar la vuelta de Google).
+// o = { tipo, hilo, campo, texto, ref, emb|fila (de qué carga), ancla }
+async function publicarEvento(o) {
+  var ts = Date.now(), id = idCom();
+  var hu = o.emb ? huellaDe(o.emb) : (o.ancla || {});
+  hu = Object.assign({}, hu, { ts: ts });
+  if (o.emb) hu.o = ordinalDe(o.emb);
+  var ev = {
+    fecha: textoFechaCom(ts), autor: autorCom(), tab: hu.t || '', contrato: hu.c || '', bl: hu.b || '',
+    texto: o.texto || '', sobre: '', campo: o.campo || '', hilo: o.hilo || id, id: id, tipo: o.tipo,
+    ref: o.ref || '', huella: hu, ts: ts, legacy: false
+  };
+  S.eventosCom.push(ev); armarHilos();
   try {
     if (!S.hojaComentarios) await crearHojaComentarios();
-
-    var ahora = new Date();
-    var fecha = ahora.toLocaleDateString('es-AR') + ' ' +
-                ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-    var autor = S.usuario ? (S.usuario.email || S.usuario.nombre) : 'desconocido';
-    var ev = S.ultimaEval && S.ultimaEval[id];
-    var sobre = ev && ev.alertas.length ? ev.alertas[0].titulo : '';
-
-    var fila = [fecha, autor, emb._tab, emb.contract || '', emb.bl || '', texto, sobre];
-
+    else if (!S.comColsOk) await completarEncabezadosComentarios();
     await api(BASE + S.cfg.sheetId + '/values/' +
       encodeURIComponent("'" + S.hojaComentarios + "'!A1") +
       ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: [fila] })
+      body: JSON.stringify({ values: [[ev.fecha, ev.autor, ev.tab, ev.contrato, ev.bl, ev.texto, ev.sobre,
+        ev.campo, ev.hilo, ev.id, ev.tipo, ev.ref, JSON.stringify(hu)]] })
     });
-
-    var k = claveComentario(emb);
-    var lista = S.comentarios.get(k) || [];
-    lista.push({ fecha: fecha, autor: autor, texto: texto, sobre: sobre });
-    S.comentarios.set(k, lista);
-    S.borrador = '';
+    return ev;
   } catch (e) {
+    // No se pudo guardar: se saca lo que se había mostrado y se avisa.
+    S.eventosCom = S.eventosCom.filter(function (x) { return x !== ev; });
+    armarHilos();
     S.error = 'No se pudo guardar el comentario: ' + e.message;
-  } finally {
-    S.enviando = false; pintar();
+    return null;
   }
 }
 
-function comentariosDe(emb) {
-  return S.comentarios.get(claveComentario(emb)) || [];
+function hiloPorId(id) { return S.hilos.filter(function (h) { return h.id === id; })[0] || null; }
+// De qué carga cuelga el hilo, para llevar su huella al escribir.
+function destinoDeHilo(h) {
+  if (h.embs && h.embs[0]) return { emb: h.embs[0] };
+  return { ancla: h.ancla };
+}
+
+async function comNuevoHilo(destino, campo, texto) {
+  texto = String(texto || '').trim();
+  if (!texto) return null;
+  S.comEnviando = true; pintar();
+  var ev = await publicarEvento({ tipo: 'comentario', campo: campo || '', texto: texto,
+    emb: destino.emb, ancla: destino.ancla });
+  S.comEnviando = false; pintar();
+  return ev;
+}
+async function comResponder(hiloId, texto) {
+  texto = String(texto || '').trim();
+  var h = hiloPorId(hiloId); if (!h || !texto) return null;
+  S.comEnviando = true; pintar();
+  var d = destinoDeHilo(h);
+  var ev = await publicarEvento({ tipo: 'respuesta', hilo: hiloId, texto: texto, campo: h.campo, emb: d.emb, ancla: d.ancla });
+  S.comEnviando = false; pintar();
+  return ev;
+}
+async function comResolver(hiloId, reabrir) {
+  var h = hiloPorId(hiloId); if (!h) return null;
+  var d = destinoDeHilo(h);
+  if (!reabrir) S.comVerRes = true;
+  var ev = await publicarEvento({ tipo: reabrir ? 'reabierto' : 'resuelto', hilo: hiloId, campo: h.campo,
+    texto: reabrir ? 'Reabrió el hilo' : 'Resolvió el hilo', emb: d.emb, ancla: d.ancla });
+  pintar();
+  return ev;
+}
+async function comEditar(hiloId, comId, texto) {
+  texto = String(texto || '').trim();
+  var h = hiloPorId(hiloId); if (!h || !texto) return null;
+  var d = destinoDeHilo(h);
+  var ev = await publicarEvento({ tipo: 'editado', hilo: hiloId, ref: comId, texto: texto, campo: h.campo, emb: d.emb, ancla: d.ancla });
+  pintar();
+  return ev;
+}
+async function comBorrar(hiloId, comId) {
+  var h = hiloPorId(hiloId); if (!h) return null;
+  var d = destinoDeHilo(h);
+  var ev = await publicarEvento({ tipo: 'eliminado', hilo: hiloId, ref: comId, campo: h.campo, emb: d.emb, ancla: d.ancla });
+  pintar();
+  return ev;
+}
+
+// Lo de siempre: un comentario general sobre la carga, desde el panel.
+async function comentar(id, texto, campo) {
+  var emb = filaPorId(id);
+  if (!emb) return;
+  var ev = await comNuevoHilo({ emb: emb }, campo || '', texto);
+  if (ev) delete S.comBorr['d-nuevo-' + id];
+  return ev;
+}
+
+// Cada tanto se vuelve a mirar la pestaña: lo que escribió otra persona aparece solo.
+var _sondeoCom = null;
+function iniciarSondeoComentarios() {
+  if (_sondeoCom) return;
+  _sondeoCom = setInterval(async function () {
+    if (document.visibilityState !== 'visible' || S.pantalla !== 'app' || !S.token || S.comEnviando || S.cargando) return;
+    if (S.editCel) return;
+    var cambio = await cargarComentarios();
+    if (cambio) pintar();
+  }, S.comSondeoMs || 45000);
+}
+
+/* --- Comentarios: lo que se ve ------------------------------------------- */
+
+function etiquetaCampoCom(campo) {
+  if (!campo) return 'General';
+  return CAMPOS[campo] ? CAMPOS[campo].label : campo;
+}
+function colorAvatar(nombre) {
+  var h = 0, t = String(nombre || '');
+  for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 360;
+  return 'hsl(' + h + ',52%,44%)';
+}
+function htmlAvatar(autor) {
+  var n = nombreCortoAutor(autor);
+  return '<span class="com-av" style="background:' + colorAvatar(n) + '" aria-hidden="true">' +
+    esc((n.charAt(0) || '?').toUpperCase()) + '</span>';
+}
+function idTxtCom(ctx, key) { return 'ct-' + ctx + '-' + String(key).replace(/[^a-zA-Z0-9]/g, '_'); }
+
+// Un cuadro de texto de comentarios: el borrador queda en S.comBorr para no perderlo al redibujar.
+function htmlTxtCom(ctx, key, kind, extra, ph, rows) {
+  return '<textarea id="' + idTxtCom(ctx, key) + '" class="com-ta" data-comtxt="' + esc(key) + '" data-comkind="' + kind + '" ' +
+    (extra || '') + ' rows="' + (rows || 2) + '" placeholder="' + esc(ph) + '">' + esc(S.comBorr[key] || '') + '</textarea>';
+}
+
+function htmlComentario(h, c, ctx) {
+  var ui = S.comUI || {}, propio = esMio(c.autor);
+  var editando = ui.editando === c.id, menu = ui.menu === c.id, conf = ui.borrar === c.id;
+  var acc = '';
+  if (propio && !editando) {
+    acc = '<span class="com-mas-wrap"><button class="com-mas" data-act="commenu" data-c="' + esc(c.id) + '" ' +
+      'aria-label="Más acciones" aria-expanded="' + menu + '">⋮</button>' +
+      (menu ? '<div class="com-menu" role="menu">' +
+        '<button role="menuitem" data-act="comeditar" data-h="' + esc(h.id) + '" data-c="' + esc(c.id) + '">Editar</button>' +
+        '<button role="menuitem" class="peligro" data-act="comborrar" data-h="' + esc(h.id) + '" data-c="' + esc(c.id) + '">' +
+          (conf ? '¿Seguro? Eliminar' : 'Eliminar') + '</button></div>' : '') + '</span>';
+  }
+  var key = 'e|' + c.id;
+  if (S.comBorr[key] === undefined) S.comBorr[key] = c.texto;
+  var cuerpo = editando
+    ? htmlTxtCom(ctx, key, 'edit', 'data-h="' + esc(h.id) + '" data-c="' + esc(c.id) + '"', 'Editá tu comentario') +
+      '<div class="com-acc"><button class="primario peq" data-act="comguardaredit" data-h="' + esc(h.id) + '" data-c="' + esc(c.id) + '">Guardar</button>' +
+      '<button class="peq" data-act="comcancelaredit">Cancelar</button></div>'
+    : '<p class="com-txt">' + esc(c.texto) + '</p>';
+  if (!editando) delete S.comBorr[key];
+  return '<div class="com-c" data-comid="' + esc(c.id) + '">' + htmlAvatar(c.autor) +
+    '<div class="com-cu"><div class="com-meta"><b class="com-autor">' + esc(nombreCortoAutor(c.autor)) + '</b>' +
+    '<span class="com-t" title="' + esc(c.fecha || '') + '">' + esc(haceCuanto(c.ts)) + (c.editado ? ' · editado' : '') + '</span>' + acc + '</div>' +
+    cuerpo + '</div></div>';
+}
+
+function htmlHilo(h, ctx, conEtiqueta) {
+  var cs = comentariosVisibles(h);
+  if (!cs.length) return '';
+  var pie;
+  if (h.resuelto) {
+    pie = '<div class="com-res"><span>✓ Resuelto' + (h.resueltoPor ? ' por <b>' + esc(nombreCortoAutor(h.resueltoPor)) + '</b>' : '') + '</span>' +
+      '<button class="peq" data-act="comreabrir" data-h="' + esc(h.id) + '">Reabrir</button></div>';
+  } else {
+    var key = 'r|' + h.id;
+    pie = '<div class="com-resp">' + htmlTxtCom(ctx, key, 'resp', 'data-h="' + esc(h.id) + '"', 'Responder…', 1) +
+      '<div class="com-acc"><button class="primario peq" data-act="comresp" data-h="' + esc(h.id) + '"' +
+        (S.comEnviando ? ' disabled' : '') + '>Responder</button>' +
+      '<button class="peq" data-act="comresolver" data-h="' + esc(h.id) + '">Resolver</button></div></div>';
+  }
+  return '<section class="com-hilo' + (h.resuelto ? ' resuelto' : '') + '" data-h="' + esc(h.id) + '">' +
+    ((ctx === 'd' || conEtiqueta) && h.campo ? '<span class="com-campo">' + esc(etiquetaCampoCom(h.campo)) + '</span>' : '') +
+    cs.map(function (c) { return htmlComentario(h, c, ctx); }).join('') + pie + '</section>';
+}
+
+// A qué apunta la ventanita abierta: sus hilos y cómo se llama.
+function destinoDePop(P) {
+  if (P.tipo === 'fact') {
+    var fact = (S.fuentesFact || [])[0], f = fact && fact.filas.filter(function (x) { return x.fila === P.id; })[0];
+    if (!f) return null;
+    var g = function (c) { var i = fact.mapa[c]; return i === undefined || f.celdas[i] == null ? '' : String(f.celdas[i]); };
+    return { hilos: (S.hilosPorFactura[P.id] || []).slice(), todos: true,
+             linea: [g('importer'), g('contract')].filter(Boolean).join(' · '), destino: { ancla: huellaDeFilaFact(P.id) } };
+  }
+  var emb = filaPorId(P.id);
+  if (!emb) return null;
+  return { hilos: hilosDeCelda(emb, P.campo),
+           linea: [emb.importer, emb.contract].filter(Boolean).join(' · '), destino: { emb: emb } };
+}
+function huellaDeFilaFact(fila) {
+  var c = candidatasFactura().filter(function (x) { return x.ref === fila; })[0];
+  return c ? c.hu : {};
+}
+
+function comPopHtml() {
+  var P = S.comPop;
+  if (!P) return '';
+  var d = destinoDePop(P);
+  if (!d) return '';
+  var vivos = d.hilos.filter(function (h) { return comentariosVisibles(h).length; });
+  var ab = vivos.filter(function (h) { return !h.resuelto; }), rs = vivos.filter(function (h) { return h.resuelto; });
+  var chip = P.tipo === 'fact' ? 'Comentarios' : etiquetaCampoCom(P.campo);
+  var key = 'n|' + P.tipo + '|' + P.id + '|' + P.campo;
+  var nuevo = P.nuevo || !vivos.length;
+  var compo = nuevo
+    ? '<div class="com-nuevoc">' + htmlTxtCom('p', key, 'nuevo', 'data-tipo="' + P.tipo + '" data-id="' + esc(P.id) + '" data-campo="' + esc(P.campo) + '"',
+        ab.length ? 'Otro comentario…' : 'Escribí un comentario…', 2) +
+      '<div class="com-acc"><button class="primario peq" data-act="comenviar" data-tipo="' + P.tipo + '" data-id="' + esc(P.id) + '" data-campo="' + esc(P.campo) + '"' +
+        (S.comEnviando ? ' disabled' : '') + '>Comentar</button>' +
+      '<button class="peq" data-act="comcerrar">Cancelar</button>' +
+      '<span class="com-quien2">como <b>' + esc(S.usuario ? nombreCortoAutor(S.usuario.email) : 'sin identificar') + '</b></span></div></div>'
+    : '<button class="com-nuevo" data-act="comnuevo">+ Comentario nuevo</button>';
+  return '<div class="com-pop" role="dialog" aria-label="Comentarios: ' + esc(chip) + '" style="visibility:hidden">' +
+    '<div class="com-top"><span class="com-campo">' + esc(chip) + '</span>' +
+      '<span class="com-linea" title="' + esc(d.linea) + '">' + esc(d.linea) + '</span>' +
+      '<button class="com-x" data-act="comcerrar" aria-label="Cerrar">×</button></div>' +
+    '<div class="com-cuerpo">' +
+      ab.map(function (h) { return htmlHilo(h, 'p', d.todos); }).join('') +
+      compo +
+      (rs.length ? '<details class="com-resueltos"' + (S.comVerRes ? ' open' : '') + '><summary>Resueltos (' + rs.length + ')</summary>' +
+        rs.map(function (h) { return htmlHilo(h, 'p', d.todos); }).join('') + '</details>' : '') +
+    '</div></div>';
+}
+
+function comCtxHtml() {
+  var C = S.comCtx;
+  if (!C) return '';
+  var emb = filaPorId(C.id);
+  if (!emb) return '';
+  var n = hilosDeCelda(emb, C.campo).length;
+  return '<div class="com-ctx" role="menu" style="left:' + C.x + 'px;top:' + C.y + 'px;visibility:hidden">' +
+    '<button role="menuitem" data-act="comctx-nuevo">' + ico('chat') + 'Comentar<span class="atajo">Ctrl+Alt+M</span></button>' +
+    (n ? '<button role="menuitem" data-act="comctx-ver">Ver comentarios (' + n + ')</button>' : '') +
+    (C.campo ? '<button role="menuitem" data-act="comctx-copiar">Copiar</button>' : '') + '</div>';
+}
+
+// Los comentarios de una carga, en su panel de detalle: todos los hilos, cada uno con su celda.
+function bloqueComentarios(emb) {
+  var hs = hilosDeCarga(emb).filter(function (h) { return comentariosVisibles(h).length; });
+  var ab = hs.filter(function (h) { return !h.resuelto; }), rs = hs.filter(function (h) { return h.resuelto; });
+  var n = ab.reduce(function (a, h) { return a + comentariosVisibles(h).length; }, 0);
+  var src = fuenteDe(emb);
+  var campos = poolColumnas('planilla').filter(function (c) {
+    return CAMPOS[c] && src.mapa[c] !== undefined && !src.noAplica[c] && c !== 'total';
+  });
+  var key = 'd|' + emb._id, campoKey = 'dc|' + emb._id;
+  var h = '<div class="bloque"><h3 class="gt">Comentarios' + (n ? ' <span>' + n + '</span>' : '') + '</h3>';
+  h += ab.length ? '<div class="hilo">' + ab.map(function (x) { return htmlHilo(x, 'd'); }).join('') + '</div>'
+                 : '<p class="ayuda" style="margin:0 0 10px">Todavía no hay comentarios.</p>';
+  h += '<div class="com-nuevoc">' +
+    '<label class="com-sobre-l" for="com-campo-' + esc(emb._id) + '">Sobre</label>' +
+    '<select id="com-campo-' + esc(emb._id) + '" class="com-campo-sel" data-comcampo="' + esc(emb._id) + '">' +
+      '<option value="">General (toda la carga)</option>' +
+      campos.map(function (c) {
+        return '<option value="' + c + '"' + (S.comBorr[campoKey] === c ? ' selected' : '') + '>' + esc(CAMPOS[c].label) + '</option>';
+      }).join('') + '</select>' +
+    htmlTxtCom('d', key, 'dnuevo', 'data-id="' + esc(emb._id) + '"', 'Escribí un comentario para el equipo…', 2) +
+    '<div class="com-acc"><button class="primario" data-act="comentar" data-f="' + esc(emb._id) + '"' +
+      (S.comEnviando ? ' disabled' : '') + '>' + (S.comEnviando ? 'Guardando…' : ico('send') + 'Comentar') + '</button>' +
+      '<span class="ayuda">' + (S.usuario ? 'Como ' + esc(nombreCortoAutor(S.usuario.email)) : 'Sin identificar') + '</span></div></div>';
+  if (rs.length) {
+    h += '<details class="com-resueltos"' + (S.comVerRes ? ' open' : '') + '><summary>Resueltos (' + rs.length + ')</summary>' +
+      rs.map(function (x) { return htmlHilo(x, 'd'); }).join('') + '</details>';
+  }
+  return h + '</div>';
+}
+
+/* --- Comentarios: abrir, cerrar, enviar ------------------------------------ */
+
+function abrirComentarios(tipo, id, campo, nuevo) {
+  S.comPop = { tipo: tipo, id: id, campo: campo || '', nuevo: !!nuevo };
+  S.comUI = {}; S.comCtx = null;
+  var d = destinoDePop(S.comPop);
+  var vivos = d ? d.hilos.filter(function (h) { return comentariosVisibles(h).length; }) : [];
+  if (nuevo || !vivos.length) S.comFoco = idTxtCom('p', 'n|' + tipo + '|' + id + '|' + (campo || ''));
+  pintar();
+}
+function cerrarComentarios() {
+  if (!S.comPop && !S.comCtx) return;
+  S.comPop = null; S.comCtx = null; S.comUI = {}; S.comVerRes = false;
+  pintar();
+}
+
+// Un cuadro de texto -> su acción. Sirve para el botón y para Enter.
+async function enviarCom(el) {
+  var kind = el.getAttribute('data-comkind') || el.getAttribute('data-act');
+  var ta = null;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-comtxt]'), function (x) {
+    if (x === el) ta = x;
+  });
+  if (!ta) {
+    // Se llegó desde un botón: el cuadro de texto es el que está en su misma caja.
+    var caja = el.closest('.com-resp, .com-nuevoc, .com-c');
+    ta = caja && caja.querySelector('[data-comtxt]');
+  }
+  if (!ta) return;
+  var key = ta.getAttribute('data-comtxt'), texto = ta.value;
+  if (!String(texto).trim()) return;
+  var ok = null;
+  if (/^(resp|comresp)$/.test(kind)) ok = await comResponder(ta.getAttribute('data-h'), texto);
+  else if (/^(edit|comguardaredit)$/.test(kind)) { ok = await comEditar(ta.getAttribute('data-h'), ta.getAttribute('data-c'), texto); if (ok) S.comUI = {}; }
+  else if (kind === 'dnuevo' || kind === 'comentar') {
+    var idc = ta.getAttribute('data-id');
+    var sel = document.querySelector('[data-comcampo="' + idc.replace(/"/g, '\\"') + '"]');
+    var campoD = sel ? sel.value : '';
+    ok = await comentar(idc, texto, campoD);
+    if (ok) { delete S.comBorr['dc|' + idc]; }
+  } else if (/^(nuevo|comenviar)$/.test(kind)) {
+    var tipo = ta.getAttribute('data-tipo'), id = ta.getAttribute('data-id'), campo = ta.getAttribute('data-campo') || '';
+    var d = destinoDePop({ tipo: tipo, id: tipo === 'fact' ? parseInt(id, 10) : id, campo: campo });
+    ok = d ? await comNuevoHilo(d.destino, campo, texto) : null;
+    if (ok && S.comPop) S.comPop.nuevo = false;
+  }
+  if (ok) { delete S.comBorr[key]; pintar(); }
+}
+
+/* Dónde se dibuja la ventanita: pegada a su celda, sin salirse de la pantalla. En el celular
+   es una hoja que sube desde abajo (por CSS). */
+function anclaDePop(P) {
+  if (P.tipo === 'fact') return document.querySelector('[data-comfact="' + P.id + '"]');
+  var trs = document.querySelectorAll('.tbl-hoja tbody tr');
+  for (var i = 0; i < trs.length; i++) {
+    if (trs[i].getAttribute('data-f') === P.id) {
+      return (P.campo ? trs[i].querySelector('td[data-c="' + P.campo + '"]') : null) || trs[i].querySelector('td.nrofila');
+    }
+  }
+  return null;
+}
+function acomodarFlotantes() {
+  var ancho = window.innerWidth, alto = window.innerHeight, m = 10;
+  var pop = document.querySelector('.com-pop');
+  if (pop && S.comPop) {
+    if (ancho <= 900) { pop.style.left = ''; pop.style.top = ''; }
+    else {
+      var anc = anclaDePop(S.comPop), r = anc ? anc.getBoundingClientRect() : null;
+      var w = pop.offsetWidth, h = pop.offsetHeight, x, y;
+      if (r) {
+        x = r.right + 8; if (x + w > ancho - m) x = r.left - w - 8;
+        if (x < m) x = Math.max(m, Math.min(ancho - w - m, r.left));
+        y = r.top - 6; if (y + h > alto - m) y = alto - h - m;
+      } else { x = (ancho - w) / 2; y = alto / 4; }
+      pop.style.left = Math.round(x) + 'px'; pop.style.top = Math.round(Math.max(m, y)) + 'px';
+    }
+    pop.style.visibility = 'visible';
+  }
+  var ctx = document.querySelector('.com-ctx');
+  if (ctx && S.comCtx) {
+    var cw = ctx.offsetWidth, ch = ctx.offsetHeight;
+    ctx.style.left = Math.max(m, Math.min(S.comCtx.x, ancho - cw - m)) + 'px';
+    ctx.style.top = Math.max(m, Math.min(S.comCtx.y, alto - ch - m)) + 'px';
+    ctx.style.visibility = 'visible';
+  }
+  if (S.comFoco) {
+    var t = document.getElementById(S.comFoco);
+    if (t) { t.focus(); try { t.setSelectionRange(t.value.length, t.value.length); } catch (e) {} }
+    S.comFoco = null;
+  }
+}
+
+// El botón «Comentar» de la barra sigue a la celda marcada.
+function actualizarBotonCom() {
+  var b = document.querySelector('.btn-com');
+  if (!b) return;
+  var emb = S.celdaAct && filaPorId(S.celdaAct.id);
+  b.disabled = !emb;
+  var n = emb ? hilosDeCelda(emb, S.celdaAct.c === '_etapa' ? '' : S.celdaAct.c).filter(function (h) { return !h.resuelto; }).length : 0;
+  b.innerHTML = ico('chat') + (n ? 'Comentarios (' + n + ')' : 'Comentar');
 }
 
 /* --- Carga de datos -------------------------------------------------------- */
@@ -6083,6 +6737,7 @@ async function cargarTodo() {
     await cargarPaisesEmpresas();
     await cargarEmpresas();
     await cargarComentarios();
+    iniciarSondeoComentarios();
     await cargarAdvices();
 
     S.avisos = avisos;
@@ -6383,6 +7038,7 @@ var ICONOS = {
   doc:    'M4 1.5h5L12.5 5v9.5h-9zM9 1.5V5h3.5M6 8h4M6 11h4',
   embudo: 'M2 3h12l-4.6 5.4V13l-2.8-1.4V8.4z',
   agrandar: 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4',
+  chat:     'M2.5 3h11v7.5h-6.2L4.5 13v-2.5H2.5zM5 6h6M5 8h3.5',
   achicar:  'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4',
   candado:  'M4.5 7V5a3.5 3.5 0 0 1 7 0v2M3.5 7h9v7h-9z',
   enlace:   'M6.6 9.4l2.8-2.8M5.2 7.8L3.9 9.1a2.2 2.2 0 0 0 3.1 3.1L8.3 11M10.8 8.2l1.3-1.3A2.2 2.2 0 0 0 9 3.8L7.7 5.1',
@@ -6776,7 +7432,7 @@ function vistaApp() {
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     ((S.modo === 'planilla' || S.modo === 'tabla') && S.vista === 'carga' ? menuColumna() : '') +
-    modalCambio() + modalMoverCtr() + modalRevision() + pendFlotaHtml();
+    modalCambio() + modalMoverCtr() + modalRevision() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -7297,6 +7953,13 @@ function vistaFacturadas() {
             (o.invoice ? '<span class="ref"><em>Factura</em><b>' + esc(o.invoice) + '</b></span>' : '') +
             (esFecha(o.etd) ? '<span class="ref"><em>ETD</em><b>' + fmtFecha(o.etd) + '</b></span>' : '') +
           '</div>' +
+          (function () {
+            var hsF = (S.hilosPorFactura[o.fila] || []).filter(function (h) { return comentariosVisibles(h).length; });
+            var nF = hsF.filter(function (h) { return !h.resuelto; })
+              .reduce(function (a, h) { return a + comentariosVisibles(h).length; }, 0);
+            return '<button class="ff-com' + (nF ? ' con' : '') + '" data-act="comfact" data-r="' + o.fila + '" data-comfact="' + o.fila + '" ' +
+              'title="Comentarios de esta carga">' + ico('chat') + (nF || '') + '</button>';
+          })() +
           (abierta ? '' :
             '<button data-act="devolver" data-r="' + o.fila + '">' + ico('volver') +
             'Devolver</button>') +
@@ -7987,7 +8650,7 @@ function filaEmbarque(x, opts) {
             ico('mail') + 'Advice enviado' + (f ? ' · ' + f : '') + '</span>';
         })() +
         (function () {
-          var n = comentariosDe(emb).length;
+          var n = nComentariosAbiertos(emb);
           return n ? '<span class="pill coment"><span class="pt"></span>' + n +
             (n === 1 ? ' comentario' : ' comentarios') + '</span>' : '';
         })() +
@@ -8629,6 +9292,11 @@ function detalleCargas(cargas) {
         '<span class="cd-prod">' + esc(e.product || '') +
           (e.tns ? ' · ' + fmtNum(normNum(e.tns)) + ' tn' : '') + '</span>' +
         '<span class="cd-estado"><span class="cd-etapa">' + esc(etiquetaEtapa(ev.etapa)) + '</span>' +
+        (function () {
+          var nc = nComentariosAbiertos(e);
+          return nc ? '<span class="pill coment" title="Comentarios sin resolver"><span class="pt"></span>' + nc +
+            (nc === 1 ? ' comentario' : ' comentarios') + '</span>' : '';
+        })() +
         (ev.nivelMax
           ? '<span class="pill ' + (ev.nivelMax === 'critico' ? 'pend' : 'nar') +
             '"><span class="pt"></span>' + ev.alertas.length +
@@ -9817,6 +10485,8 @@ function vistaPlanilla(filas) {
       (S.planillaFull ? 'Salir de pantalla completa' : 'Pantalla completa') + '</button>' +
     (Object.keys(S.fCol).some(function (k) { return filtroColActivo(S.fCol[k]); }) || S.ordenCol
       ? '<button data-act="limpiarcol">Quitar filtros de columna</button>' : '') +
+    '<button class="btn-com" data-act="comcelda" title="Comentar la celda marcada (Ctrl+Alt+M). También con clic derecho sobre la celda."' +
+      ((S.celdaAct && filaPorId(S.celdaAct.id)) ? '' : ' disabled') + '>' + ico('chat') + 'Comentar</button>' +
     '<span class="ayuda" style="margin-left:auto">' + filas.length + ' filas</span>' +
     barraPendHtml() +
     menuConfigHtml(true) +
@@ -10113,7 +10783,7 @@ function filasHtmlPlanilla(filas, cols) {
     if (noCombina) clases.push('incompat');
     return '<tr' + (clases.length ? ' class="' + clases.join(' ') + '"' : '') +
       ' data-f="' + esc(emb._id) + '">' +
-      '<td class="nrofila" title="' + esc(emb._tab) +
+      '<td class="nrofila' + (hilosDeCelda(emb, '').some(function (h) { return comentariosVisibles(h).length; }) ? ' tiene-com' : '') + '" title="' + esc(emb._tab) +
         (adviceDe(emb) ? ' · advice enviado' : '') + '"><span class="nro">' + emb._fila + '</span>' +
         '<button class="fila-abrir" data-act="abrir" data-f="' + esc(emb._id) + '" ' +
           'title="Abrir el detalle de esta carga" aria-label="Abrir el detalle de la fila ' + emb._fila + '">' +
@@ -10509,7 +11179,16 @@ function celdaPlanilla(emb, src, c) {
   var td = celdaPlanillaBase(emb, src, c).replace(/^<td/, '<td data-c="' + c + '"');
   var pend = pendDe(emb._id, c) ||
     (c === 'total' && (pendDe(emb._id, 'tns') || pendDe(emb._id, 'price')));
-  return pend ? conClaseTd(td, 'pend-cel') : td;
+  if (pend) td = conClaseTd(td, 'pend-cel');
+  // Comentarios: la marca va según la CARGA y la columna, no según la posición en pantalla,
+  // así que si se reordena o se filtra la planilla, la marca viaja con su fila.
+  var hs = hilosDeCelda(emb, c).filter(function (h) { return comentariosVisibles(h).length; });
+  if (hs.length) {
+    var abiertos = hs.filter(function (h) { return !h.resuelto; }).length;
+    td = conClaseTd(td, abiertos ? 'tiene-com' : 'tiene-com com-resueltos')
+      .replace(/^<td/, '<td data-ncom="' + hs.length + '"');
+  }
+  return td;
 }
 
 function celdaPlanillaBase(emb, src, c) {
@@ -10763,34 +11442,8 @@ function vistaPanel(x) {
 
   h += bloqueAdvice(emb, ev);
 
-  // Comentarios: lo que el equipo se dice sobre este embarque.
-  var cs = comentariosDe(emb);
-  h += '<div class="bloque"><h3 class="gt">Comentarios' +
-    (cs.length ? ' <span>' + cs.length + '</span>' : '') + '</h3>';
-
-  if (cs.length) {
-    h += '<div class="hilo">' + cs.map(function (c) {
-      return '<div class="com">' +
-        '<div class="com-cab"><span class="com-autor">' + esc(nombreCortoAutor(c.autor)) + '</span>' +
-        '<span class="com-fecha">' + esc(c.fecha) + '</span></div>' +
-        '<p class="com-txt">' + esc(c.texto) + '</p>' +
-        (c.sobre ? '<p class="com-sobre">sobre: ' + esc(c.sobre) + '</p>' : '') +
-        '</div>';
-    }).join('') + '</div>';
-  } else {
-    h += '<p class="ayuda" style="margin:0 0 10px">Todavía no hay comentarios.</p>';
-  }
-
-  h += '<textarea id="nuevo-com" data-com="' + esc(emb._id) + '" rows="2" ' +
-    'placeholder="Escribí un comentario para el equipo…">' + esc(S.borrador || '') + '</textarea>' +
-    '<div class="com-acc">' +
-      '<button class="primario" data-act="comentar" data-f="' + esc(emb._id) + '"' +
-        (S.enviando ? ' disabled' : '') + '>' +
-        (S.enviando ? 'Guardando…' : ico('send') + 'Comentar') + '</button>' +
-      '<span class="ayuda">' +
-        (S.usuario ? 'Como ' + esc(nombreCortoAutor(S.usuario.email)) : 'Sin identificar') +
-      '</span>' +
-    '</div></div>';
+  // Comentarios: lo que el equipo se dice sobre este embarque, por celda.
+  h += bloqueComentarios(emb);
 
   // Fechas: input nativo, que además valida solo y evita el 28/09 sin año.
   var fechas = ['etd', 'eta', 'pagoEstimado'].filter(function (c) {
@@ -11028,6 +11681,7 @@ function pintar() {
   medirFijas();
   aplicarCeldaActiva();
   acomodarMenuCfg();
+  actualizarBotonCom();
   // El cartel de confirmación toma el foco: Enter confirma, Esc cancela.
   if (S.confirmar) {
     var fc0 = document.querySelector('.modal-cambio ' + (S.confirmar.atado ? 'input[type="checkbox"]' : '.primario'));
@@ -11054,6 +11708,7 @@ function pintar() {
     if (el) { el.scrollTop = scrolls[sel].top; el.scrollLeft = scrolls[sel].left; }
   });
   if (scrollPag) window.scrollTo(0, scrollPag);
+  acomodarFlotantes();
 
   if (id) {
     var nuevo = document.getElementById(id);
@@ -11071,6 +11726,7 @@ function marcarCeldaActiva(td) {
   if (viejo) viejo.classList.remove('cel-act');
   td.classList.add('cel-act');
   S.celdaAct = { id: td.closest('tr').getAttribute('data-f'), c: td.getAttribute('data-c') };
+  actualizarBotonCom();
 }
 function tdActiva() {
   if (!S.celdaAct) return null;
@@ -11136,6 +11792,10 @@ document.addEventListener('dblclick', function (ev) {
   ev.preventDefault();
   // El doble clic del navegador también selecciona el texto: se saca.
   try { window.getSelection().removeAllRanges(); } catch (e) {}
+  if (S.comPop || S.comCtx) {
+    S.comPop = null; S.comCtx = null; S.comUI = {};
+    Array.prototype.forEach.call(document.querySelectorAll('.com-pop, .com-ctx'), function (n) { n.remove(); });
+  }
   editarCelda(td);
 });
 
@@ -11190,6 +11850,62 @@ document.addEventListener('change', function (ev) {
       ev.target.tagName === 'SELECT') cerrarEdicionCelda(true);
 });
 
+// Clic derecho sobre una celda: el menú con «Comentar», como en Sheets.
+document.addEventListener('contextmenu', function (ev) {
+  if (!ev.target.closest || S.editCel) return;
+  var td = ev.target.closest('.tbl-hoja td[data-c]'), nro = ev.target.closest('.tbl-hoja td.nrofila');
+  if (!td && !nro) return;
+  ev.preventDefault();
+  var tr = (td || nro).closest('tr');
+  if (td) marcarCeldaActiva(td);
+  S.comPop = null; S.comUI = {};
+  S.comCtx = { x: ev.clientX, y: ev.clientY, id: tr.getAttribute('data-f'), campo: td ? td.getAttribute('data-c') : '' };
+  pintar();
+});
+
+// Ctrl+Alt+M comenta la celda marcada (el mismo atajo de Sheets). Esc cierra. Enter envía.
+document.addEventListener('keydown', function (ev) {
+  if (S.editCel && ev.target.classList && ev.target.classList.contains('edit-cel')) return;
+  var t = ev.target;
+  if (ev.ctrlKey && ev.altKey && String(ev.key).toLowerCase() === 'm' && S.celdaAct && filaPorId(S.celdaAct.id)) {
+    ev.preventDefault();
+    return abrirComentarios('celda', S.celdaAct.id, S.celdaAct.c === '_etapa' ? '' : S.celdaAct.c, true);
+  }
+  if (ev.key === 'Escape' && (S.comPop || S.comCtx)) {
+    ev.preventDefault(); ev.stopPropagation();
+    if (S.comUI && S.comUI.editando) { delete S.comBorr['e|' + S.comUI.editando]; S.comUI = {}; return pintar(); }
+    return cerrarComentarios();
+  }
+  // Enter envía lo que se escribió; Shift+Enter hace un renglón nuevo.
+  if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing && t && t.getAttribute && t.getAttribute('data-comtxt')) {
+    ev.preventDefault(); ev.stopPropagation();
+    enviarCom(t);
+  }
+}, true);
+
+// Lo que se va escribiendo se guarda aparte: si la pantalla se redibuja, no se pierde.
+document.addEventListener('toggle', function (ev) {
+  if (ev.target.classList && ev.target.classList.contains('com-resueltos')) S.comVerRes = ev.target.open;
+}, true);
+document.addEventListener('input', function (ev) {
+  var k = ev.target.getAttribute && ev.target.getAttribute('data-comtxt');
+  if (k) S.comBorr[k] = ev.target.value;
+});
+document.addEventListener('change', function (ev) {
+  var idc = ev.target.getAttribute && ev.target.getAttribute('data-comcampo');
+  if (idc) S.comBorr['dc|' + idc] = ev.target.value;
+});
+// Al mover la planilla o cambiar el tamaño, la ventanita acompaña a su celda.
+(function () {
+  var espera = null;
+  var reubicar = function () {
+    if (espera) return;
+    espera = requestAnimationFrame(function () { espera = null; if (S.comPop || S.comCtx) acomodarFlotantes(); });
+  };
+  window.addEventListener('scroll', reubicar, true);
+  window.addEventListener('resize', reubicar);
+})();
+
 document.addEventListener('fullscreenchange', function () {
   if (!document.fullscreenElement && S.planillaFull) { S.planillaFull = false; pintar(); }
 });
@@ -11214,6 +11930,11 @@ document.addEventListener('click', function (ev) {
   if (!ev.target.closest) return;
   // Editando una celda: un clic afuera guarda, como en Sheets.
   if (S.editCel && !ev.target.closest('.edit-cel')) cerrarEdicionCelda(true);
+  // Ventanita de comentarios o menú de clic derecho: un clic afuera los cierra.
+  if ((S.comPop || S.comCtx) && !ev.target.closest('.com-pop, .com-ctx, [data-act^="com"], .tbl-hoja td, .tbl-hoja td.nrofila')) {
+    S.comPop = null; S.comCtx = null; S.comUI = {};
+    pintar();
+  }
   if (ev.target.closest('td.editando')) return;
   // Arrastrar el mouse para seleccionar texto y copiarlo: ese clic no abre nada.
   if (ev.target.closest('.tbl-hoja') && textoSeleccionadoEnTabla()) { ev.stopPropagation(); return; }
@@ -11225,7 +11946,22 @@ document.addEventListener('click', function (ev) {
   if (tdP && !S.menuCol && !S.menuCfg && !ev.target.closest('.col-check')) {
     marcarCeldaActiva(tdP);
     ev.stopPropagation();
+    // Una celda con comentarios abre su hilo (como en Sheets); una sin comentarios cierra el que hubiera.
+    var idT = tdP.closest('tr').getAttribute('data-f'), cT = tdP.getAttribute('data-c');
+    var embT = filaPorId(idT);
+    var hsT = embT ? hilosDeCelda(embT, cT === '_etapa' ? '' : cT).filter(function (h) { return comentariosVisibles(h).length; }) : [];
+    if (hsT.length) {
+      if (S.comPop && S.comPop.tipo === 'celda' && S.comPop.id === idT && S.comPop.campo === (cT === '_etapa' ? '' : cT) && !S.comCtx) return;
+      return abrirComentarios('celda', idT, cT === '_etapa' ? '' : cT, false);
+    }
+    if (S.comPop || S.comCtx) return cerrarComentarios();
     return;
+  }
+  // Número de fila: si la carga tiene comentarios generales, los abre.
+  var nroT = ev.target.closest('.tbl-hoja td.nrofila');
+  if (nroT && !ev.target.closest('.fila-abrir') && nroT.classList.contains('tiene-com')) {
+    ev.stopPropagation();
+    return abrirComentarios('celda', nroT.closest('tr').getAttribute('data-f'), '', false);
   }
   // Menú «Configuración» abierto: un clic afuera lo cierra.
   if (S.menuCfg && ev.target.closest && !ev.target.closest('.cfg-wrap')) {
@@ -11304,9 +12040,54 @@ document.addEventListener('click', function (ev) {
 
   if (act === 'tab') return irAVista(el.getAttribute('data-v'));
   if (act === 'csv') { S.menuCfg = false; pintar(); return exportarCSV(); }
-  if (act === 'comentar') {
-    var ta = document.getElementById('nuevo-com');
-    return comentar(el.getAttribute('data-f'), ta ? ta.value : '');
+  if (act === 'comentar') return enviarCom(el);
+  if (act === 'comcelda') {
+    if (!S.celdaAct) return;
+    var cc0 = S.celdaAct.c === '_etapa' ? '' : S.celdaAct.c;
+    return abrirComentarios('celda', S.celdaAct.id, cc0, true);
+  }
+  if (act === 'comcerrar') return cerrarComentarios();
+  if (act === 'comnuevo') { S.comPop.nuevo = true; S.comFoco = idTxtCom('p', 'n|' + S.comPop.tipo + '|' + S.comPop.id + '|' + S.comPop.campo); return pintar(); }
+  if (act === 'comenviar' || act === 'comresp' || act === 'comguardaredit') return enviarCom(el);
+  if (act === 'comresolver') return comResolver(el.getAttribute('data-h'), false);
+  if (act === 'comreabrir') return comResolver(el.getAttribute('data-h'), true);
+  if (act === 'commenu') {
+    var cm = el.getAttribute('data-c');
+    S.comUI = S.comUI && S.comUI.menu === cm ? {} : { menu: cm };
+    return pintar();
+  }
+  if (act === 'comeditar') {
+    S.comUI = { editando: el.getAttribute('data-c') };
+    var hE = hiloPorId(el.getAttribute('data-h')), cE0 = hE && hE.comentarios.filter(function (x) { return x.id === S.comUI.editando; })[0];
+    if (cE0) S.comBorr['e|' + cE0.id] = cE0.texto;
+    S.comFoco = idTxtCom(S.comPop ? 'p' : 'd', 'e|' + S.comUI.editando);
+    return pintar();
+  }
+  if (act === 'comcancelaredit') {
+    if (S.comUI && S.comUI.editando) delete S.comBorr['e|' + S.comUI.editando];
+    S.comUI = {}; return pintar();
+  }
+  if (act === 'comborrar') {
+    var cb0 = el.getAttribute('data-c');
+    // Dos toques: el primero pide confirmar, el segundo borra.
+    if (!S.comUI || S.comUI.borrar !== cb0) { S.comUI = { menu: cb0, borrar: cb0 }; return pintar(); }
+    S.comUI = {};
+    return comBorrar(el.getAttribute('data-h'), cb0);
+  }
+  if (act === 'comfact') return abrirComentarios('fact', parseInt(el.getAttribute('data-r'), 10), '', false);
+  if (act === 'comctx-nuevo' || act === 'comctx-ver') {
+    var C0 = S.comCtx; if (!C0) return;
+    return abrirComentarios('celda', C0.id, C0.campo === '_etapa' ? '' : C0.campo, act === 'comctx-nuevo');
+  }
+  if (act === 'comctx-copiar') {
+    var C1 = S.comCtx; S.comCtx = null;
+    var tdC = (function () {
+      var trs = document.querySelectorAll('.tbl-hoja tbody tr');
+      for (var i = 0; i < trs.length; i++) if (trs[i].getAttribute('data-f') === C1.id) return trs[i].querySelector('td[data-c="' + C1.campo + '"]');
+      return null;
+    })();
+    if (tdC && navigator.clipboard) navigator.clipboard.writeText(tdC.innerText.replace(/\s+/g, ' ').trim());
+    return pintar();
   }
   if (act === 'modo') {
     S.planillaFull = false; S.modo = el.getAttribute('data-m'); return pintar(); }
@@ -11881,7 +12662,9 @@ document.addEventListener('input', function (e) {
     var cG = e.target.getAttribute('data-gen');
     if (cG && S.gen) { S.gen[cG] = fmt; return; }
     var cE = e.target.getAttribute('data-ectr');
-    if (cE && S.editCtr) { S.editCtr.cambios[cE] = fmt; return; }
+    // El editor de contratos tiene que enterarse: sin esto el botón Guardar quedaba apagado y la
+    // fecha escrita a mano no se podía guardar.
+    if (cE && S.editCtr) { S.editCtr.cambios[cE] = fmt; refrescarBarraCtr(); return; }
     return;   // el panel guarda al salir del campo, no en cada tecla
   }
 
@@ -12324,7 +13107,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.02-i';
+var APP_VERSION = '2026.10.02-k';
 
 function arrancar() {
   cargarPrefsPlanilla();
