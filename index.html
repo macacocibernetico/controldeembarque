@@ -1793,6 +1793,119 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
   .cf-grupo .segmento,.cf-grupo .chips{max-width:100%;overflow-x:auto}
   .cf-chip .cf-txt{max-width:200px}
 }
+
+/* «Por exportador»: leyenda de colores */
+.leyenda-exp{background:var(--sup);border-radius:14px;box-shadow:0 0 0 1px var(--linea2);margin:0 0 18px;overflow:hidden}
+.ley-cab{width:100%;display:flex;align-items:center;gap:9px;min-height:44px;padding:0 16px;background:none;border:0;
+  border-radius:0;font-size:14px;font-weight:600;color:var(--tinta);text-align:left}
+.ley-cab .ico{width:16px;height:16px;color:var(--tinta3);flex:none}
+.ley-cab .ley-t{flex:1}
+.ley-fl{color:var(--tinta4);transition:transform .18s var(--ease)}
+.leyenda-exp:not(.abierta) .ley-fl{transform:rotate(-90deg)}
+.ley-cuerpo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:1px solid var(--linea2)}
+.ley-grupo{padding:14px 18px 16px}
+.ley-grupo + .ley-grupo{border-left:1px solid var(--linea2)}
+.ley-grupo h4{margin:0;font-size:13.5px;font-weight:700}
+.ley-sub{margin:2px 0 10px;font-size:12px;color:var(--tinta3)}
+.ley-grupo ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.ley-grupo li{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.4;color:var(--tinta2)}
+.ley-grupo li > :first-child{flex:none;margin-top:2px;width:26px;display:inline-flex;justify-content:center}
+.ley-grupo-barra li > :first-child{width:30px}
+.ley-sw{display:inline-flex;height:8px;margin-top:6px !important}
+.ley-sw i{flex:1;height:8px}
+.ley-grupo .pill{padding:0;font-size:13px}
+.ley-grupo .pill .pt{width:10px;height:10px}
+.ley-num{min-width:22px;padding:2px 0;line-height:1.3}
+.ley-gris{min-width:22px;text-align:center;font-size:12.5px;color:var(--tinta4);margin-top:0 !important}
+.ley-nota{margin:10px 0 0;font-size:12px;color:var(--tinta3);line-height:1.4}
+@media(max-width:900px){
+  .ley-cuerpo{grid-template-columns:1fr}
+  .ley-grupo + .ley-grupo{border-left:0;border-top:1px solid var(--linea2)}
+  /* En el celular la barra de cada cliente no se muestra, así que tampoco se explica. */
+  .ley-grupo-barra{display:none}
+}
+
+/* ===== «Por exportador»: revisión de diseño ===================================== */
+/* Controles de arriba: ordenar, desplegar todo, plegar todo */
+.exp-barra{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;margin:-10px 0 22px}
+.exp-barra .segmento.sub{margin:0}
+.exp-acc{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.exp-acc select{width:auto;min-height:38px;font-size:13.5px;padding-right:34px}
+.exp-acc button{min-height:38px;font-size:13.5px;padding:0 15px;white-space:nowrap}
+.exp-acc button[disabled]{opacity:.45;cursor:default}
+
+/* Encabezado del exportador: el nombre es el botón que pliega a sus clientes */
+.exp-cab{align-items:center}
+.exp-h3{margin:0;font-size:17px;letter-spacing:-.02em;font-weight:700}
+.exp-tog{display:inline-flex;align-items:center;gap:8px;max-width:100%;min-height:44px;margin-left:-6px;padding:0 10px 0 6px;
+  background:none;border:0;border-radius:12px;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.exp-tog:hover{background:var(--sup2)}
+.exp-tog .exp-nom{overflow-wrap:break-word;min-width:0}
+.exp-tog .rot-pais{flex:none;margin:0}
+.exp-fl,.cli-fl{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;
+  flex:none;color:var(--tinta3);transition:transform .18s var(--ease),background .15s}
+.exp-fl .ico,.cli-fl .ico{width:14px;height:14px;stroke-width:2.2}
+.exp-fl.on{transform:rotate(90deg);color:var(--acento)}
+.exp-tog:hover .exp-fl{background:var(--sup3)}
+.exp-cli:hover .cli-fl{background:var(--sup3)}
+.cli-bloque.on .cli-fl{background:var(--acentobg)}
+
+/* Columnas de los clientes: rotuladas y alineadas con su encabezado */
+.exp-cli,.cli-cab{display:grid;align-items:center;column-gap:12px;
+  grid-template-columns:36px minmax(0,1.6fr) minmax(70px,1fr) 92px 56px 56px}
+.exp-cli{min-height:48px}
+.cli-cab{padding:0 10px;margin:4px 0 2px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--tinta4)}
+.cli-cab .cc-tn{text-align:right}
+.cli-cab .cc-n,.cli-cab .cc-al{text-align:center}
+.exp-cli .cli-tn{min-width:0}
+.exp-cli .cli-n{min-width:0;text-align:center}
+.exp-cli .cli-al{justify-self:center}
+
+/* Detalle de cada carga */
+.cd-fila{container-type:inline-size;container-name:cdfila}
+.cd-estado{display:inline-flex;align-items:center;gap:8px;flex:none}
+.cd-mas{margin-top:2px}
+.cd-mas summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--acento);list-style:none;padding:3px 0;width:max-content}
+.cd-mas summary::-webkit-details-marker{display:none}
+.cd-mas summary:hover{text-decoration:underline}
+.cd-mas[open] summary{color:var(--tinta3)}
+.cd-mas b{display:block;margin-top:3px}
+/* Con poco lugar: contrato, producto y estado cada uno en su línea (el producto se partía palabra por palabra) */
+@container cdfila (max-width: 560px){
+  .cd-cab{gap:4px 10px}
+  .cd-ctr{flex:1 1 100%;overflow-wrap:anywhere}
+  .cd-prod{flex:1 1 100%}
+  .cd-estado{flex:1 1 100%;margin-top:2px;flex-wrap:wrap}
+}
+
+/* Celular */
+@media(max-width:900px){
+  /* El nombre del exportador tiene su línea; el total y las alertas, la de abajo (antes se chocaban) */
+  .exp-ident{flex:1 1 100%}
+  .exp-tot{text-align:left;flex:1}
+  .exp-cli,.cli-cab{grid-template-columns:36px minmax(0,1fr) 78px 44px 44px;column-gap:8px}
+  .cli-cab .cc-barra{display:none}
+  .cli-cab{padding:0 6px}
+  .exp-acc{margin-left:0;width:100%}
+  .exp-acc select{flex:1 1 100%}
+  .exp-acc button{flex:1 1 0}
+}
+
+.cd-f{white-space:nowrap}
+.cli-n .l,.cli-al .l{display:none}
+@media(max-width:900px){
+  /* Cada cliente en dos líneas: el nombre entero arriba y, abajo, las cifras con su palabra. */
+  .cli-cab{display:none}
+  .exp-cli{grid-template-columns:36px minmax(0,1fr) 78px 92px;grid-template-areas:"fl nom nom nom" ". tn n al";
+    row-gap:3px;column-gap:10px;padding:9px 6px;min-height:60px;align-items:center}
+  .exp-cli .cli-fl{grid-area:fl;grid-row:1 / span 2;align-self:start;margin-top:2px}
+  .exp-cli .cli-nom{grid-area:nom;white-space:normal;overflow:visible;flex-wrap:wrap;line-height:1.3}
+  .exp-cli .cli-tn{grid-area:tn;text-align:left;font-size:13px;color:var(--tinta2)}
+  .exp-cli .cli-n{grid-area:n;text-align:left;font-size:13px;color:var(--tinta3)}
+  .exp-cli .cli-n .l,.exp-cli .cli-al .l{display:inline}
+  .exp-cli .cli-al{grid-area:al;justify-self:start;padding:2px 10px}
+  .exp-cli .cli-al.vacio{display:none}
+}
 </style>
 </head>
 <body>
@@ -1849,7 +1962,10 @@ var S = {
   filtroTipo: '',
   expSoloActivas: true,
   expDesde: '',
-  expAbierto: null,
+  expAbiertos: {},       // «Por exportador»: los clientes con el detalle desplegado (varios a la vez)
+  expPlegados: {},       // y los exportadores con su lista de clientes plegada
+  expOrden: 'tn',        // cómo se ordenan: toneladas, alertas o nombre
+  expLlaves: [],         // los clientes que se están viendo (para «Desplegar todo»)
   verFirmas: false,
   fVia: '',
   fTipoCtr: '',
@@ -1896,6 +2012,7 @@ var S = {
   modo: 'tarjetas',
   colsOcultas: {},
   menuCfg: false,
+  expLeyenda: true,      // «Por exportador»: la leyenda de colores, abierta hasta que se la cierre
   planCong: 0,
   // Tabla y Planilla son la misma grilla con distintas columnas por defecto; cada
   // una recuerda sus columnas visibles, cuántas inmoviliza y los anchos.
@@ -2167,14 +2284,23 @@ function normFecha(v) {
   if (m2) {
     var d2 = +m2[1], mes2 = +m2[2];
     if (d2 >= 1 && d2 <= 31 && mes2 >= 1 && mes2 <= 12) {
-      var f3 = new Date(Date.UTC(new Date().getUTCFullYear(), mes2 - 1, d2));
+      var f3 = new Date(Date.UTC(new Date().getFullYear(), mes2 - 1, d2));   // el año de quien mira, no el de Londres
       if (!isNaN(f3)) { f3.anioAsumido = true; f3.crudo = s; return f3; }
     }
     return { invalida: true, crudo: s };
   }
 
+  // «2026-10-12»: JavaScript lo toma como UTC, que es lo que hace falta.
+  var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+  if (iso) {
+    var fi = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3]));
+    return (isNaN(fi) || fi.getUTCMonth() !== +iso[2] - 1) ? { invalida: true, crudo: s } : fi;
+  }
+  // Cualquier otro formato («12 Oct 2026»): lo entiende como fecha local, así que se
+  // toma el día de calendario que dice y se lleva a medianoche UTC.
   var f2 = new Date(s);
-  return isNaN(f2) ? { invalida: true, crudo: s } : f2;
+  return isNaN(f2) ? { invalida: true, crudo: s }
+    : new Date(Date.UTC(f2.getFullYear(), f2.getMonth(), f2.getDate()));
 }
 function esFecha(f) { return f instanceof Date && !isNaN(f); }
 
@@ -2319,6 +2445,15 @@ var ETAPAS = [
 
 var DIA = 86400000;
 function dias(a, b) { return Math.round((a - b) / DIA); }
+
+/* «Ahora» para comparar con las fechas de la planilla. Como esas fechas son medianoches
+   UTC, «ahora» tiene que ser la hora de reloj de quien mira, puesta en UTC: así una
+   carga llega cuando empieza SU día de llegada en tu huso, no unas horas antes ni
+   después (con el instante real, en Argentina «llegaba» a las 21:00 del día anterior). */
+function ahoraComoUTC() {
+  var n = new Date();
+  return new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate(), n.getHours(), n.getMinutes(), n.getSeconds()));
+}
 
 function lleno(emb, c) {
   var v = emb[c];
@@ -5504,8 +5639,8 @@ function fechaAdvice(reg) {
   var t = String(reg && reg.fecha || '');
   var m = t.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
   if (m) return m[1];
-  var d = new Date(t);
-  return isNaN(d) ? '' : fmtFecha(d);
+  var d = normFecha(t);
+  return esFecha(d) ? fmtFecha(d) : '';
 }
 
 /* --- Comentarios -----------------------------------------------------------
@@ -6251,6 +6386,7 @@ var ICONOS = {
   achicar:  'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4',
   candado:  'M4.5 7V5a3.5 3.5 0 0 1 7 0v2M3.5 7h9v7h-9z',
   enlace:   'M6.6 9.4l2.8-2.8M5.2 7.8L3.9 9.1a2.2 2.2 0 0 0 3.1 3.1L8.3 11M10.8 8.2l1.3-1.3A2.2 2.2 0 0 0 9 3.8L7.7 5.1',
+  info:     'M8 14.2a6.2 6.2 0 1 0 0-12.4 6.2 6.2 0 0 0 0 12.4zM8 7.2v3.6M8 5v.01',
   az:     'M3 12l2.5-8 2.5 8M3.8 9.5h3.4M10 4h3.5L10 12h3.5'
 };
 
@@ -6273,8 +6409,12 @@ function fmtNum(v) {
   return n.toLocaleString('es-AR', { maximumFractionDigits: 2 });
 }
 
+/* Las fechas se guardan como la medianoche UTC del día que dice la planilla (12/10 es
+   12/10 a las 00:00 UTC). Hay que mostrarlas con el huso UTC: con el de quien mira
+   (Argentina es UTC-3) esa medianoche cae a las 21:00 del día anterior y la fecha
+   salía un día corrida hacia atrás. */
 function fmtFecha(f) {
-  return esFecha(f) ? f.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit' }) : '';
+  return esFecha(f) ? f.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', timeZone:'UTC' }) : '';
 }
 
 function pintarCelda(v) {
@@ -6581,7 +6721,7 @@ function vistaConfig() {
 /* --- Tablero --------------------------------------------------------------- */
 
 function evaluarTodo() {
-  var hoy = new Date();
+  var hoy = ahoraComoUTC();
   S.ultimaEval = {};
   return S.datos.filas.map(function (emb) {
     var ctr = S.contratos.get(String(emb.contract || '').trim()) || null;
@@ -7667,7 +7807,7 @@ function pasosEtapa(idEtapa) {
 // donde estaría hoy. Las fechas van rotuladas y separadas de la línea, que es
 // lo que antes se veía amontonado.
 function barraRuta(emb) {
-  var hoy = new Date();
+  var hoy = ahoraComoUTC();
   var pct = null;
   if (esFecha(emb.etd) && esFecha(emb.eta) && emb.eta > emb.etd) {
     pct = Math.max(0, Math.min(1, (hoy - emb.etd) / (emb.eta - emb.etd)));
@@ -8265,6 +8405,67 @@ function calcularContratos() {
    le pagó al exportador y el embarque dejó de requerir seguimiento. */
 function esActiva(ev) { return ev.etapa !== 'cobrado'; }
 
+/* Qué significa cada color en «Por exportador». Todo sale de las mismas tablas y clases
+   que dibujan la vista (etapas, etiquetas de los semáforos, estilos de la barra y de las
+   alertas): si algo cambia allá, la leyenda cambia con ello y no puede contradecirse. */
+function leyendaExportadores() {
+  var etapas = ETAPAS.map(function (et) {
+    return '<li><span class="cli-barra ley-sw"><i class="e-' + et.id + '"></i></span>' + esc(et.label) + '</li>';
+  }).join('');
+  var punto = function (cls, texto) {
+    return '<li><span class="pill ' + cls + '"><span class="pt"></span></span>' + texto + '</li>';
+  };
+  var e = ETIQUETAS;
+  return '<section class="leyenda-exp' + (S.expLeyenda ? ' abierta' : '') + '" aria-label="Qué significa cada color">' +
+    '<button class="ley-cab" data-act="expleyenda" aria-expanded="' + !!S.expLeyenda + '">' +
+      ico('info') + '<span class="ley-t">Qué significa cada color</span><span class="ley-fl">▾</span></button>' +
+    (S.expLeyenda
+      ? '<div class="ley-cuerpo">' +
+          '<div class="ley-grupo ley-grupo-barra"><h4>Barra de cada cliente</h4>' +
+            '<p class="ley-sub">Cargas del cliente, por etapa</p><ul>' + etapas + '</ul>' +
+            '<p class="ley-nota">Cada tramo es proporcional a la cantidad de cargas en esa etapa. ' +
+              'Pasá el mouse por la barra para ver el número.</p></div>' +
+          '<div class="ley-grupo"><h4>Alertas</h4>' +
+            '<p class="ley-sub">Lo que hay que mirar primero</p><ul>' +
+              '<li><span class="cli-al ley-num">2</span>Círculo rojo: cargas del cliente con una alerta crítica o de esta semana. ' +
+                'Arriba, junto al exportador, «N con alertas» es la suma de todos sus clientes.</li>' +
+              '<li><span class="ley-gris">3</span>Número gris: cantidad de cargas del cliente.</li>' +
+              punto('pend', 'En cada carga, rojo: requiere acción ahora. La carga lleva además un borde rojo fino.') +
+              punto('nar', 'En cada carga, naranja: es para esta semana, o faltan datos.') +
+            '</ul></div>' +
+          '<div class="ley-grupo"><h4>Docs · Fotos · T.R.</h4>' +
+            '<p class="ley-sub">Cada documento de la carga</p><ul>' +
+              punto('ok', esc(e.docs.ok + ' · ' + e.pics.ok + ' · ' + e.tr.ok)) +
+              punto('pend', esc(e.docs.pendiente + ' · ' + e.tr.pendiente)) +
+              punto('sol', esc(e.docs.atencion + ' (Docs y Fotos) · ' + e.tr.atencion + ' (T.R.)')) +
+              punto('hueco', esc(e.docs.vacio) + ': todavía no se cargó nada') +
+            '</ul></div>' +
+        '</div>'
+      : '') +
+    '</section>';
+}
+
+/* Cada vez que algo se abre o se cierra la pantalla se redibuja, y el botón que tenía el foco
+   se reemplaza por otro igual: sin esto, con el teclado el siguiente Enter o espacio no
+   hacía nada porque el foco se perdía. Se lo vuelve a poner en el mismo botón. */
+function volverAEnfocar(act, k) {
+  var bs = document.querySelectorAll('[data-act="' + act + '"]');
+  for (var i = 0; i < bs.length; i++) {
+    if (k === undefined || bs[i].getAttribute('data-k') === k) { bs[i].focus(); return; }
+  }
+}
+
+// Exportadores y clientes se ordenan igual: por toneladas (lo de siempre), por alertas
+// (lo que hay que mirar primero) o por nombre.
+function ordenarExp(arr) {
+  var o = S.expOrden || 'tn';
+  return arr.sort(function (a, b) {
+    if (o === 'nombre') return a.nombre.localeCompare(b.nombre, 'es');
+    if (o === 'alertas') return (b.alertas - a.alertas) || (b.tn - a.tn) || a.nombre.localeCompare(b.nombre, 'es');
+    return (b.tn - a.tn) || (b.n - a.n) || a.nombre.localeCompare(b.nombre, 'es');
+  });
+}
+
 function vistaExportadores(evs) {
   var soloActivas = S.expSoloActivas !== false;
   var usados = evs.filter(function (x) { return soloActivas ? esActiva(x.ev) : true; });
@@ -8291,16 +8492,28 @@ function vistaExportadores(evs) {
 
   var lista = [];
   grupos.forEach(function (g) { lista.push(g); });
-  lista.sort(function (a, b) { return b.tn - a.tn || b.n - a.n; });
+  ordenarExp(lista);
 
   var totalTn = lista.reduce(function (a, g) { return a + g.tn; }, 0);
+  S.expLlaves = [];
 
-  var h = '<div class="segmento sub">' +
-    '<button data-act="expact" data-v="1" aria-pressed="' + soloActivas + '">' +
-      'En curso<span class="cnt">' + usados.length + '</span></button>' +
-    '<button data-act="expact" data-v="0" aria-pressed="' + (!soloActivas) + '">' +
-      'Todas<span class="cnt">' + evs.length + '</span></button>' +
-    '</div>';
+  var nAbiertos = Object.keys(S.expAbiertos).length;
+  var h = '<div class="exp-barra">' +
+    '<div class="segmento sub">' +
+      '<button data-act="expact" data-v="1" aria-pressed="' + soloActivas + '">' +
+        'En curso<span class="cnt">' + usados.length + '</span></button>' +
+      '<button data-act="expact" data-v="0" aria-pressed="' + (!soloActivas) + '">' +
+        'Todas<span class="cnt">' + evs.length + '</span></button>' +
+    '</div>' +
+    '<div class="exp-acc">' +
+      '<label class="sr-solo" for="orden-exp">Ordenar</label>' +
+      '<select id="orden-exp" data-ordenexp="1">' + [['tn', 'Más toneladas primero'], ['alertas', 'Con más alertas primero'],
+        ['nombre', 'Por nombre (A–Z)']].map(function (o) {
+          return '<option value="' + o[0] + '"' + ((S.expOrden || 'tn') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+        }).join('') + '</select>' +
+      '<button data-act="expall">Desplegar todo</button>' +
+      '<button data-act="expnada"' + (nAbiertos ? '' : ' disabled') + '>Plegar todo' + (nAbiertos ? ' (' + nAbiertos + ')' : '') + '</button>' +
+    '</div></div>';
 
   if (!lista.length) {
     return h + '<p class="centro">No hay cargas ' +
@@ -8310,20 +8523,28 @@ function vistaExportadores(evs) {
   h += '<p class="conteo">' + lista.length +
     (lista.length === 1 ? ' exportador' : ' exportadores') + ' · ' +
     fmtNum(totalTn) + ' tn en ' + usados.length +
-    (usados.length === 1 ? ' carga' : ' cargas') + '</p>';
+    (usados.length === 1 ? ' carga' : ' cargas') + '</p>' +
+    leyendaExportadores();
 
   h += '<div class="lista">' + lista.map(function (g) {
     var cls = [];
     g.clientes.forEach(function (c) { cls.push(c); });
-    cls.sort(function (a, b) { return b.tn - a.tn; });
+    ordenarExp(cls);
+    var plegado = !!S.expPlegados[g.nombre];
+    cls.forEach(function (c) { S.expLlaves.push(g.nombre + '||' + c.nombre); });
 
     return '<article class="emb exp-card">' +
       '<div class="emb-cuerpo">' +
         '<div class="exp-cab">' +
           '<div class="exp-ident">' +
-            '<h3>' + esc(g.nombre) + '</h3>' +
-            (function () { var f = bandera(paisDeEmpresa(g.nombre));
-              return f ? '<span class="rot-pais">' + f + '</span>' : ''; })() +
+            // El nombre es el botón que pliega y despliega a sus clientes.
+            '<h3 class="exp-h3"><button class="exp-tog" data-act="expplegar" data-k="' + esc(g.nombre) + '" ' +
+              'aria-expanded="' + !plegado + '" title="' + (plegado ? 'Mostrar' : 'Ocultar') + ' los clientes de ' + esc(g.nombre) + '">' +
+              '<span class="exp-fl' + (plegado ? '' : ' on') + '" aria-hidden="true">' + ico('flecha') + '</span>' +
+              '<span class="exp-nom">' + esc(g.nombre) + '</span>' +
+              (function () { var f = bandera(paisDeEmpresa(g.nombre));
+                return f ? '<span class="rot-pais">' + f + '</span>' : ''; })() +
+            '</button></h3>' +
           '</div>' +
           '<div class="exp-tot">' +
             '<span class="n">' + fmtNum(g.tn) + ' tn</span>' +
@@ -8334,31 +8555,37 @@ function vistaExportadores(evs) {
             (g.alertas === 1 ? ' con alerta' : ' con alertas') + '</span>' : '') +
         '</div>' +
 
-        '<div class="exp-clientes">' + cls.map(function (c) {
+        (plegado ? '' : '<div class="exp-clientes">' +
+          // Qué es cada columna, a la vista (antes sólo se entendía con la leyenda).
+          '<div class="cli-cab" aria-hidden="true"><span></span><span>Cliente</span>' +
+            '<span class="cc-barra">Cargas por etapa</span><span class="cc-tn">Toneladas</span>' +
+            '<span class="cc-n">Cargas</span><span class="cc-al">Alertas</span></div>' +
+          cls.map(function (c) {
           var barra = ETAPAS.map(function (et) {
             var n = c.etapas[et.id] || 0;
             return n ? '<i class="e-' + et.id + '" style="flex:' + n + '" title="' +
               esc(n + ' en ' + et.label) + '"></i>' : '';
           }).join('');
           var llave = g.nombre + '||' + c.nombre;
-          var abierto = S.expAbierto === llave;
+          var abierto = !!S.expAbiertos[llave];
 
           return '<div class="cli-bloque' + (abierto ? ' on' : '') + '">' +
             '<button class="exp-cli" data-act="expcli" data-k="' + esc(llave) + '" ' +
-              'aria-expanded="' + abierto + '">' +
+              'aria-expanded="' + abierto + '" title="' + (abierto ? 'Ocultar' : 'Mostrar') + ' las cargas de ' + esc(c.nombre) + '">' +
               '<span class="cli-fl">' + ico('flecha') + '</span>' +
               '<span class="cli-nom">' + esc(c.nombre) +
                 (function () { var f = bandera(paisDeEmpresa(c.nombre));
                   return f ? ' ' + f : ''; })() + '</span>' +
               '<span class="cli-barra">' + barra + '</span>' +
               '<span class="cli-tn">' + fmtNum(c.tn) + ' tn</span>' +
-              '<span class="cli-n">' + c.n + '</span>' +
-              (c.alertas ? '<span class="cli-al" title="' + c.alertas + ' con alerta">' +
-                c.alertas + '</span>' : '<span class="cli-al vacio"></span>') +
+              '<span class="cli-n">' + c.n + '<span class="l"> ' + (c.n === 1 ? 'carga' : 'cargas') + '</span></span>' +
+              (c.alertas ? '<span class="cli-al" title="' + c.alertas + ' con alerta">' + c.alertas +
+                '<span class="l"> ' + (c.alertas === 1 ? 'alerta' : 'alertas') + '</span></span>'
+                : '<span class="cli-al vacio"></span>') +
             '</button>' +
             (abierto ? detalleCargas(c.cargas) : '') +
           '</div>';
-        }).join('') + '</div>' +
+        }).join('') + '</div>') +
       '</div></article>';
   }).join('') + '</div>';
 
@@ -8384,6 +8611,15 @@ function detalleCargas(cargas) {
       return '<span class="cd-ref"><em>' + etq + '</em>' +
         (v ? '<b>' + esc(v) + '</b>' : '<u>falta</u>') + '</span>';
     };
+    // Contenedores: una carga puede traer diez y estiraba la tarjeta. Se ven los tres primeros
+    // y el resto está a un toque, sin perder ninguno.
+    var refCont = function () {
+      if (src.mapa.containers === undefined || src.noAplica.containers) return '';
+      var items = String(e.containers || '').split(/\s*[,;\n]+\s*/).filter(Boolean);
+      if (items.length <= 3) return ref('Contenedores', 'containers');
+      return '<span class="cd-ref"><em>Contenedores · ' + items.length + '</em><b>' + esc(items.slice(0, 3).join(', ')) + '</b>' +
+        '<details class="cd-mas"><summary>+ ' + (items.length - 3) + ' más</summary><b>' + esc(items.slice(3).join(', ')) + '</b></details></span>';
+    };
 
     return '<div class="cd-fila' + (ev.nivelMax ? ' n-' + ev.nivelMax : '') + '" ' +
       'data-act="abrir" data-f="' + esc(e._id) + '" tabindex="0">' +
@@ -8392,23 +8628,24 @@ function detalleCargas(cargas) {
         '<span class="cd-ctr">' + esc(e.contract || 'sin contrato') + '</span>' +
         '<span class="cd-prod">' + esc(e.product || '') +
           (e.tns ? ' · ' + fmtNum(normNum(e.tns)) + ' tn' : '') + '</span>' +
-        '<span class="cd-etapa">' + esc(etiquetaEtapa(ev.etapa)) + '</span>' +
+        '<span class="cd-estado"><span class="cd-etapa">' + esc(etiquetaEtapa(ev.etapa)) + '</span>' +
         (ev.nivelMax
           ? '<span class="pill ' + (ev.nivelMax === 'critico' ? 'pend' : 'nar') +
             '"><span class="pt"></span>' + ev.alertas.length +
             (ev.alertas.length === 1 ? ' alerta' : ' alertas') + '</span>'
-          : '') +
+          : '') + '</span>' +
       '</div>' +
 
       '<div class="cd-refs">' +
         ref('Booking', 'booking') +
-        ref('Contenedores', 'containers') +
+        refCont() +
         ref('BL', 'bl') +
         ref('Factura', 'invoice') +
         ref('Buque', 'vessel') +
-        '<span class="cd-ref"><em>ETD → ETA</em><b>' +
-          (esFecha(e.etd) ? fmtFecha(e.etd) : '··') + ' → ' +
-          (esFecha(e.eta) ? fmtFecha(e.eta) : '··') + '</b></span>' +
+        '<span class="cd-ref cd-fechas"><em>ETD → ETA</em><b>' +
+          // Cada fecha va entera; si no entran juntas, la segunda baja después de la flecha.
+          '<span class="cd-f">' + (esFecha(e.etd) ? fmtFecha(e.etd) : '··') + '</span> → ' +
+          '<span class="cd-f">' + (esFecha(e.eta) ? fmtFecha(e.eta) : '··') + '</span></b></span>' +
         (e.port ? '<span class="cd-ref"><em>Destino</em><b>' + esc(e.port) + '</b></span>' : '') +
       '</div>' +
 
@@ -10745,7 +10982,8 @@ function exportarCSV() {
     }).join(';');
   }).join('\r\n');
 
-  var hoy = new Date().toISOString().slice(0, 10);
+  var n0 = new Date();
+  var hoy = n0.getFullYear() + '-' + String(n0.getMonth() + 1).padStart(2, '0') + '-' + String(n0.getDate()).padStart(2, '0');
   var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
@@ -10979,6 +11217,8 @@ document.addEventListener('click', function (ev) {
   if (ev.target.closest('td.editando')) return;
   // Arrastrar el mouse para seleccionar texto y copiarlo: ese clic no abre nada.
   if (ev.target.closest('.tbl-hoja') && textoSeleccionadoEnTabla()) { ev.stopPropagation(); return; }
+  // «+ N más» de los contenedores: sólo despliega la lista, no abre el detalle de la carga.
+  if (ev.target.closest && ev.target.closest('.cd-mas')) { ev.stopPropagation(); return; }
   // Celda de la tabla: un clic la marca (como en Sheets) y no abre nada. El
   // detalle se abre con el botón del número de fila; el doble clic edita.
   var tdP = ev.target.closest('.tbl-hoja td[data-c]');
@@ -11176,6 +11416,11 @@ document.addEventListener('click', function (ev) {
     S.tPendNada = setTimeout(function () { S.pendNada = false; pintar(); }, 3500);
     return pintar();
   }
+  if (act === 'expleyenda') {
+    S.expLeyenda = !S.expLeyenda;
+    try { localStorage.setItem('embarques:leyendaExp', S.expLeyenda ? '1' : '0'); } catch (e) {}
+    return pintar();
+  }
   if (act === 'cambiono') { S.confirmar = null; return pintar(); }
   if (act === 'cambiook') {
     var Cc = S.confirmar;
@@ -11223,10 +11468,22 @@ document.addEventListener('click', function (ev) {
   if (act === 'desmarcar') { S.marcados = {}; S.adviceMsg = null; return pintar(); }
   if (act === 'advidioma') { S.adviceIdioma = el.getAttribute('data-v'); return pintar(); }
   if (act === 'expact') { S.expSoloActivas = el.getAttribute('data-v') === '1'; return pintar(); }
+  if (act === 'expplegar') {
+    var ke = el.getAttribute('data-k');
+    if (S.expPlegados[ke]) delete S.expPlegados[ke]; else S.expPlegados[ke] = true;
+    pintar(); return volverAEnfocar('expplegar', ke);
+  }
+  if (act === 'expall') {
+    S.expPlegados = {};
+    S.expLlaves.forEach(function (k) { S.expAbiertos[k] = true; });
+    pintar(); return volverAEnfocar('expall');
+  }
+  if (act === 'expnada') { S.expAbiertos = {}; pintar(); return volverAEnfocar('expall'); }
   if (act === 'expcli') {
+    // Cada flecha abre y cierra SU cliente; los demás no se tocan.
     var kk2 = el.getAttribute('data-k');
-    S.expAbierto = (S.expAbierto === kk2) ? null : kk2;
-    return pintar();
+    if (S.expAbiertos[kk2]) delete S.expAbiertos[kk2]; else S.expAbiertos[kk2] = true;
+    pintar(); return volverAEnfocar('expcli', kk2);
   }
   if (act === 'vercargas') {
     // Del resumen a las cargas de ese par exportador/cliente.
@@ -11737,6 +11994,9 @@ document.addEventListener('change', function (e) {
   if (e.target.getAttribute && e.target.getAttribute('data-genbase')) {
     S.gen.guardarBase = e.target.checked; return;
   }
+  if (e.target.getAttribute && e.target.getAttribute('data-ordenexp')) {
+    S.expOrden = e.target.value; return pintar();
+  }
   if (e.target.getAttribute && e.target.getAttribute('data-ordenctr')) {
     S.ordenCtr = e.target.value; S.topeContratos = 40; return pintar();
   }
@@ -12064,10 +12324,17 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.02-f';
+var APP_VERSION = '2026.10.02-i';
 
 function arrancar() {
   cargarPrefsPlanilla();
+  // La leyenda: abierta en pantalla ancha, cerrada en el celular (ahí empuja la lista hacia
+  // abajo), hasta que la persona elija; desde entonces se recuerda lo que eligió.
+  S.expLeyenda = window.innerWidth > 900;
+  try {
+    var gl = localStorage.getItem('embarques:leyendaExp');
+    if (gl === '0') S.expLeyenda = false; else if (gl === '1') S.expLeyenda = true;
+  } catch (e) {}
   // Config compartida por enlace: se toma una vez y queda guardada, así el
   // resto del equipo no repite el alta.
   var deEnlace = leerConfigDeEnlace();
