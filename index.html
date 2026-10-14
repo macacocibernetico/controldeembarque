@@ -4143,10 +4143,13 @@ function ubicarFila(h, mapa, esp, nro) {
     : 'Esa carga ya no está donde estaba: alguien la movió o la cambió. Actualizá y probá de nuevo.');
 }
 
-/* Mueve una fila de una pestaña a otra: insertar el hueco, escribir los campos
-   con sus colores, el total como fórmula y borrar el origen van en UN SOLO
-   pedido. Si algo falla, Google no aplica nada: no puede quedar una fila vacía
-   a medias (que es lo que pasaba cuando el hueco se insertaba aparte). */
+/* Mueve una fila de una pestaña a otra, EN TRES TIEMPOS y sin riesgo de perderla:
+     1) se inserta el hueco en el destino (arriba del TOTAL) y se copian los campos, colores y el total;
+     2) se VUELVE A LEER el destino y se comprueba que la carga está ahí, en esa fila;
+     3) recién entonces se borra la fila del origen (releyéndola, por si alguien movió algo).
+   Si la comprobación del paso 2 falla, NO se toca el origen: se deshace el hueco y se avisa.
+   (Antes todo iba en un solo pedido, con el borrado al final: si la copia no quedaba en el destino,
+   la fila se perdía igual — hubo que rescatarla del historial de versiones.) */
 async function moverFila(origen, destinoTab) {
   var hd = await leerHoja(S.cfg.sheetId, destinoTab);
   var mapaD = detectar(hd.encabezados, CAMPOS).mapa;
@@ -4203,18 +4206,70 @@ async function moverFila(origen, destinoTab) {
     } });
   }
 
-  // Y recién al final, sacar la de origen.
-  reqs.push({ deleteDimension: {
-    range: { sheetId: origen.sheetId, dimension: 'ROWS',
-             startIndex: origen.fila - 1, endIndex: origen.fila }
-  } });
-
+  // Tiempo 1: copiar al destino. El origen todavía no se toca.
   await api(BASE + S.cfg.sheetId + ':batchUpdate', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ requests: reqs })
   });
 
+  // Tiempo 2: comprobar, leyendo de nuevo, que la carga está en el destino.
+  var ident = identidadDeCeldas(origen.celdas, origen.mapa);
+  var ultCol = letraCol(MAX_COLS - 1), pestD = "'" + destinoTab.replace(/'/g, "''") + "'";
+  var chk = await api(BASE + S.cfg.sheetId + '/values/' +
+    encodeURIComponent(pestD + '!A' + fila + ':' + ultCol + (fila + 1)) + '?valueRenderOption=UNFORMATTED_VALUE');
+  var leidas = (chk && chk.values) || [];
+  var enDestino = leidas[0] || [], debajo = leidas[1] || [];
+  var dv = function (campo) { var i = mapaD[campo]; return i === undefined || enDestino[i] == null ? '' : enDestino[i]; };
+  var problemas = [];
+  if (filaTotal && String(debajo[0] || '').trim().toUpperCase().indexOf('TOTAL') !== 0) {
+    problemas.push('el TOTAL no quedó justo debajo');
+  }
+  if (ident.contract && clave(dv('contract')) !== clave(ident.contract)) problemas.push('el contrato no coincide');
+  if (ident.importer && clave(dv('importer')) !== clave(ident.importer)) problemas.push('el cliente no coincide');
+  if (ident.bl && clave(dv('bl')) !== clave(ident.bl)) problemas.push('el BL no coincide');
+  if (ident.tns !== null && Math.abs((normNum(dv('tns')) || 0) - ident.tns) > 0.0001) problemas.push('las toneladas no coinciden');
+  if (problemas.length) {
+    // No se tocó el origen. Si el hueco quedó vacío, se lo saca para no dejar una fila en blanco.
+    var vacio = !enDestino.some(function (x) { return x !== '' && x != null; });
+    var limpio = false;
+    if (vacio) {
+      try {
+        await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: hd.sheetId, dimension: 'ROWS',
+            startIndex: fila - 1, endIndex: fila } } }] })
+        });
+        limpio = true;
+      } catch (e) { /* se avisa abajo */ }
+    }
+    throw new Error('No se movió nada: la carga no quedó bien en «' + destinoTab + '» (fila ' + fila + '): ' +
+      problemas.join(', ') + '. Quedó en «' + origen.tab + '», sin tocar.' +
+      (vacio && !limpio ? ' Ojo: puede haber quedado una fila vacía en «' + destinoTab + '».' : ''));
+  }
+
+  // Tiempo 3: ahora sí, sacar la de origen (releída, por si cambió algo en el medio).
+  try {
+    var ho = await leerHoja(S.cfg.sheetId, origen.tab);
+    var mo = detectar(ho.encabezados, CAMPOS).mapa;
+    var filaO = ubicarFila(ho, mo, ident, origen.fila);
+    await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: ho.sheetId, dimension: 'ROWS',
+        startIndex: filaO.fila - 1, endIndex: filaO.fila } } }] })
+    });
+  } catch (e) {
+    throw new Error('La carga YA está en «' + destinoTab + '» (fila ' + fila + ') pero no se pudo borrar de «' +
+      origen.tab + '»: ' + e.message + ' Borrala a mano de «' + origen.tab + '» para que no quede duplicada.');
+  }
+
   return { tab: destinoTab, fila: fila };
+}
+
+// Lo que identifica a una carga, a partir de las celdas de su fila.
+function identidadDeCeldas(celdas, mapa) {
+  var v = function (c) { var i = mapa[c]; return i === undefined || celdas[i] == null ? '' : celdas[i]; };
+  var tn = normNum(v('tns'));
+  return { contract: v('contract'), bl: v('bl'), importer: v('importer'), tns: tn === undefined ? null : tn };
 }
 
 async function pasarAFacturar(id, avisar, enviar) {
@@ -4235,7 +4290,7 @@ async function pasarAFacturar(id, avisar, enviar) {
     var h = await leerHoja(S.cfg.sheetId, emb._tab);
     var mp = detectar(h.encabezados, CAMPOS).mapa;
     var fresca = ubicarFila(h, mp, emb, emb._fila);
-    await moverFila({
+    var movida = await moverFila({
       tab: emb._tab, sheetId: h.sheetId, mapa: mp,
       fila: fresca.fila, celdas: fresca.celdas, colores: fresca.colores
     }, destino.tab);
@@ -4246,11 +4301,11 @@ async function pasarAFacturar(id, avisar, enviar) {
       catch (e2) { aviso = ' El mail no salió: ' + e2.message; }
     }
 
-    S.avisoOk = 'Pasada a "' + destino.tab + '" y quitada de "' + res.desde + '".' + aviso;
+    S.avisoOk = 'Pasada a "' + destino.tab + '" (fila ' + movida.fila + ') y quitada de "' + res.desde + '".' + aviso;
     S.ultimoMov = { desde: res.desde, quien: res.quien, contrato: res.contrato, bl: res.bl };
     S.sel = null; S.pasar = null;
     await cargarTodo();
-    toast('Enviada a «' + destino.tab + '»: ' + (res.contrato || res.quien), 'ok');
+    toast('Enviada a «' + destino.tab + '», fila ' + movida.fila + ': ' + (res.contrato || res.quien), 'ok');
   } catch (e) {
     S.factError = 'No se pudo pasar: ' + e.message;
     toast('No se pudo enviar a facturar', 'error');
@@ -7703,12 +7758,38 @@ function pedidosMoverContrato(plan) {
     });
   });
 
-  // Y recién al final, sacar las de origen (de abajo hacia arriba).
-  plan.filasO.slice().sort(function (a, b) { return b.fila - a.fila; }).forEach(function (fo) {
-    reqs.push({ deleteDimension: { range: { sheetId: ho.sheetId, dimension: 'ROWS',
-      startIndex: fo.fila - 1, endIndex: fo.fila } } });
-  });
   return reqs;
+}
+
+// El borrado de las filas de origen (de abajo hacia arriba). Va APARTE de la copia: ver ejecutarMoverContrato.
+function pedidosBorrarOrigenContrato(plan, filasO) {
+  return filasO.slice().sort(function (a, b) { return b.fila - a.fila; }).map(function (fo) {
+    return { deleteDimension: { range: { sheetId: plan.ho.sheetId, dimension: 'ROWS',
+      startIndex: fo.fila - 1, endIndex: fo.fila } } };
+  });
+}
+
+// Compara lo que había en una fila con lo que se lee en otra. Las fórmulas no se comparan (su valor puede cambiar).
+// cols: [{ o: columna en lo esperado, d: columna en lo leído }]. Devuelve cuántas celdas con dato se compararon y cuántas difieren.
+function celdasDistintas(esperado, leido, cols, formulas) {
+  var mal = 0, comp = 0;
+  cols.forEach(function (c) {
+    var e = esperado[c.o];
+    if (e === null || e === undefined || e === '' || (formulas && esFormula(formulas[c.o]))) return;
+    var l = leido[c.d]; comp++;
+    var igual = (typeof e === 'number' || typeof l === 'number')
+      ? Math.abs((normNum(e) || 0) - (normNum(l) || 0)) < 0.0001
+      : clave(e) === clave(l);
+    if (!igual) mal++;
+  });
+  return { mal: mal, comp: comp };
+}
+
+// Lee de nuevo filas de una pestaña (valores sin formato), para comprobar lo escrito.
+async function leerFilasValores(tab, desde, hasta) {
+  var rango = "'" + tab.replace(/'/g, "''") + "'!A" + desde + ':' + letraCol(MAX_COLS - 1) + hasta;
+  var d = await api(BASE + S.cfg.sheetId + '/values/' + encodeURIComponent(rango) + '?valueRenderOption=UNFORMATTED_VALUE');
+  return (d && d.values) || [];
 }
 
 async function ejecutarMoverContrato(nombre) {
@@ -7718,10 +7799,61 @@ async function ejecutarMoverContrato(nombre) {
     // Se vuelve a leer todo: entre que se abrió el cartel y este clic alguien
     // pudo haber tocado la planilla.
     var plan = await planMoverContrato(nombre);
+    var n = plan.filasO.length, pos = plan.filaDestino;
+
+    // Tiempo 1: copiar al destino. El origen todavía no se toca.
     await api(BASE + S.cfg.sheetId + ':batchUpdate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ requests: pedidosMoverContrato(plan) })
     });
+
+    // Tiempo 2: volver a leer el destino y comprobar que las filas están ahí, con sus datos.
+    var colsDest = plan.pares.filter(function (pr) { return plan.colForm[pr.d] !== true; })
+      .map(function (pr) { return { o: pr.o, d: pr.d }; });
+    var leidas = await leerFilasValores(plan.destinoTab, pos, pos + n - 1);
+    var problemas = [], enBlanco = true;
+    plan.filasO.forEach(function (fo, i) {
+      var fila = leidas[i] || [];
+      if (fila.some(function (x) { return x !== '' && x != null; })) enBlanco = false;
+      var cmp = celdasDistintas(fo.celdas, fila, colsDest, plan.formulasO[i]);
+      if (cmp.comp < 2 || cmp.mal > 0) problemas.push('la fila ' + (i + 1) + ' de ' + n + ' no coincide' +
+        (cmp.comp < 2 ? ' (casi no tiene datos)' : ' (' + cmp.mal + ' de ' + cmp.comp + ' datos distintos)'));
+    });
+    if (problemas.length) {
+      // No se tocó el origen. Si lo insertado quedó en blanco, se lo saca para no dejar filas vacías.
+      var limpio = false;
+      if (enBlanco) {
+        try {
+          await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: plan.hd.sheetId, dimension: 'ROWS',
+              startIndex: pos - 1, endIndex: pos - 1 + n } } }] })
+          });
+          limpio = true;
+        } catch (e0) { /* se avisa abajo */ }
+      }
+      throw new Error('No se movió nada: el contrato no quedó bien en «' + plan.destinoTab + '» (desde la fila ' + pos + '): ' +
+        problemas.join('; ') + '. Quedó en «' + plan.origenTab + '», sin tocar.' +
+        (enBlanco && !limpio ? ' Ojo: pueden haber quedado filas vacías en «' + plan.destinoTab + '».' : ''));
+    }
+
+    // Tiempo 3: recién ahora se borra el origen, comprobando antes que esas filas siguen siendo las mismas.
+    try {
+      var mismas = plan.pares.map(function (pr) { return { o: pr.o, d: pr.o }; });
+      for (var k = 0; k < n; k++) {
+        var fo = plan.filasO[k];
+        var ahora = (await leerFilasValores(plan.origenTab, fo.fila, fo.fila))[0] || [];
+        var c2 = celdasDistintas(fo.celdas, ahora, mismas, plan.formulasO[k]);
+        if (c2.comp < 2 || c2.mal > 0) throw new Error('la fila ' + fo.fila + ' de «' + plan.origenTab + '» cambió mientras se movía.');
+      }
+      await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: pedidosBorrarOrigenContrato(plan, plan.filasO) })
+      });
+    } catch (e1) {
+      throw new Error('El contrato YA está copiado en «' + plan.destinoTab + '» (desde la fila ' + pos + ') pero no se pudo borrar de «' +
+        plan.origenTab + '»: ' + e1.message + ' Borralo a mano de «' + plan.origenTab + '» para que no quede duplicado.');
+    }
     var haciaC = plan.haciaCerrados;
     S.moverCtr = null; S.editCtr = null;
     S.ultimoMovCtr = { contrato: plan.contrato, hacia: haciaC ? 'C' : 'A', desde: plan.origenTab };
@@ -13062,7 +13194,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.14-q';
+var APP_VERSION = '2026.10.14-r';
 
 function arrancar() {
   cargarPrefsPlanilla();
