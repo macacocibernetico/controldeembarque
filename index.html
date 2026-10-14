@@ -1733,13 +1733,13 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 .pb-sub{font-size:12.5px;color:#9a5b00}
 .pb-punto{width:9px;height:9px;border-radius:50%;background:#f59e0b;flex:none;display:inline-block;margin-right:2px}
 .pend-barra button{min-height:34px;font-size:13px}
+.pend-flota.con-panel{right:calc(min(520px,100%) + 18px)}   /* con el panel de detalle abierto, a su izquierda: no tapa «Cerrar» */
 .pend-flota{position:fixed;top:14px;right:22px;z-index:70;display:inline-flex;align-items:center;gap:8px;
   min-height:38px;padding:0 16px;border-radius:980px;background:#fff4d6;color:#6b3f00;font-weight:600;
   box-shadow:0 6px 20px rgba(0,0,0,.18),inset 0 0 0 1px rgba(217,119,6,.5)}
 
 /* Revisión en dos pasos */
 .modal-rev{width:min(640px,100%)}
-.rev-paso{margin:0 0 2px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9a5b00}
 .rev-lista{max-height:min(46vh,420px);overflow:auto;margin:14px -6px 0;padding:0 6px;display:flex;flex-direction:column;gap:12px}
 .rev-fila{background:var(--sup2);border-radius:12px;padding:12px 14px}
 .rev-fila header{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
@@ -1762,7 +1762,7 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
   .rc-campo{grid-column:1 / -1}
   .rc-aviso{grid-column:1 / -1}
   .pend-barra{width:100%}
-  .pend-flota{top:58px;right:12px}
+  .pend-flota,.pend-flota.con-panel{top:58px;right:12px}
 }
 
 /* Barra de filtros de Contratos */
@@ -2082,7 +2082,6 @@ var S = {
   editCel: null,
   moverCtr: null,
   ultimoMovCtr: null,
-  confirmar: null,
   tAbrir: null,
   tAvisoCel: null,
   tFiltro: null,
@@ -2117,7 +2116,7 @@ var S = {
   anchos: {},
   celdaAct: null,        // celda marcada con un clic: { id, c }
   pend: {},              // cambios escritos en la tabla que todavía no se guardaron
-  revision: null,        // el cartel de «revisá y confirmá» ({ paso, entiendo, guardando, error })
+  revision: null,        // el cartel «Confirmar cambios» ({ guardando, error })
   pendNada: false,
   fCol: {},
   ordenCol: null,
@@ -5028,10 +5027,11 @@ function guardarFechaPanel(input, campo, texto) {
 
   var iso = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') +
             '-' + String(d.getUTCDate()).padStart(2, '0');
-  var actual = esFecha(emb[campo])
-    ? emb[campo].getUTCFullYear() + '-' +
-      String(emb[campo].getUTCMonth() + 1).padStart(2, '0') + '-' +
-      String(emb[campo].getUTCDate()).padStart(2, '0')
+  var vv = valorVista(emb, campo);
+  var actual = esFecha(vv)
+    ? vv.getUTCFullYear() + '-' +
+      String(vv.getUTCMonth() + 1).padStart(2, '0') + '-' +
+      String(vv.getUTCDate()).padStart(2, '0')
     : '';
   if (iso === actual) return;
   pedirCambio(id, campo, iso);
@@ -6797,11 +6797,12 @@ function toast(texto, tipo, ms) {
   }, ms || (tipo === 'error' ? 6000 : 3800));
 }
 
-/* --- Cambiar un dato de una carga, con confirmación ---------------------------
-   Todo cambio pide confirmar. Si el dato sale del contrato (precio, puerto,
-   exportador...), la confirmación avisa qué dice el contrato y pide tildar que
-   se entiende que la carga va a quedar distinta; después deja seguir, porque
-   hay ajustes puntuales que son legítimos. Al terminar de guardar sale un aviso. */
+/* --- Cambiar un dato de una carga --------------------------------------------
+   Los cambios NO se escriben al instante ni piden confirmar uno por uno: se van
+   juntando (S.pend, ver encolarCambio) y se confirman todos juntos, una sola vez,
+   con el botón «Confirmar cambios» de arriba a la derecha. Si un dato sale del
+   contrato (precio, puerto, exportador...), esa confirmación avisa qué dice el
+   contrato, pero deja seguir: hay ajustes puntuales que son legítimos. */
 var CAMPOS_DEL_CONTRATO = ['contract', 'exporter', 'importer', 'price', 'tipo',
                            'product', 'incoterm', 'port'];
 
@@ -6844,83 +6845,14 @@ function igualAlContrato(campo, nuevo, delContrato) {
   return clave(nuevo) === clave(delContrato);
 }
 
+// Desde el panel de detalle: el cambio queda pendiente (igual que en la tabla).
+// Los semáforos (Docs, Fotos, T.R.) siguen guardándose al instante.
 function pedirCambio(id, campo, valor) {
   var emb = filaPorId(id);
   if (!emb) return;
   var def = CAMPOS[campo];
   if (!def || def.tipo === 'semaforo') return aplicarCambio(id, campo, valor);
-  if (S.confirmar && S.confirmar.id === id && S.confirmar.campo === campo) return;
-
-  var nuevo = def.tipo === 'numero' ? numAR(valor)
-    : def.tipo === 'fecha' ? convertir(valor, 'fecha')
-    : String(valor == null ? '' : valor).trim();
-  var antes = emb[campo];
-  var mismo = def.tipo === 'fecha' ? txtV(antes) === txtV(nuevo)
-    : def.tipo === 'numero' ? (normNum(antes) === nuevo)
-    : String(antes == null ? '' : antes).trim() === nuevo;
-  if (mismo) return pintar();
-
-  var C = { id: id, campo: campo, valor: valor, etiqueta: def.label,
-            antes: txtV(antes), despues: txtV(nuevo), contrato: emb.contract || '',
-            donde: emb._tab + ' · fila ' + emb._fila, entiendo: false };
-
-  if (campo === 'tns' || campo === 'price') {
-    var tn = campo === 'tns' ? nuevo : normNum(emb.tns), pr = campo === 'price' ? nuevo : normNum(emb.price);
-    var t0 = normNum(emb.total);
-    if (t0 === null && normNum(emb.tns) !== null && normNum(emb.price) !== null) t0 = normNum(emb.tns) * normNum(emb.price);
-    if (tn !== null && pr !== null) C.total = { antes: t0, despues: Math.round(tn * pr * 100) / 100 };
-  }
-
-  if (CAMPOS_DEL_CONTRATO.indexOf(campo) >= 0) {
-    C.atado = true;
-    if (campo === 'contract') {
-      C.aviso = 'Esto cambia a qué contrato pertenece la carga: el entregado y el saldo de los dos contratos se recalculan.';
-    } else {
-      var dc = valorDelContrato(emb, campo);
-      C.hayContrato = dc.hay; C.enContrato = dc.texto;
-      if (!dc.hay) {
-        C.aviso = 'No encontré el contrato «' + C.contrato + '» para comparar. ' + def.label +
-          ' sale del contrato, así que no pude verificar este cambio.';
-      } else if (!dc.texto) {
-        C.aviso = 'En el contrato ' + C.contrato + ' no figura ' + def.label.toLowerCase() + '. Esta carga va a tener uno propio.';
-      } else if (igualAlContrato(campo, nuevo, dc.valor)) {
-        C.atado = false;               // coincide con el contrato: es un cambio normal
-      } else {
-        C.aviso = 'En el contrato ' + C.contrato + ' ' + def.label.toLowerCase() + ' dice «' + dc.texto +
-          '». Vas a dejar esta carga con un valor distinto al del contrato.';
-      }
-    }
-  }
-  S.confirmar = C;
-  pintar();
-}
-
-function modalCambio() {
-  var C = S.confirmar;
-  if (!C) return '';
-  var ctrEd = C.contrato && S.ctrEditables && S.ctrEditables.has(C.contrato);
-  return '<div class="modal-velo" data-act="cambiono"></div>' +
-    '<div class="modal-caja"><div class="modal-cambio" role="alertdialog" aria-modal="true" aria-labelledby="mcm-t">' +
-      '<h3 id="mcm-t">¿Cambiar ' + esc(C.etiqueta.toLowerCase()) + '?</h3>' +
-      '<p class="mcm-donde">' + esc(C.donde) + (C.contrato ? ' · ' + esc(C.contrato) : '') + '</p>' +
-      '<div class="mcm-cambio"><div><em>Antes</em><b>' + esc(C.antes) + '</b></div>' +
-        '<span aria-hidden="true">→</span><div><em>Después</em><b>' + esc(C.despues) + '</b></div></div>' +
-      (C.total ? '<p class="mcm-total">El total pasa de <b>' + (C.total.antes === null ? '—' : fmtNum(C.total.antes)) +
-        '</b> a <b>' + fmtNum(C.total.despues) + '</b> (se recalcula solo).</p>' : '') +
-      (C.atado
-        ? '<div class="mcm-aviso"><span class="mcm-ico">' + ico('enlace') + '</span><div>' +
-            '<p>' + esc(C.aviso) + '</p>' +
-            '<p class="mcm-sub">Este dato sale del contrato. Si el contrato está mal, conviene corregirlo allá; ' +
-            'si es un ajuste puntual de esta carga, podés seguir.</p>' +
-            (ctrEd ? '<button data-act="ctrabrir" data-k="' + esc(C.contrato) + '">Abrir el contrato</button>' : '') +
-          '</div></div>' +
-          '<label class="chk entiendo"><input type="checkbox" data-cambioentiendo="1"' + (C.entiendo ? ' checked' : '') + '>' +
-            '<span>Entiendo que esta carga va a diferir del contrato</span></label>'
-        : '') +
-      '<div class="mcm-acc">' +
-        '<button data-act="cambiono">Cancelar</button>' +
-        '<button class="primario" data-act="cambiook"' + (C.atado && !C.entiendo ? ' disabled' : '') + '>Cambiar</button>' +
-      '</div></div></div>';
+  if (!encolarCambio(id, campo, valor)) pintar();   // sin cambio real: se vuelve a mostrar lo que había
 }
 
 // ¿Hay texto seleccionado con el mouse dentro de la tabla? Si sí, el clic que
@@ -7446,7 +7378,7 @@ function vistaApp() {
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     ((S.modo === 'planilla' || S.modo === 'tabla') && S.vista === 'carga' ? menuColumna() : '') +
-    modalCambio() + modalMoverCtr() + modalRevision() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
+    modalMoverCtr() + modalRevision() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -10933,17 +10865,18 @@ function barraPendHtml() {
     '<span class="pb-punto"></span><b>' + n + (n === 1 ? ' cambio' : ' cambios') + ' sin guardar</b>' +
     '<span class="pb-sub">en ' + m + (m === 1 ? ' fila' : ' filas') + '</span>' +
     '<button data-act="pendnada">' + (S.pendNada ? '¿Descartar todo?' : 'Descartar') + '</button>' +
-    '<button class="primario" data-act="pendrevisar">Revisar y guardar</button></div>';
+    '<button class="primario" data-act="pendrevisar">Confirmar cambios</button></div>';
 }
 
 // En las otras vistas (tarjetas, control, contratos) no hay barra de tabla: queda
-// una etiqueta a la vista para que los cambios pendientes no se olviden.
+// un botón arriba a la derecha que abre directo la confirmación.
 function pendFlotaHtml() {
   if (!nPend()) return '';
-  if (S.vista === 'carga' && (S.modo === 'planilla' || S.modo === 'tabla')) return '';
+  // En Tabla y Planilla la barra de la tabla ya hace de botón, salvo que el panel de detalle la tape.
+  if (S.vista === 'carga' && (S.modo === 'planilla' || S.modo === 'tabla') && !S.sel) return '';
   var n = nPend();
-  return '<button class="pend-flota" data-act="pendir"><span class="pb-punto"></span>' + n +
-    (n === 1 ? ' cambio sin guardar' : ' cambios sin guardar') + ' · Ver</button>';
+  return '<button class="pend-flota' + (S.sel ? ' con-panel' : '') + '" data-act="pendrevisar"><span class="pb-punto"></span>Confirmar ' + n +
+    (n === 1 ? ' cambio' : ' cambios') + '</button>';
 }
 
 function modalRevision() {
@@ -10958,21 +10891,18 @@ function modalRevision() {
     var ea = filaPorId(a) || {}, eb = filaPorId(b) || {};
     return String(ea._tab).localeCompare(String(eb._tab)) || (ea._fila - eb._fila);
   });
-  var n = lista.length, m = orden.length, dif = 0, porTab = {};
+  var n = lista.length, m = orden.length, dif = 0;
   var bloques = orden.map(function (id) {
     var emb = filaPorId(id) || {};
-    porTab[emb._tab] = porTab[emb._tab] || { n: 0, m: 0 };
-    porTab[emb._tab].m++;
     var tocaTot = false;
     var lineas = porFila[id].map(function (p) {
-      porTab[emb._tab].n++;
       var av = avisoContratoPend(p, emb);
       if (av) dif++;
       if (p.campo === 'tns' || p.campo === 'price') tocaTot = true;
       return '<li class="rev-cambio' + (av ? ' dif' : '') + '"><span class="rc-campo">' + esc(etqCol(p.campo)) + '</span>' +
         '<span class="rc-antes">' + esc(txtPend(p, p.antes)) + '</span><span class="rc-flecha">→</span>' +
         '<span class="rc-desp">' + esc(txtPend(p, p.nuevo)) + '</span>' +
-        (R.paso === 1 && !R.guardando
+        (!R.guardando
           ? '<button class="rc-quitar" data-act="pendquitar" data-k="' + esc(clavePend(p.id, p.campo)) +
             '" title="Quitar este cambio" aria-label="Quitar este cambio">×</button>' : '') +
         (av ? '<span class="rc-aviso">' + ico('enlace') + esc(av) + '</span>' : '') + '</li>';
@@ -10994,30 +10924,14 @@ function modalRevision() {
       '<p class="mcm-sub">Esos datos salen del contrato. Si el contrato está mal, conviene corregirlo allá; ' +
       'si es un ajuste puntual de la carga, podés seguir.</p></div></div>' : '';
 
-  var cab, cuerpo, pie;
-  if (R.paso === 1) {
-    cab = '<p class="rev-paso">Paso 1 de 2</p><h3 id="mcm-t">Revisá tus cambios</h3>' +
-      '<p class="mcm-donde">' + n + (n === 1 ? ' cambio' : ' cambios') + ' en ' + m + (m === 1 ? ' fila' : ' filas') +
-      '. Todavía no se escribió nada en la planilla.</p>';
-    cuerpo = '<div class="rev-lista">' + bloques + '</div>' + avisoDif;
-    pie = '<button data-act="pendseguir">Seguir editando</button>' +
-      '<button class="primario" data-act="pendsig">Continuar</button>';
-  } else {
-    var resumen = Object.keys(porTab).map(function (t) {
-      return '<li><b>' + esc(t) + '</b>: ' + porTab[t].n + (porTab[t].n === 1 ? ' cambio' : ' cambios') + ' en ' +
-        porTab[t].m + (porTab[t].m === 1 ? ' fila' : ' filas') + '</li>';
-    }).join('');
-    cab = '<p class="rev-paso">Paso 2 de 2</p><h3 id="mcm-t">Confirmación final</h3>' +
-      '<p class="mcm-donde">Vas a escribir en Google Sheets. Es la planilla compartida: lo que guardes lo ve todo el equipo.</p>';
-    cuerpo = '<ul class="rev-resumen">' + resumen + '</ul>' + avisoDif +
-      '<label class="chk entiendo"><input type="checkbox" data-pendentiendo="1"' + (R.entiendo ? ' checked' : '') +
-        (R.guardando ? ' disabled' : '') + '><span>Revisé los ' + n + (n === 1 ? ' cambio' : ' cambios') +
-        ' y quiero guardarlos</span></label>' +
-      (R.error ? '<div class="error" style="margin-top:12px;white-space:pre-line">' + esc(R.error) + '</div>' : '');
-    pie = '<button data-act="pendatras"' + (R.guardando ? ' disabled' : '') + '>Volver a revisar</button>' +
-      '<button class="primario" data-act="pendguardar"' + (!R.entiendo || R.guardando ? ' disabled' : '') + '>' +
-        (R.guardando ? 'Guardando…' : 'Guardar ' + n + (n === 1 ? ' cambio' : ' cambios')) + '</button>';
-  }
+  var cab = '<h3 id="mcm-t">Confirmar cambios</h3>' +
+    '<p class="mcm-donde">' + n + (n === 1 ? ' cambio' : ' cambios') + ' en ' + m + (m === 1 ? ' fila' : ' filas') +
+    '. Se escriben en Google Sheets, la planilla compartida: lo que guardes lo ve todo el equipo.</p>';
+  var cuerpo = '<div class="rev-lista">' + bloques + '</div>' + avisoDif +
+    (R.error ? '<div class="error" style="margin-top:12px;white-space:pre-line">' + esc(R.error) + '</div>' : '');
+  var pie = '<button data-act="pendseguir"' + (R.guardando ? ' disabled' : '') + '>Seguir editando</button>' +
+    '<button class="primario" data-act="pendguardar"' + (R.guardando ? ' disabled' : '') + '>' +
+      (R.guardando ? 'Guardando…' : 'Guardar ' + n + (n === 1 ? ' cambio' : ' cambios')) + '</button>';
   return '<div class="modal-velo" data-act="pendseguir"></div>' +
     '<div class="modal-caja"><div class="modal-cambio modal-rev" role="alertdialog" aria-modal="true" aria-labelledby="mcm-t">' +
       cab + cuerpo + '<div class="mcm-acc">' + pie + '</div></div></div>';
@@ -11466,7 +11380,7 @@ function vistaPanel(x) {
   if (fechas.length) {
     h += '<div class="bloque"><h3 class="gt">Fechas</h3><div class="fechas">' +
       fechas.map(function (c) {
-        var v = emb[c];
+        var v = valorVista(emb, c);
         var iso = esFecha(v)
           ? v.getUTCFullYear() + '-' +
             String(v.getUTCMonth() + 1).padStart(2, '0') + '-' +
@@ -11493,8 +11407,8 @@ function vistaPanel(x) {
     return src.mapa[c] !== undefined && !src.noAplica[c];
   });
   if (nums.length) {
-    var tnsA = normNum(emb.tns), preA = normNum(emb.price);
-    var totalA = (tnsA && preA) ? tnsA * preA : normNum(emb.total);
+    var tnsA = normNum(valorVista(emb, 'tns')), preA = normNum(valorVista(emb, 'price'));
+    var totalA = (tnsA && preA) ? tnsA * preA : normNum(valorVista(emb, 'total'));
 
     h += '<div class="bloque"><h3 class="gt">Cantidad y precio</h3>' +
       '<div class="fechas">' +
@@ -11502,7 +11416,7 @@ function vistaPanel(x) {
         return '<div class="campo"><label for="n-' + c + '">' + CAMPOS[c].label + '</label>' +
           '<input id="n-' + c + '" type="number" step="any" data-num="' + c + '" ' +
           'data-f="' + esc(emb._id) + '" value="' +
-          esc(emb[c] === null || emb[c] === undefined ? '' : emb[c]) + '"></div>';
+          esc(valorVista(emb, c) === null || valorVista(emb, c) === undefined ? '' : valorVista(emb, c)) + '"></div>';
       }).join('') + '</div>' +
       (totalA
         ? '<p class="total-calc">Total: <b>' + fmtNum(totalA) + '</b>' +
@@ -11521,7 +11435,7 @@ function vistaPanel(x) {
   if (eds.length) {
     h += '<div class="bloque"><h3 class="gt">Datos</h3>';
     eds.forEach(function (c) {
-      var v = emb[c];
+      var v = valorVista(emb, c);
       h += '<div class="campo' + (falta[c] ? ' falta' : '') + '">' +
         '<label for="e-' + c + '">' + CAMPOS[c].label +
         (falta[c] ? ' <span style="color:var(--pend)">· falta</span>' : '') + '</label>' +
@@ -11697,11 +11611,8 @@ function pintar() {
   acomodarMenuCfg();
   actualizarBotonCom();
   // El cartel de confirmación toma el foco: Enter confirma, Esc cancela.
-  if (S.confirmar) {
-    var fc0 = document.querySelector('.modal-cambio ' + (S.confirmar.atado ? 'input[type="checkbox"]' : '.primario'));
-    if (fc0) fc0.focus();
-  } else if (S.revision) {
-    var fr0 = document.querySelector('.modal-rev ' + (S.revision.paso === 2 ? 'input[type="checkbox"]' : '.primario'));
+  if (S.revision) {
+    var fr0 = document.querySelector('.modal-rev .primario');
     if (fr0 && !fr0.disabled) fr0.focus();
   } else if (S.moverCtr && S.moverCtr.plan && !S.moverCtr.entiendo) {
     var fm0 = document.querySelector('.modal-cambio input[type="checkbox"]');
@@ -11814,7 +11725,7 @@ document.addEventListener('dblclick', function (ev) {
 });
 
 document.addEventListener('keydown', function (ev) {
-  if (S.editCel || S.revision || S.confirmar || S.moverCtr || S.menuCol || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  if (S.editCel || S.revision || S.moverCtr || S.menuCol || ev.ctrlKey || ev.metaKey || ev.altKey) return;
   var t = ev.target;
   if (t && (/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(t.tagName) || t.isContentEditable)) return;
   var td = tdActiva();
@@ -12192,17 +12103,14 @@ document.addEventListener('click', function (ev) {
     if (!S.moverCtr || !S.moverCtr.entiendo || S.moverCtr.moviendo) return;
     return ejecutarMoverContrato(S.moverCtr.contrato);
   }
-  if (act === 'pendrevisar') { S.revision = { paso: 1, entiendo: false, guardando: false, error: null }; return pintar(); }
+  if (act === 'pendrevisar') { S.revision = { guardando: false, error: null }; return pintar(); }
   if (act === 'pendseguir') { if (S.revision && S.revision.guardando) return; S.revision = null; return pintar(); }
-  if (act === 'pendsig') { if (S.revision) { S.revision.paso = 2; S.revision.entiendo = false; S.revision.error = null; } return pintar(); }
-  if (act === 'pendatras') { if (S.revision && !S.revision.guardando) { S.revision.paso = 1; S.revision.error = null; } return pintar(); }
   if (act === 'pendquitar') {
     delete S.pend[el.getAttribute('data-k')];
     if (!nPend()) S.revision = null;
     return pintar();
   }
-  if (act === 'pendguardar') { if (S.revision && S.revision.entiendo) return guardarPendientes(); return; }
-  if (act === 'pendir') { S.modo = S.modoGrid || 'planilla'; return irAVista('carga'); }
+  if (act === 'pendguardar') { if (S.revision) return guardarPendientes(); return; }
   if (act === 'pendnada') {
     // Descartar todo es irreversible: pide un segundo clic.
     if (S.pendNada) { S.pend = {}; S.pendNada = false; S.revision = null; return pintar(); }
@@ -12215,13 +12123,6 @@ document.addEventListener('click', function (ev) {
     S.expLeyenda = !S.expLeyenda;
     try { localStorage.setItem('embarques:leyendaExp', S.expLeyenda ? '1' : '0'); } catch (e) {}
     return pintar();
-  }
-  if (act === 'cambiono') { S.confirmar = null; return pintar(); }
-  if (act === 'cambiook') {
-    var Cc = S.confirmar;
-    if (!Cc || (Cc.atado && !Cc.entiendo)) return;
-    S.confirmar = null;
-    return aplicarCambio(Cc.id, Cc.campo, Cc.valor);
   }
   if (act === 'menucol') {
     S.menuCfg = false;
@@ -12763,22 +12664,10 @@ document.addEventListener('change', function (e) {
     S.topeContratos = 40;
     return pintar();
   }
-  if (e.target.getAttribute && e.target.getAttribute('data-pendentiendo') && S.revision) {
-    S.revision.entiendo = e.target.checked;
-    var bPg = document.querySelector('.modal-cambio [data-act="pendguardar"]');
-    if (bPg) bPg.disabled = !e.target.checked || !!S.revision.guardando;
-    return;
-  }
   if (e.target.getAttribute && e.target.getAttribute('data-moverentiendo') && S.moverCtr) {
     S.moverCtr.entiendo = e.target.checked;
     var bMv = document.querySelector('.modal-cambio [data-act="ctrmoverok"]');
     if (bMv) bMv.disabled = !e.target.checked || !!S.moverCtr.moviendo;
-    return;
-  }
-  if (e.target.getAttribute && e.target.getAttribute('data-cambioentiendo') && S.confirmar) {
-    S.confirmar.entiendo = e.target.checked;
-    var bOkc = document.querySelector('.modal-cambio [data-act="cambiook"]');
-    if (bOkc) bOkc.disabled = !e.target.checked;
     return;
   }
   var gd = e.target.getAttribute && e.target.getAttribute('data-gendoc');
@@ -12892,7 +12781,8 @@ document.addEventListener('change', function (e) {
     if (!fn) return;
     var nuevo = e.target.value === '' ? '' : parseFloat(e.target.value);
     if (nuevo !== '' && isNaN(nuevo)) return;
-    if (String(nuevo) === String(fn[cn] === null || fn[cn] === undefined ? '' : fn[cn])) return;
+    var vn = valorVista(fn, cn);
+    if (String(nuevo) === String(vn === null || vn === undefined ? '' : vn)) return;
     return pedirCambio(idn2, cn, nuevo);
   }
 
@@ -12901,10 +12791,11 @@ document.addEventListener('change', function (e) {
   var idf = e.target.getAttribute('data-f');
   var ff = filaPorId(idf);
   if (!ff) return;
-  var actualISO = esFecha(ff[cf])
-    ? ff[cf].getUTCFullYear() + '-' +
-      String(ff[cf].getUTCMonth() + 1).padStart(2, '0') + '-' +
-      String(ff[cf].getUTCDate()).padStart(2, '0')
+  var vf = valorVista(ff, cf);
+  var actualISO = esFecha(vf)
+    ? vf.getUTCFullYear() + '-' +
+      String(vf.getUTCMonth() + 1).padStart(2, '0') + '-' +
+      String(vf.getUTCDate()).padStart(2, '0')
     : '';
   if (e.target.value !== actualISO) pedirCambio(idf, cf, e.target.value);
 }, true);
@@ -12923,7 +12814,7 @@ document.addEventListener('blur', function (e) {
   if (!campo) return;
   var id = e.target.getAttribute('data-f');
   var f = filaPorId(id);
-  var actual = f ? f[campo] : '';
+  var actual = f ? valorVista(f, campo) : '';
   var actualTxt = actual instanceof Date ? fmtFecha(actual) : (actual || '');
   if (e.target.value !== actualTxt) pedirCambio(id, campo, e.target.value);
 }, true);
@@ -12941,7 +12832,6 @@ document.addEventListener('keydown', function (e) {
   }
   if (e.key === 'Escape' && S.revision && !S.revision.guardando) { S.revision = null; return pintar(); }
   if (e.key === 'Escape' && S.moverCtr && !S.moverCtr.moviendo) { S.moverCtr = null; return pintar(); }
-  if (e.key === 'Escape' && S.confirmar) { S.confirmar = null; return pintar(); }
   if (e.key === 'Escape' && S.menuCfg) { S.menuCfg = false; return pintar(); }
   if (e.key === 'Escape' && S.combo) { S.combo = null; return pintar(); }
   if (e.key === 'Escape' && S.menuSem) { S.menuSem = null; return pintar(); }
@@ -13121,7 +13011,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.14-l';
+var APP_VERSION = '2026.10.14-m';
 
 function arrancar() {
   cargarPrefsPlanilla();
