@@ -487,6 +487,7 @@ html{overflow-x:clip}
 .edit-cel{width:100%;min-width:120px;height:100%;min-height:34px;border:0;border-radius:0;
   padding:0 10px;font:inherit;background:#fff;outline:none;box-shadow:none}
 .edit-cel.mal{background:#fdecea;color:var(--pend)}
+.tbl-hoja td.editando .edit-cel + .edit-cel{border-top:1px solid #dadce0}   /* color arriba, texto abajo */
 .tbl-hoja td[data-c]{cursor:default}
 
 /* Aviso al lado de una celda que no se puede editar */
@@ -2224,6 +2225,11 @@ var CAMPOS = {
   docs:         {label:'Docs',         tipo:'semaforo',alias:['docs','docs.','documentos','observaciones']},
   pics:         {label:'Fotos',        tipo:'semaforo',alias:['pics','fotos','pictures']},
   tr:           {label:'T.R.',         tipo:'semaforo',alias:['t. r.','t.r.','tr','telex release']},
+  // El texto que va DENTRO de la celda de Docs/Fotos/T.R. (el color es el estado). Misma columna de la
+  // planilla que el semáforo, por eso no tienen alias propio: ver baseSem().
+  docs_nota:    {label:'Docs (texto)',  tipo:'texto',   alias:[]},
+  pics_nota:    {label:'Fotos (texto)', tipo:'texto',   alias:[]},
+  tr_nota:      {label:'T.R. (texto)',  tipo:'texto',   alias:[]},
   tracking:     {label:'Tracking',     tipo:'texto',   alias:['tracking n°','tracking','tracking no']},
   pagoEstimado: {label:'Pago estimado',tipo:'fecha',   alias:['pago estimado','estimated payment']},
   commission:   {label:'Comisión',     tipo:'numero',  alias:['commission','comision']},
@@ -2313,6 +2319,21 @@ function extraerId(entrada) {
 /* --- Semáforos: el color de la celda ES el dato --------------------------- */
 
 var SEMAFOROS = ['docs', 'pics', 'tr'];
+
+// «docs_nota» es el texto de la celda de Docs: vive en la MISMA columna que el semáforo «docs».
+function baseSem(c) {
+  var b = String(c).replace(/_nota$/, '');
+  return b !== c && SEMAFOROS.indexOf(b) >= 0 ? b : c;
+}
+
+// Modalidad de liberación que dice el texto de la celda T.R. ('' si el texto no es una modalidad).
+function modoTr(texto) {
+  var t = clave(texto);
+  return /bl original|original/.test(t) ? 'BL original'
+       : /telex/.test(t) ? 'Telex release'
+       : /express/.test(t) ? 'Express release'
+       : '';
+}
 var CICLO = ['vacio', 'ok', 'pendiente', 'atencion'];
 var COLORES = {
   ok:        { red: 0,   green: 1,   blue: 0 },
@@ -6460,6 +6481,7 @@ async function cargarTodo() {
           if (ic === undefined) return;
           var tx = f.celdas[ic];
           o._notas[c] = tx == null ? '' : String(tx).trim();
+          o[c + '_nota'] = o._notas[c];
         });
 
         // En T.R. el texto es la MODALIDAD de liberación (BL Original / telex),
@@ -6468,11 +6490,7 @@ async function cargarTodo() {
         // palabras de estado ("solicitada"), que ya vienen en el color. Solo
         // tomamos las que son realmente modalidad.
         if (det.mapa.tr !== undefined) {
-          var t = clave(f.celdas[det.mapa.tr]);
-          o.trModo = /bl original|original/.test(t) ? 'BL original'
-                   : /telex/.test(t) ? 'Telex release'
-                   : /express/.test(t) ? 'Express release'
-                   : '';
+          o.trModo = modoTr(f.celdas[det.mapa.tr]);
         }
 
         // Naranja en "Pago estimado" = falta que manden el comprobante.
@@ -6928,37 +6946,6 @@ async function aplicarCambio(id, campo, valor) {
 }
 
 // Escribe el texto de una columna semáforo sin tocar su color.
-async function aplicarNota(id, campo, texto) {
-  var f = filaPorId(id);
-  if (!f) return;
-  var src = fuenteDe(f);
-  var idx = src.mapa[campo];
-  if (idx === undefined) return;
-
-  var antes = (f._notas && f._notas[campo]) || '';
-  f._notas = f._notas || {};
-  f._notas[campo] = texto;
-  S.guardando++; pintar();
-
-  var valores = {};
-  valores[idx] = texto;
-  try {
-    await escribirCeldas(S.cfg.sheetId, f._sheetId, f._fila, valores, {});
-  } catch (e) {
-    f._notas[campo] = antes;
-    S.error = 'No se pudo guardar la anotación: ' + e.message;
-  } finally {
-    S.guardando--;
-    if (!S.guardando) {
-      S.guardadoOk = true;
-      clearTimeout(S.tGuardado);
-      S.tGuardado = setTimeout(function () { S.guardadoOk = false; pintar(); }, 2500);
-    }
-    pintar();
-  }
-}
-
-
 /* ===========================================================================
    Vistas
    =========================================================================== */
@@ -10963,7 +10950,7 @@ async function guardarPendientes() {
         var fresca = ubicarFila(h, mp, cambios[0].ident, emb._fila);
         var valores = {}, colores = {}, tocaTotal = false;
         cambios.forEach(function (p) {
-          var idx = mp[p.campo];
+          var idx = mp[baseSem(p.campo)];
           if (idx === undefined) throw new Error('La columna «' + etqCol(p.campo) + '» ya no existe en «' + tabs[t] + '».');
           if (p.tipo === 'semaforo') colores[idx] = p.nuevo || 'vacio';
           else valores[idx] = (p.nuevo === null || p.nuevo === undefined) ? '' : p.nuevo;
@@ -10989,6 +10976,10 @@ async function guardarPendientes() {
       var e = filaPorId(p.id);
       if (!e) return;
       e[p.campo] = p.nuevo;
+      if (baseSem(p.campo) !== p.campo) {            // texto de Docs/Fotos/T.R.
+        e._notas = e._notas || {}; e._notas[baseSem(p.campo)] = p.nuevo;
+        if (baseSem(p.campo) === 'tr') e.trModo = modoTr(p.nuevo);
+      }
       if (p.campo === 'tns' || p.campo === 'price') {
         var pr = normNum(e.price), tn = normNum(e.tns);
         e.total = (pr !== null && tn !== null) ? Math.round(pr * tn * 100) / 100 : e.total;
@@ -11014,9 +11005,9 @@ async function guardarPendientes() {
 
 function motivoNoEditable(emb, c) {
   if (c === '_etapa') return 'La etapa se calcula sola, según los datos que tiene la carga.';
-  var src = fuenteDe(emb);
-  if (src.mapa[c] === undefined) return 'Esta columna no existe en «' + emb._tab + '».';
-  if (src.noAplica && src.noAplica[c]) return 'Esta columna no aplica en «' + emb._tab + '».';
+  var src = fuenteDe(emb), cb = baseSem(c);
+  if (src.mapa[cb] === undefined) return 'Esta columna no existe en «' + emb._tab + '».';
+  if (src.noAplica && src.noAplica[cb]) return 'Esta columna no aplica en «' + emb._tab + '».';
   if (c === 'total') return 'El total se calcula solo: precio × toneladas. Cambiá la cantidad y se actualiza.';
   return null;
 }
@@ -11036,11 +11027,14 @@ function editarCelda(td) {
   if (tipo === 'semaforo') {
     td.classList.add('editando');
     var ops = ['ok', 'pendiente', 'atencion', 'vacio'];
-    td.innerHTML = '<select class="edit-cel" data-editcel="1" aria-label="' + esc(CAMPOS[c].label) + '">' +
+    td.innerHTML = '<select class="edit-cel" data-editcel="1" aria-label="' + esc(CAMPOS[c].label) + ': color de fondo">' +
       ops.map(function (o) {
       return '<option value="' + o + '"' + ((v || 'vacio') === o ? ' selected' : '') + '>' +
         esc(etiqueta(c, o)) + '</option>';
-    }).join('') + '</select>';
+    }).join('') + '</select>' +
+      '<input class="edit-cel" data-editcel="1" data-txtsem="1" autocomplete="off" aria-label="' +
+      esc(CAMPOS[c].label) + ': texto" placeholder="Texto de la celda" value="' +
+      esc(valorVista(emb, c + '_nota') || '') + '">';
   } else {
     if (v instanceof Date) inicial = fmtFecha(v);
     else if (tipo === 'numero' && typeof v === 'number') {
@@ -11054,7 +11048,7 @@ function editarCelda(td) {
   S.editCel = { id: emb._id, c: c, td: td, previo: null };
   var inp = td.querySelector('.edit-cel');
   inp.focus();
-  if (inp.select) inp.select();
+  if (inp.select && tipo !== 'semaforo') inp.select();
 }
 
 // Guarda (o descarta) lo que se escribió en la celda.
@@ -11065,6 +11059,15 @@ function cerrarEdicionCelda(guardar) {
   var inp = E.td.querySelector('.edit-cel');
   if (!guardar || !inp) return refrescarPlanilla();
   var emb = filaPorId(E.id), c = E.c, tipo = CAMPOS[c].tipo, val = inp.value;
+
+  // Docs / Fotos / T.R.: se cambian el color (estado) y el texto de la celda, cada uno por su lado.
+  if (tipo === 'semaforo') {
+    var tx = E.td.querySelector('[data-txtsem]');
+    var cambioColor = encolarCambio(E.id, c, E.td.querySelector('select.edit-cel').value);
+    var cambioTexto = tx ? encolarCambio(E.id, c + '_nota', tx.value) : false;
+    if (!cambioColor && !cambioTexto) refrescarPlanilla();
+    return;
+  }
 
   // Validar antes de escribir: un dato mal en la planilla es peor que ninguno.
   if (tipo === 'fecha' && String(val).trim() && !esFecha(normFecha(val))) {
@@ -11105,7 +11108,7 @@ function conClaseTd(td, cls) {
 
 function celdaPlanilla(emb, src, c) {
   var td = celdaPlanillaBase(emb, src, c).replace(/^<td/, '<td data-c="' + c + '"');
-  var pend = pendDe(emb._id, c) ||
+  var pend = pendDe(emb._id, c) || (SEMAFOROS.indexOf(c) >= 0 && pendDe(emb._id, c + '_nota')) ||
     (c === 'total' && (pendDe(emb._id, 'tns') || pendDe(emb._id, 'price')));
   if (pend) td = conClaseTd(td, 'pend-cel');
   // Comentarios: la marca va según la CARGA y la columna, no según la posición en pantalla,
@@ -11129,7 +11132,7 @@ function celdaPlanillaBase(emb, src, c) {
   if (SEMAFOROS.indexOf(c) >= 0) {
     if (src.noAplica[c]) return '<td class="na"></td>';
     var est = valorVista(emb, c) || 'vacio';
-    var txt = (emb._notas && emb._notas[c]) || '';
+    var txt = valorVista(emb, c + '_nota') || '';
     return '<td class="cel-' + est + '" title="' + esc(etiqueta(c, est)) +
       (txt ? ' — ' + esc(txt) : '') + '">' + esc(txt) + '</td>';
   }
@@ -11332,7 +11335,7 @@ function vistaPanel(x) {
         '<label for="n-' + c + '">Anotación en ' + CAMPOS[c].label + '</label>' +
         '<input id="n-' + c + '" data-nota="' + c + '" data-f="' + esc(emb._id) + '" ' +
         'placeholder="Ej: recibir factura y enviar gas free cuando recibamos" value="' +
-        esc((emb._notas && emb._notas[c]) || '') + '"></div>';
+        esc(valorVista(emb, c + '_nota') || '') + '"></div>';
     });
     h += '</div>';
   }
@@ -11765,15 +11768,14 @@ document.addEventListener('copy', function (ev) {
 // Enter guarda, Escape descarta, Tab guarda y deja seguir.
 document.addEventListener('keydown', function (ev) {
   if (!S.editCel || !ev.target.classList || !ev.target.classList.contains('edit-cel')) return;
+  if (ev.key === 'Tab' && ev.target.tagName === 'SELECT' && !ev.shiftKey && S.editCel.td.querySelector('[data-txtsem]')) {
+    ev.preventDefault(); ev.stopPropagation(); S.editCel.td.querySelector('[data-txtsem]').focus(); return;   // del color al texto
+  }
   if (ev.key === 'Enter' || ev.key === 'Tab') { ev.preventDefault(); ev.stopPropagation(); cerrarEdicionCelda(true); }
   else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); cerrarEdicionCelda(false); }
 }, true);
 
-// Elegir un estado en un semáforo lo guarda en el acto.
-document.addEventListener('change', function (ev) {
-  if (S.editCel && ev.target.classList && ev.target.classList.contains('edit-cel') &&
-      ev.target.tagName === 'SELECT') cerrarEdicionCelda(true);
-});
+// En Docs/Fotos/T.R. la celda tiene color y texto: elegir el color no cierra, para poder escribir el texto.
 
 // Clic derecho sobre una celda: el menú con «Comentar», como en Sheets.
 document.addEventListener('contextmenu', function (ev) {
@@ -12805,8 +12807,8 @@ document.addEventListener('blur', function (e) {
   if (nota) {
     var idn = e.target.getAttribute('data-f');
     var fn = filaPorId(idn);
-    if (fn && e.target.value !== ((fn._notas && fn._notas[nota]) || '')) {
-      aplicarNota(idn, nota, e.target.value);
+    if (fn && e.target.value !== (valorVista(fn, nota + '_nota') || '')) {
+      pedirCambio(idn, nota + '_nota', e.target.value);
     }
     return;
   }
@@ -13011,7 +13013,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.14-m';
+var APP_VERSION = '2026.10.14-n';
 
 function arrancar() {
   cargarPrefsPlanilla();
