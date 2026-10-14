@@ -2025,6 +2025,51 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
   .com-ta{font-size:16px}
   .com-ctx{min-width:220px}
 }
+
+/* ===== Contratos: búsqueda y tarjetas más prolijas (14/10/2026) ===== */
+.ctr-filtros{padding:18px 20px;gap:14px;border-radius:14px}
+.cf-fila{gap:10px 12px}
+.cf-busca{position:relative;flex:3 1 340px;min-width:200px;display:flex;align-items:center}
+.cf-busca input{width:100%;height:46px;padding:0 42px 0 42px;border-radius:12px;border:1px solid var(--linea3);
+  background:var(--papel);font-size:15px;transition:border-color .15s,box-shadow .15s,background .15s}
+.cf-busca input:focus{background:var(--sup);border-color:var(--acento);box-shadow:0 0 0 3px rgba(124,58,237,.16)}
+.cf-lupa{position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex;color:var(--tinta3);pointer-events:none}
+.cf-lupa .ico{width:17px;height:17px;stroke-width:2}
+.cf-borrar{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;min-height:0;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:var(--sup3);color:var(--tinta2)}
+.cf-borrar:hover{background:var(--linea3)}
+.cf-borrar .ico{width:12px;height:12px;stroke-width:2.4}
+.cf-sel,.cf-orden{height:46px;border-radius:12px}
+.cf-rot{min-width:62px}
+.conteo{margin:2px 2px 16px;font-size:13.5px}
+.conteo b{color:var(--tinta);font-weight:700}
+.cf-nota{color:var(--tinta3)}
+.ctr-vacio{background:var(--sup);border-radius:14px;box-shadow:var(--s1);padding:34px 20px}
+.ctr-vacio p{margin:0 0 8px}
+.ctr-vacio .primario{margin-top:10px}
+
+.ctr-card{position:relative;border-radius:14px;padding:22px 28px 14px;border-left:5px solid var(--linea3);
+  transition:box-shadow .2s var(--ease),transform .2s var(--ease)}
+.ctr-card.editable:hover{box-shadow:var(--s2);transform:translateY(-1px)}
+.ctr-card.ctr-ok{border-left-color:#16a34a}
+.ctr-card.ctr-sol{border-left-color:var(--violeta)}
+.ctr-card.ctr-nar{border-left-color:#d97706}
+.ctr-card.ctr-hueco{border-left-color:var(--linea3)}
+.ctr-num .ct-pre{color:inherit}
+.ctr-num{font-size:23px}
+.ctr-card .ct-fecha{color:var(--tinta3);font-size:13px;background:var(--sup2);padding:2px 9px;border-radius:980px}
+.ctr-card .ctr-cab{border-bottom-color:var(--linea)}
+.ctr-card .ctr-nom{font-weight:600}
+.ctr-card .barra{height:8px;margin-bottom:12px}
+.ctr-card .barra i{opacity:1;background:var(--violeta)}
+.ctr-card .barra i.full{background:#16a34a}
+.ctr-card .barra i.exc{background:#d97706}
+.ctr-card .ctr-pie{border-top-color:var(--linea)}
+@media(max-width:600px){
+  .ctr-filtros{padding:14px}
+  .ctr-card{padding:16px 16px 10px;border-left-width:4px}
+  .ctr-num{font-size:20px}
+}
 </style>
 </head>
 <body>
@@ -7034,6 +7079,7 @@ async function aplicarCambio(id, campo, valor) {
 var ICONOS = {
   mail:   'M2 4h12v8H2zM2 4l6 4 6-4',
   plus:   'M8 3v10M3 8h10',
+  lupa:   'M7 12.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zM11 11l3.5 3.5',
   refresh:'M13 8a5 5 0 1 1-1.5-3.5M13 2v3h-3',
   down:   'M8 2v8M5 7l3 3 3-3M3 13h10',
   cols:   'M2 2h12v12H2zM6 2v12M10 2v12',
@@ -9564,13 +9610,31 @@ function ordenarContratos(lista, orden) {
    Cada grupo (búsqueda, estado, vía, tipo, exportador, importador) se aplica
    sobre todos los demás. Pidiendo «todo menos este grupo» cada selector puede
    decir cuántos contratos quedarían con cada opción. */
+// Todo lo que se puede buscar de un contrato, sin tildes ni mayúsculas.
+function textoBuscableContrato(r) {
+  var partes = [r.contrato, r.importador, r.exportador, r.producto, r.tipo, r.periodo, r.via ? VIA_TXT[r.via] : '',
+    r.cond && r.cond.texto, r.fecha instanceof Date ? fmtFecha(r.fecha) : ''];
+  (r.embarques || []).forEach(function (e) { partes.push(e.bl, e.booking, e.invoice, e.vessel); });
+  var hay = clave(partes.filter(Boolean).join(' '));
+  return { hay: hay, compacto: hay.replace(/[^a-z0-9]/g, '') };
+}
+
+// «lt 033», «LT033», «maní newsan», «qdtx2021223»: cada palabra tiene que aparecer, en cualquier orden,
+// con o sin guiones y espacios de por medio.
+function coincideBusqueda(txt, palabras) {
+  return palabras.every(function (p) {
+    var c = p.replace(/[^a-z0-9]/g, '');
+    return txt.hay.indexOf(p) >= 0 || (c && txt.compacto.indexOf(c) >= 0);
+  });
+}
+
 function contratosFiltrados(omitir) {
   var lista = calcularContratos();
-  var q = String(S.busca || '').trim().toLowerCase();
+  var q = clave(S.busca);
+  var palabras = q ? q.split(' ').filter(Boolean) : [];
 
-  if (omitir !== 'q' && q) lista = lista.filter(function (r) {
-    return [r.contrato, r.importador, r.exportador]
-      .some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
+  if (omitir !== 'q' && palabras.length) lista = lista.filter(function (r) {
+    return coincideBusqueda(textoBuscableContrato(r), palabras);
   });
 
   if (omitir !== 'estado') {
@@ -9586,7 +9650,8 @@ function contratosFiltrados(omitir) {
     if (S.fContrato === 'con_embarques') lista = lista.filter(function (r) { return r.embarques.length; });
     // Sin elegir nada, solo tienen sentido los contratos con movimiento o con saldo pendiente.
     // «Todos» los muestra todos, también los viejos ya completos.
-    if (!S.fContrato) lista = lista.filter(function (r) { return r.embarques.length || r.saldo > 0.5; });
+    // Pero si estás BUSCANDO, se busca en todos: un contrato completo y viejo existe aunque no tenga movimiento.
+    if (!S.fContrato && !palabras.length) lista = lista.filter(function (r) { return r.embarques.length || r.saldo > 0.5; });
   }
 
   if (omitir !== 'via') {
@@ -9688,7 +9753,11 @@ function vistaContratos() {
     '<section class="ctr-filtros' + (S.ctrFiltrosAbierto ? ' abierto' : '') + '" aria-label="Filtros de contratos">' +
       // Qué buscar y de quién
       '<div class="cf-fila">' +
-        '<input id="busca-ctr" placeholder="Buscar contrato o cliente" value="' + esc(S.busca) + '" aria-label="Buscar">' +
+        '<div class="cf-busca"><span class="cf-lupa" aria-hidden="true">' + ico('lupa') + '</span>' +
+          '<input id="busca-ctr" autocomplete="off" placeholder="Buscar contrato, cliente o producto" value="' + esc(S.busca) + '" aria-label="Buscar contratos">' +
+          (String(S.busca || '').trim()
+            ? '<button class="cf-borrar" data-act="ctrquitar" data-f="q" aria-label="Borrar la búsqueda" title="Borrar la búsqueda">' + ico('x') + '</button>'
+            : '') + '</div>' +
         // Sólo en el celular: despliega el resto de los filtros.
         '<button class="cf-toggle" data-act="ctrfiltros" aria-expanded="' + !!S.ctrFiltrosAbierto + '">' +
           'Filtros' + (activos.length - (String(S.busca || '').trim() ? 1 : 0) > 0
@@ -9737,11 +9806,21 @@ function vistaContratos() {
           (activos.length > 1 ? '<button class="cf-limpiar" data-act="ctrlimpiar">Quitar todos</button>' : '') + '</div>'
         : '') +
     '</section>' +
-    '<p class="conteo">' + lista.length + (lista.length === 1 ? ' contrato' : ' contratos') + ' · ' + conEmb + ' con embarques activos</p>';
+    '<p class="conteo">' + (String(S.busca || '').trim()
+      ? '<b>' + lista.length + '</b> ' + (lista.length === 1 ? 'resultado' : 'resultados') + ' para «' + esc(S.busca.trim()) + '»' +
+        (!S.fContrato ? ' <span class="cf-nota">· se busca en todos los contratos, también en los completos</span>' : '')
+      : '<b>' + lista.length + '</b> ' + (lista.length === 1 ? 'contrato' : 'contratos') + ' de ' + calcularContratos().length +
+        (!S.fContrato && S.fContrato !== 'todos' ? ' <span class="cf-nota">· con movimiento o saldo (elegí «Todos» para ver el resto)</span>' : '')) +
+      ' · ' + conEmb + ' con embarques activos</p>';
 
   lista = ordenarContratos(lista, S.ordenCtr || 'recientes');
 
-  if (!lista.length) return h + '<p class="centro">Nada coincide.</p>';
+  if (!lista.length) {
+    return h + '<div class="centro ctr-vacio"><p><b>Nada coincide' +
+      (String(S.busca || '').trim() ? ' con «' + esc(S.busca.trim()) + '»' : '') + '.</b></p>' +
+      '<p class="ayuda">Probá con menos palabras (por ejemplo, solo el número del contrato) o sacá los filtros.</p>' +
+      (activos.length ? '<button class="primario" data-act="ctrlimpiar">Quitar todos los filtros</button>' : '') + '</div>';
+  }
 
   // Con cientos de contratos, dibujarlos todos hace lento cada tecleo del
   // formulario. Se muestran de a tandas.
@@ -10462,7 +10541,7 @@ function filaContrato(r) {
   var origen = ref ? esc(ref.tab) + ' · fila ' + ref.fila
     : (r.origen ? esc(r.origen) + ' · solo lectura' : '');
 
-  return '<article class="ctr-fila ctr-card' + (editable ? ' editable' : '') + '"' +
+  return '<article class="ctr-fila ctr-card ctr-' + cls + (editable ? ' editable' : '') + '"' +
     (editable ? ' data-act="ctrabrir" data-k="' + esc(r.contrato) + '" tabindex="0"' : '') + '>' +
 
     // Arriba: qué contrato es y en qué situación está, de un vistazo.
@@ -13194,7 +13273,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.14-s';
+var APP_VERSION = '2026.10.14-t';
 
 function arrancar() {
   cargarPrefsPlanilla();
