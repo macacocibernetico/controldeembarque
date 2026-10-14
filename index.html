@@ -492,7 +492,18 @@ html{overflow-x:clip}
 .sem-ed{position:absolute;left:0;top:0;min-width:240px;background:#fff;border-radius:6px;
   box-shadow:0 0 0 2px #1a73e8,0 10px 28px rgba(0,0,0,.22)}
 .sem-ed .edit-cel{display:block;height:36px;min-height:36px}
-.sem-ed .edit-cel + .edit-cel{border-top:1px solid #dadce0}
+.sem-ed .sem-ops{display:flex;flex-direction:column;padding:4px;border-bottom:1px solid #dadce0}
+.sem-ed .sem-op{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;min-width:0;height:32px;min-height:32px;padding:0 10px;
+  border-radius:6px;background:none;text-align:left;cursor:pointer;font-size:14px;color:var(--tinta)}
+.sem-ed .sem-op:hover{background:#f1f3f4}
+.sem-ed .sem-op[aria-checked="true"]{background:#e8f0fe;font-weight:600}
+.sem-ed .sem-op:focus-visible{outline:2px solid #1a73e8;outline-offset:-2px}
+/* La bolita de cada estado, con el color que se ve en la planilla pero más fuerte, para reconocerlo de un vistazo. */
+.sem-dot{width:14px;height:14px;border-radius:50%;flex:none;display:inline-block}
+.sem-dot.d-ok{background:#16a34a}
+.sem-dot.d-pendiente{background:#dc2626}
+.sem-dot.d-atencion{background:#0891b2}
+.sem-dot.d-vacio{background:#fff;box-shadow:inset 0 0 0 2px #9ca3af}
 .tbl-hoja td[data-c]{cursor:default}
 
 /* Aviso al lado de una celda que no se puede editar */
@@ -11048,11 +11059,12 @@ function editarCelda(td) {
   if (tipo === 'semaforo') {
     td.classList.add('editando');
     var ops = ['ok', 'pendiente', 'atencion', 'vacio'];
-    td.innerHTML = '<div class="sem-ed"><select class="edit-cel" data-editcel="1" aria-label="' + esc(CAMPOS[c].label) + ': color de fondo">' +
+    td.innerHTML = '<div class="sem-ed"><div class="sem-ops" role="radiogroup" aria-label="' + esc(CAMPOS[c].label) + ': color de fondo">' +
       ops.map(function (o) {
-      return '<option value="' + o + '"' + ((v || 'vacio') === o ? ' selected' : '') + '>' +
-        esc(etiqueta(c, o)) + '</option>';
-    }).join('') + '</select>' +
+        var on = (v || 'vacio') === o;
+        return '<button type="button" class="edit-cel sem-op" data-editcel="1" data-sem="' + o + '" role="radio" aria-checked="' + on + '">' +
+          '<span class="sem-dot d-' + o + '"></span>' + esc(etiqueta(c, o)) + '</button>';
+      }).join('') + '</div>' +
       '<input class="edit-cel" data-editcel="1" data-txtsem="1" autocomplete="off" aria-label="' +
       esc(CAMPOS[c].label) + ': texto" placeholder="Texto de la celda" value="' +
       esc(valorVista(emb, c + '_nota') || '') + '"></div>';
@@ -11067,7 +11079,7 @@ function editarCelda(td) {
       esc(inicial) + '"' + (tipo === 'fecha' ? ' placeholder="DD/MM/AAAA"' : '') + '>';
   }
   S.editCel = { id: emb._id, c: c, td: td, previo: null };
-  var inp = td.querySelector('.edit-cel');
+  var inp = td.querySelector(tipo === 'semaforo' ? '.sem-op[aria-checked="true"]' : '.edit-cel');
   inp.focus();
   if (inp.select && tipo !== 'semaforo') inp.select();
 }
@@ -11084,7 +11096,7 @@ function cerrarEdicionCelda(guardar) {
   // Docs / Fotos / T.R.: se cambian el color (estado) y el texto de la celda, cada uno por su lado.
   if (tipo === 'semaforo') {
     var tx = E.td.querySelector('[data-txtsem]');
-    var cambioColor = encolarCambio(E.id, c, E.td.querySelector('select.edit-cel').value);
+    var cambioColor = encolarCambio(E.id, c, E.td.querySelector('.sem-op[aria-checked="true"]').getAttribute('data-sem'));
     var cambioTexto = tx ? encolarCambio(E.id, c + '_nota', tx.value) : false;
     if (!cambioColor && !cambioTexto) refrescarPlanilla();
     return;
@@ -11789,7 +11801,14 @@ document.addEventListener('copy', function (ev) {
 // Enter guarda, Escape descarta, Tab guarda y deja seguir.
 document.addEventListener('keydown', function (ev) {
   if (!S.editCel || !ev.target.classList || !ev.target.classList.contains('edit-cel')) return;
-  if (ev.key === 'Tab' && ev.target.tagName === 'SELECT' && !ev.shiftKey && S.editCel.td.querySelector('[data-txtsem]')) {
+  if ((ev.key === 'ArrowDown' || ev.key === 'ArrowUp') && ev.target.hasAttribute('data-sem')) {
+    ev.preventDefault(); ev.stopPropagation();
+    var ops = Array.prototype.slice.call(S.editCel.td.querySelectorAll('.sem-op'));
+    var nuevo = ops[(ops.indexOf(ev.target) + (ev.key === 'ArrowDown' ? 1 : ops.length - 1)) % ops.length];
+    ops.forEach(function (o) { o.setAttribute('aria-checked', String(o === nuevo)); });
+    nuevo.focus(); return;
+  }
+  if (ev.key === 'Tab' && ev.target.hasAttribute('data-sem') && !ev.shiftKey && S.editCel.td.querySelector('[data-txtsem]')) {
     ev.preventDefault(); ev.stopPropagation(); S.editCel.td.querySelector('[data-txtsem]').focus(); return;   // del color al texto
   }
   if (ev.key === 'Enter' || ev.key === 'Tab') { ev.preventDefault(); ev.stopPropagation(); cerrarEdicionCelda(true); }
@@ -11797,6 +11816,14 @@ document.addEventListener('keydown', function (ev) {
 }, true);
 
 // En Docs/Fotos/T.R. la celda tiene color y texto: elegir el color no cierra, para poder escribir el texto.
+
+// Docs/Fotos/T.R.: tocar un estado lo marca; se confirma con Enter o con un clic afuera.
+document.addEventListener('click', function (ev) {
+  var op = S.editCel && ev.target.closest && ev.target.closest('.sem-op');
+  if (!op) return;
+  Array.prototype.forEach.call(S.editCel.td.querySelectorAll('.sem-op'), function (o) { o.setAttribute('aria-checked', String(o === op)); });
+  op.focus();
+});
 
 // Clic derecho sobre una celda: el menú con «Comentar», como en Sheets.
 document.addEventListener('contextmenu', function (ev) {
@@ -13035,7 +13062,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.14-p';
+var APP_VERSION = '2026.10.14-q';
 
 function arrancar() {
   cargarPrefsPlanilla();
