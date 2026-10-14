@@ -31,20 +31,22 @@
   --linea3:#d1d5db;  /* gray-300 */
   --tinta:#111827;   /* gray-900 */
   --tinta2:#4b5563;  /* gray-600 */
-  --tinta3:#6b7280;  /* gray-500 */
-  --tinta4:#9ca3af;  /* gray-400 */
+  /* tinta3 y tinta4 son texto de apoyo: tienen que dar 4,5:1 (AA) también sobre los fondos
+     grises y pastel. Los grises de Tailwind originales (#6b7280 / #9ca3af) daban 4,4:1 y 2,3:1. */
+  --tinta3:#525b6a;
+  --tinta4:#5f6877;
 
   /* Verde de marca. El acento cambia según la sección, así cada una tiene
      identidad propia sin que la app se vuelva un arcoíris. */
   --verde:#0a7d5a;
   --azul:#2563eb;    --azulbg:#eff6ff;    --azul-d:#1d4ed8;   /* blue-600  */
   --naranja:#ea580c; --naranjabg:#fff7ed; --naranja-d:#c2410c; /* orange-600 */
-  --violeta:#7c3aed; --violetabg:#f5f3ff; --violeta-d:#6d28d9; /* violet-600 */
+  --violeta:#6d28d9; --violetabg:#f5f3ff; --violeta-d:#5b21b6; /* violet-600 */
   --acento:#2563eb; --acentobg:#eff6ff; --acento-d:#1d4ed8;   /* blue-600 */
   --ok:#059669;   --okbg:#ecfdf5;   /* emerald-600 */
-  --pend:#dc2626; --pendbg:#fef2f2;  /* red-600     */
+  --pend:#b91c1c; --pendbg:#fef2f2;  /* red-700 (el 600 daba 4,4:1 como texto) */
   --sol:#0891b2;  --solbg:#ecfeff;   /* cyan-600    */
-  --nar:#d97706;  --narbg:#fffbeb;   /* amber-600   */
+  --nar:#b45309;  --narbg:#fffbeb;   /* amber-700 (el 600 daba 3,1:1 como texto) */
 
   /* shadow-sm / shadow-md / shadow-2xl */
   --s1:0 1px 2px 0 rgba(0,0,0,.05), 0 0 0 1px rgba(17,24,39,.045);
@@ -78,7 +80,8 @@ button{font:inherit;font-weight:500;font-size:14px;cursor:pointer;
   transition:background .22s var(--ease),opacity .22s,transform .12s var(--ease)}
 button:hover{background:var(--sup2);color:var(--tinta);border-color:var(--linea3)}
 button:active{transform:scale(.96)}
-button:focus-visible{outline:3px solid rgba(10,125,90,.35);outline-offset:1px}
+/* Color pleno: con transparencia el anillo daba 1,7:1 y casi no se veía (WCAG 1.4.11 pide 3:1). */
+button:focus-visible{outline:3px solid var(--verde);outline-offset:1px}
 button:disabled{opacity:.35;cursor:default}
 button:disabled:hover{background:var(--sup);border-color:var(--linea2)}
 button:disabled:active{transform:none}
@@ -115,7 +118,8 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .marco-app{display:flex;min-height:100vh}
 /* El acento se reasigna por sección: botones, chips y barras lo heredan. */
 .v-azul{--acento:var(--azul);--acentobg:var(--azulbg);--acento-d:var(--azul-d)}
-.v-naranja{--acento:var(--naranja);--acentobg:var(--naranjabg);--acento-d:var(--naranja-d)}
+/* El naranja de marca (#ea580c) da 3,6:1 como texto; se usa el oscuro para que llegue a 4,5:1. */
+.v-naranja{--acento:var(--naranja-d);--acentobg:var(--naranjabg);--acento-d:#9a3412}
 .v-violeta{--acento:var(--violeta);--acentobg:var(--violetabg);--acento-d:var(--violeta-d)}
 
 /* Casilleros de color con emoji, como en Ajustes de iOS */
@@ -347,7 +351,7 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .marcar.on{background:var(--acento);color:#fff;font-weight:500}
 .marcar.on .cuad{background:#fff;box-shadow:none}
 .marcar.on .cuad .ico{color:var(--acento)}
-.marcar input:focus-visible + .cuad{outline:3px solid rgba(10,125,90,.35);outline-offset:2px}
+.marcar input:focus-visible + .cuad{outline:3px solid var(--verde);outline-offset:2px}
 
 /* Avisos dentro de la tarjeta ----------------------------------------------- */
 .aviso-fila{margin-top:20px;padding:14px 16px;border-radius:var(--r2);background:var(--sup2)}
@@ -1293,7 +1297,7 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 
   .tabbar .tb-l{font-size:10.5px;letter-spacing:-.005em}
   .tabbar button[aria-current=true].c-azul{color:var(--azul)}
-  .tabbar button[aria-current=true].c-naranja{color:var(--naranja)}
+  .tabbar button[aria-current=true].c-naranja{color:var(--naranja-d)}
   .tabbar button[aria-current=true].c-violeta{color:var(--violeta)}
   .tabbar button[aria-current=true] .tb-ico{transform:scale(1.06)}
   .tabbar button[aria-current=true] .tb-l{font-weight:600}
@@ -1400,6 +1404,16 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .ver-mas button{width:100%}
 }
 
+@media(max-width:600px){
+  /* Tarjeta de carga: tres columnas no entran en un celular (las fechas se pisaban). Se apilan. */
+  .fila-top{grid-template-columns:minmax(0,1fr)}
+  .lt-rot{max-width:none}
+  /* Las pestañas de origen/producto envuelven en vez de cortarse a la derecha. */
+  .segmento{flex-wrap:wrap;overflow:visible}
+  .segmento.sub{overflow:visible}
+  .segmento button,.segmento.sub button{flex:1 1 auto;padding:0 8px}
+  .segmento button + button::before{display:none}
+}
 @media(max-width:400px){
   /* En pantallas muy chicas el "→" al costado no entra: se apila. */
   .via-partes{flex-direction:column;gap:6px}
@@ -13107,7 +13121,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.02-k';
+var APP_VERSION = '2026.10.14-l';
 
 function arrancar() {
   cargarPrefsPlanilla();
