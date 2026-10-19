@@ -2104,6 +2104,11 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 /* El menú «Configuración» de las tarjetas se abre hacia la derecha del botón (no tapa el menú lateral) */
 .cfg-wrap.cfg-izq .menu-cfg{left:0;right:auto}
 .req{color:var(--pend);font-weight:700;margin-left:2px}
+
+/* A facturar en Tabla */
+.tbl-fact td{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl-fact .fact-acc{display:flex;gap:6px;align-items:center;overflow:visible;max-width:none}
+.tbl-fact .nrofila{position:static}
 </style>
 </head>
 <body>
@@ -2197,6 +2202,7 @@ var S = {
   pasando: null,
   factError: null,
   verFact: false,
+  modoFact: 'tarjetas',
   buscaFact: '',
   topeFact: 25,
   devolver: null,
@@ -8180,9 +8186,14 @@ function vistaFacturadas() {
   var tope = S.topeFact || 25;
   var vis = filas.slice(0, tope);
 
+  var modoT = S.modoFact === 'tabla';
   var h = '<div class="filtros">' +
     '<input id="busca-fact" placeholder="Buscar cliente, contrato, BL, factura" value="' +
       esc(S.buscaFact || '') + '" aria-label="Buscar en A facturar">' +
+    '<span class="modos" style="margin-left:auto">' +
+      [['tarjetas', 'Tarjetas'], ['tabla', 'Tabla']].map(function (m) {
+        return '<button data-act="modofact" data-m="' + m[0] + '" aria-pressed="' + ((m[0] === 'tabla') === modoT) + '">' + m[1] + '</button>';
+      }).join('') + '</span>' +
     '</div>' +
     '<p class="conteo">' + total + (total === 1 ? ' fila' : ' filas') + ' en «' +
       esc(fact.tab) + '»' + (q ? ' que coinciden' : ', de la más reciente a la más vieja') +
@@ -8190,6 +8201,51 @@ function vistaFacturadas() {
 
   if (S.factError) h += '<div class="error">' + esc(S.factError) + '</div>';
   if (!vis.length) return h + '<p class="centro">Nada coincide.</p>';
+
+  function bloqueDevolver(o) {
+    var destino = tabProbable(o);
+    return '<div class="confirmar" style="margin-top:14px">' +
+      '<p class="cf-tit">' + ico('volver') + '¿A qué pestaña la devolvemos?' +
+        (modoT ? ' <span class="ayuda">(fila ' + o.fila + ' · ' + esc(o.contract || 'sin contrato') + ')</span>' : '') + '</p>' +
+      '<div class="chips" style="margin:0 0 14px">' +
+        (S.fuentes || []).map(function (f) {
+          var sel = (S.devolverTab || destino) === f.tab;
+          return '<button data-act="devolvertab" data-t="' + esc(f.tab) + '" aria-pressed="' + sel + '">' + esc(nombreCorto(f.tab)) + '</button>';
+        }).join('') +
+      '</div>' +
+      '<p class="cf-ojo">Se mueve la fila con sus datos y sus colores, y se borra de «' + esc(fact.tab) + '». Es el mismo cortar y pegar de siempre.</p>' +
+      '<div class="alta-acc">' +
+        '<button class="primario" data-act="devolverok" data-r="' + o.fila + '"' + (S.pasando ? ' disabled' : '') + '>' +
+          (S.pasando === 'f' + o.fila ? 'Moviendo…' : ico('check') + 'Devolver') + '</button>' +
+        '<button data-act="devolverno">Cancelar</button>' +
+      '</div></div>';
+  }
+
+  if (modoT) {
+    var colsT = [['Exportador', 'exporter'], ['Importador', 'importer'], ['Contrato', 'contract'], ['Producto', 'product'],
+      ['TNS', 'tns'], ['BL', 'bl'], ['Contenedores', 'containers'], ['Buque', 'vessel'], ['ETD', 'etd'], ['Factura', 'invoice']];
+    var celT = function (o, k) {
+      if (k === 'tns') return o.tns ? fmtNum(o.tns) : '';
+      if (k === 'etd') return esFecha(o.etd) ? fmtFecha(o.etd) : '';
+      return o[k] || '';
+    };
+    var filaAbierta = vis.filter(function (o) { return S.devolver === o.fila; })[0];
+    h += (filaAbierta ? bloqueDevolver(filaAbierta) : '') +
+      '<div class="hoja"><table class="tbl-hoja tbl-fact"><thead><tr><th class="nrofila">#</th>' +
+      colsT.map(function (c) { return '<th>' + c[0] + '</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
+      vis.map(function (o) {
+        return '<tr class="fact-tr' + (S.devolver === o.fila ? ' sel' : '') + '"><td class="nrofila">' + o.fila + '</td>' +
+          colsT.map(function (c) { var v = celT(o, c[1]); return '<td title="' + esc(v) + '">' + esc(v) + '</td>'; }).join('') +
+          '<td class="fact-acc"><button class="ff-com" data-act="comfact" data-r="' + o.fila + '" data-comfact="' + o.fila + '" title="Comentarios de esta carga">' + ico('chat') + '</button>' +
+          (S.devolver === o.fila ? '' : '<button data-act="devolver" data-r="' + o.fila + '">' + ico('volver') + 'Devolver</button>') +
+          '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    if (total > vis.length) {
+      h += '<div class="ver-mas"><button data-act="masfact">Ver ' + Math.min(total - vis.length, 25) + ' más</button>' +
+        '<span class="ayuda">' + (total - vis.length) + ' sin mostrar</span></div>';
+    }
+    return h;
+  }
 
   h += '<div class="lista">' + vis.map(function (o) {
     var destino = tabProbable(o);
@@ -12661,6 +12717,7 @@ document.addEventListener('click', function (ev) {
     S.factError = null; S.topeFact = 25;
     return pintar();
   }
+  if (act === 'modofact') { S.modoFact = el.getAttribute('data-m'); return pintar(); }
   if (act === 'masfact') { S.topeFact = (S.topeFact || 25) + 25; return pintar(); }
   if (act === 'devolver') {
     S.devolver = parseInt(el.getAttribute('data-r'), 10);
@@ -13472,7 +13529,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.19-w';
+var APP_VERSION = '2026.10.19-x';
 
 function arrancar() {
   cargarPrefsPlanilla();
