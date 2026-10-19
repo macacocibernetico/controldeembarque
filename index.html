@@ -2086,6 +2086,24 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 .pal-ayuda{margin:10px 0 0;font-size:12px;color:var(--tinta3);line-height:1.4;max-width:180px}
 .tbl-hoja td[data-bg] .vacia{color:var(--tinta)}
 .muestra-bg{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid rgba(17,24,39,.25);margin-right:6px;vertical-align:-2px}
+
+/* ===== Pulido general (19/10/2026) ===== */
+.saltar{position:fixed;left:12px;top:-60px;z-index:200;background:var(--tinta);color:#fff;padding:10px 16px;border-radius:10px;
+  font-weight:600;text-decoration:none;transition:top .15s}
+.saltar:focus{top:12px;outline:3px solid var(--verde);outline-offset:2px}
+#principal:focus{outline:none}
+/* Botones de cada encabezado de la tabla: al menos 24 px (WCAG 2.5.8) */
+.th-filtro{min-height:24px;min-width:24px;width:24px;height:24px}
+.th-ord{min-height:24px;min-width:24px;justify-content:center;display:inline-flex;align-items:center}
+.tbl-hoja.fijo .th-ord{min-width:24px}
+.th-x{min-height:24px;min-width:24px}
+@media(max-width:600px){
+  .ayuda-accion{display:none}      /* en el celular el botón principal se explica solo: sube el contenido */
+}
+
+/* El menú «Configuración» de las tarjetas se abre hacia la derecha del botón (no tapa el menú lateral) */
+.cfg-wrap.cfg-izq .menu-cfg{left:0;right:auto}
+.req{color:var(--pend);font-weight:700;margin-left:2px}
 </style>
 </head>
 <body>
@@ -4181,6 +4199,8 @@ function formAltaEmb() {
     return src.mapa[c[0]] !== undefined && !src.noAplica[c[0]];
   }).map(function (c) {
     var campo = c[0], label = c[1], tipo = c[2], val = a[campo] || '';
+    // Los obligatorios llevan un asterisco (son los que pide crearEmbarque).
+    if (['exporter', 'importer', 'contract', 'product', 'tns'].indexOf(campo) >= 0) label += ' <span class="req" aria-hidden="true">*</span><span class="sr-solo"> (obligatorio)</span>';
     if (listaDe[tipo]) {
       var ops = listaDe[tipo];
       var ok = ops.some(function (o) { return clave(o) === clave(val); });
@@ -4219,7 +4239,7 @@ function formAltaEmb() {
         (S.creandoEmb ? ' disabled' : '') + '>' +
         (S.creandoEmb ? 'Guardando…' : ico('check') + 'Agregar carga') + '</button>' +
       '<span class="ayuda">Se inserta arriba de la fila TOTAL de «' + esc(a.tab) +
-        '». Docs, Fotos y T.R. arrancan en rojo.</span>' +
+        '». Docs, Fotos y T.R. arrancan en rojo. Los campos con <span class="req">*</span> son obligatorios.</span>' +
     '</div></div>';
 }
 
@@ -5814,7 +5834,7 @@ function botonFacturar(emb) {
   var abierto = S.pasar === emb._id;
   return '<button class="btn-fact' + (abierto ? ' on' : '') + '" data-act="pasar" ' +
     'data-f="' + esc(emb._id) + '" aria-expanded="' + abierto + '">' +
-    ico('mover') + 'Enviar a facturar</button>';
+    ico('mover') + 'Pasar a A facturar</button>';
 }
 
 // Si el error es una API apagada en Google Cloud, un botón lleva directo a prenderla.
@@ -6408,7 +6428,7 @@ function idTxtCom(ctx, key) { return 'ct-' + ctx + '-' + String(key).replace(/[^
 // Un cuadro de texto de comentarios: el borrador queda en S.comBorr para no perderlo al redibujar.
 function htmlTxtCom(ctx, key, kind, extra, ph, rows) {
   return '<textarea id="' + idTxtCom(ctx, key) + '" class="com-ta" data-comtxt="' + esc(key) + '" data-comkind="' + kind + '" ' +
-    (extra || '') + ' rows="' + (rows || 2) + '" placeholder="' + esc(ph) + '">' + esc(S.comBorr[key] || '') + '</textarea>';
+    (extra || '') + ' rows="' + (rows || 2) + '" placeholder="' + esc(ph) + '" aria-label="' + esc(ph || 'Escribir un comentario') + '">' + esc(S.comBorr[key] || '') + '</textarea>';
 }
 
 function htmlComentario(h, c, ctx) {
@@ -7568,7 +7588,9 @@ function vistaApp() {
   evs.forEach(function (x) { x.ev.nivelMax ? cuenta[x.ev.nivelMax]++ : cuenta.ok++; });
 
   // Pestañas y tipos de las CARGAS: en Contratos filtrarían algo que ni se ve (Contratos tiene los suyos).
-  var segmentado = S.vista === 'contratos' ? '' : segmentoPestanas(todosEvs) + segmentoTipos(todosEvs);
+  var segmentado = S.vista === 'contratos' ? ''
+    : S.verFact && S.vista === 'carga' ? segmentoPestanas(todosEvs)      // «A facturar»: el filtro por producto no aplica
+    : segmentoPestanas(todosEvs) + segmentoTipos(todosEvs);
   var cuerpo = S.vista === 'control' ? vistaControl(evs, cuenta)
              : S.vista === 'contratos' ? vistaContratos()
              : S.verFact ? vistaFacturadas()
@@ -7581,9 +7603,9 @@ function vistaApp() {
     if (item) panel = vistaPanel(item);
   }
 
-  return barraMobile() +
+  return '<a class="saltar" href="#principal" data-act="saltar">Saltar al contenido</a>' + barraMobile() +
     '<div class="marco-app v-' + colorDeVista(S.vista) + '">' + navLateral(todosEvs) +
-    '<main class="app">' + avisoSesion() +
+    '<main class="app" id="principal" tabindex="-1">' + avisoSesion() +
       (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
       (S.avisoOk ? '<div class="ok-aviso">' + esc(S.avisoOk) +
         ' <button data-act="cerraviso">Cerrar</button></div>' : '') +
@@ -8425,7 +8447,11 @@ function tiposDisponibles(evs) {
 function tituloVista() {
   var t = { control: 'Control', carga: 'Cargas', contratos: 'Contratos' }[S.vista] || '';
   var sub = '';
-  if (S.vista === 'carga' && S.datos) {
+  if (S.vista === 'carga' && S.verFact) {
+    t = 'A facturar';
+    var ff = (S.fuentesFact || [])[0];
+    sub = ff ? 'Cargas cuyo cliente ya pagó · ' + ff.filas.length + ' en total' : '';
+  } else if (S.vista === 'carga' && S.datos) {
     sub = S.modo === 'exportadores'
       ? 'Quién está embarcando y para quién'
       : S.datos.filas.length + ' embarques';
@@ -8437,7 +8463,7 @@ function tituloVista() {
   }
   var v = VISTAS.filter(function (x) { return x.id === S.vista; })[0];
   return '<div class="titulo-vista"><h1>' +
-    (v ? '<span class="t-emoji">' + v.emoji + '</span>' : '') + esc(t) + '</h1>' +
+    (v ? '<span class="t-emoji">' + (S.verFact && S.vista === 'carga' ? '🧾' : v.emoji) + '</span>' : '') + esc(t) + '</h1>' +
     (sub ? '<p>' + esc(sub) + '</p>' : '') + '</div>';
 }
 
@@ -8517,7 +8543,7 @@ function navLateral(evs) {
     var cuenta = {};
     (evs || []).forEach(function (x) { cuenta[x.emb._tab] = (cuenta[x.emb._tab] || 0) + 1; });
     fuentes = '<div class="nav-sec">Origen</div>' +
-      '<button class="nav-sub" data-act="ftab" data-t="" aria-current="' + (!S.filtroTab) + '">' +
+      '<button class="nav-sub" data-act="ftab" data-t="" aria-current="' + (!S.filtroTab && !S.verFact) + '">' +
         'Todo<span class="n">' + (evs || []).length + '</span></button>' +
       S.fuentes.map(function (f) {
         return '<button class="nav-sub" data-act="ftab" data-t="' + esc(f.tab) + '" ' +
@@ -8864,7 +8890,7 @@ function filaEmbarque(x, opts) {
 
         '<div class="partes">' + partes + '</div>' +
         (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') +
-        (S.fuentes.length > 1 ? '<div class="orig">' + esc(emb._tab) + '</div>' : '') +
+        (S.fuentes.length > 1 ? '<div class="orig">' + esc(nombreCorto(emb._tab)) + '</div>' : '') +
       '</div>' +
       '<div class="medio">' + barraRuta(emb) +
         '<div class="et-wrap">' + pasosEtapa(ev.etapa) + '</div></div>' +
@@ -9120,7 +9146,7 @@ function vistaGrilla(evs) {
   }
 
   h += '<div class="filtros">' +
-    '<input id="busca-cargas" placeholder="Buscar cliente, contrato, BL, factura, anotaciones" value="' +
+    '<input id="busca-cargas" placeholder="Buscar cliente, contrato, BL, factura…" value="' +
       esc(S.busca) + '" aria-label="Buscar">' +
     '<select id="orden" aria-label="Ordenar por">' +
       Object.keys(ORDENES).map(function (k) {
@@ -11036,7 +11062,7 @@ function opcionesCong(vis) {
 
 function menuConfigHtml(planilla) {
   var abierto = !!S.menuCfg;
-  var h = '<div class="cfg-wrap"><button class="btn-cfg" data-act="menucfg" aria-haspopup="true" ' +
+  var h = '<div class="cfg-wrap' + (planilla ? '' : ' cfg-izq') + '"><button class="btn-cfg" data-act="menucfg" aria-haspopup="true" ' +
     'aria-expanded="' + abierto + '">' + ico('gear') + 'Configuración</button>';
   if (abierto) {
     h += '<div class="menu-cfg" role="menu" aria-label="Configuración">';
@@ -11619,7 +11645,7 @@ function vistaPanel(x) {
     '</div>' +
 
     '<div class="pe-etapa">' + pasosEtapa(ev.etapa) + '</div>' +
-    '<p class="pe-aviso">' + ico('check') + 'Cada cambio se guarda solo en la planilla.</p>';
+    '<p class="pe-aviso">' + ico('check') + 'Tus cambios quedan pendientes: se guardan todos juntos con «Confirmar cambios».</p>';
 
   // Pasar a "A facturar": la mudanza que hoy se hace a mano.
   if ((S.fuentesFact || []).length && !emb._aFacturar) {
@@ -12435,6 +12461,11 @@ document.addEventListener('click', function (ev) {
   if (act === 'modo') {
     S.planillaFull = false; S.modo = el.getAttribute('data-m'); return pintar(); }
   if (act === 'menucfg') { S.menuCfg = !S.menuCfg; S.menuCol = null; S.menuPintar = false; return pintar(); }
+  if (act === 'saltar') {
+    ev.preventDefault();
+    var mp = document.getElementById('principal'); if (mp) { mp.focus(); mp.scrollIntoView(); }
+    return;
+  }
   if (act === 'pintarmenu') { S.menuPintar = !S.menuPintar; S.menuCfg = false; S.menuCol = null; return pintar(); }
   if (act === 'pintar') {
     var ca = S.celdaAct, op = PALETA_BG.filter(function (o) { return o[0] === (el.getAttribute('data-k') || ''); })[0];
@@ -13441,7 +13472,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.19-v';
+var APP_VERSION = '2026.10.19-w';
 
 function arrancar() {
   cargarPrefsPlanilla();
