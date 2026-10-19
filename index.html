@@ -2070,6 +2070,22 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
   .ctr-card{padding:16px 16px 10px;border-left-width:4px}
   .ctr-num{font-size:20px}
 }
+
+/* ===== Pintar el fondo de las celdas ===== */
+.pal-wrap{position:relative;display:inline-block}
+.btn-pintar{gap:6px}
+.btn-pintar .ico{width:14px;height:14px}
+.pal-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:60;background:var(--sup);border-radius:12px;padding:12px 14px;
+  box-shadow:var(--s3);min-width:208px}
+.pal-tit{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--tinta3)}
+.pal-grid{display:grid;grid-template-columns:repeat(3,44px);gap:8px}
+.pal-sw{width:44px;height:36px;min-height:36px;padding:0;border-radius:8px;border:1px solid rgba(17,24,39,.18);
+  display:inline-flex;align-items:center;justify-content:center;font-size:16px;color:var(--tinta3);background:#fff;cursor:pointer}
+.pal-sw:hover{transform:scale(1.06);box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.pal-sw.on{outline:3px solid var(--verde);outline-offset:1px}
+.pal-ayuda{margin:10px 0 0;font-size:12px;color:var(--tinta3);line-height:1.4;max-width:180px}
+.tbl-hoja td[data-bg] .vacia{color:var(--tinta)}
+.muestra-bg{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid rgba(17,24,39,.25);margin-right:6px;vertical-align:-2px}
 </style>
 </head>
 <body>
@@ -2176,6 +2192,7 @@ var S = {
   modo: 'tarjetas',
   colsOcultas: {},
   menuCfg: false,
+  menuPintar: false,
   expLeyenda: true,      // «Por exportador»: la leyenda de colores, abierta hasta que se la cierre
   planCong: 0,
   // Tabla y Planilla son la misma grilla con distintas columnas por defecto; cada
@@ -2389,6 +2406,61 @@ function extraerId(entrada) {
 var SEMAFOROS = ['docs', 'pics', 'tr'];
 
 // «docs_nota» es el texto de la celda de Docs: vive en la MISMA columna que el semáforo «docs».
+/* --- Pintar el fondo de las celdas (como en Sheets) --------------------------
+   Un cambio de color es un cambio más: queda pendiente con la clave «bg:columna» y se confirma junto con
+   todo lo demás. Colores básicos y suaves, para que el texto se siga leyendo. */
+var PALETA_BG = [
+  ['', 'Sin color', null],
+  ['amarillo', 'Amarillo', { red: 1, green: 0.95, blue: 0.6 }],
+  ['naranja', 'Naranja claro', { red: 1, green: 0.8, blue: 0.6 }],
+  ['rojo', 'Rojo claro', { red: 0.96, green: 0.78, blue: 0.78 }],
+  ['verde', 'Verde claro', { red: 0.72, green: 0.88, blue: 0.78 }],
+  ['celeste', 'Celeste', { red: 0.78, green: 0.88, blue: 0.97 }],
+  ['azul', 'Azul', { red: 0.6, green: 0.76, blue: 0.95 }],
+  ['violeta', 'Violeta', { red: 0.84, green: 0.78, blue: 0.95 }],
+  ['gris', 'Gris', { red: 0.85, green: 0.85, blue: 0.85 }]
+];
+function esBlanco(bg) {
+  return !bg || ((bg.red || 0) > 0.97 && (bg.green || 0) > 0.97 && (bg.blue || 0) > 0.97);
+}
+function claveColor(bg) {
+  return esBlanco(bg) ? 'blanco' : [bg.red || 0, bg.green || 0, bg.blue || 0].map(function (x) { return Math.round(x * 100); }).join(',');
+}
+// ¿Es uno de los colores de la paleta (o uno casi igual)? Solo esos se muestran: la planilla tiene otros grises y
+// rellenos propios (por ejemplo la columna ETA) que son de la app y no hay que pisar.
+function enPaleta(bg) {
+  return PALETA_BG.some(function (o) {
+    return o[2] && Math.abs((bg.red || 0) - o[2].red) < 0.03 && Math.abs((bg.green || 0) - o[2].green) < 0.03 && Math.abs((bg.blue || 0) - o[2].blue) < 0.03;
+  });
+}
+function nombreColor(bg) {
+  if (esBlanco(bg)) return 'Sin color';
+  var k = claveColor(bg), n = PALETA_BG.filter(function (o) { return o[2] && claveColor(o[2]) === k; })[0];
+  return n ? n[1] : 'Color de Sheets';
+}
+function cssColor(bg) {
+  return 'rgb(' + [bg.red || 0, bg.green || 0, bg.blue || 0].map(function (x) { return Math.round(x * 255); }).join(',') + ')';
+}
+// Lo que tiene la planilla ahora en esa celda (sin lo pendiente).
+function bgGuardado(emb, c) {
+  var i = fuenteDe(emb).mapa[c];
+  return i === undefined || !emb._bg ? null : (emb._bg[i] || null);
+}
+// Lo que se ve: lo pendiente si lo hay.
+function bgDe(emb, c) {
+  var p = pendDe(emb._id, 'bg:' + c);
+  return p ? p.nuevo : bgGuardado(emb, c);
+}
+// Definición de un campo: los de la planilla, o «bg:columna» (el fondo de esa columna).
+function defCampo(c) {
+  if (CAMPOS[c]) return CAMPOS[c];
+  if (String(c).indexOf('bg:') === 0) {
+    var b = String(c).slice(3);
+    return { label: 'Fondo de ' + (b === '_etapa' ? 'Etapa' : (CAMPOS[b] ? CAMPOS[b].label : b)), tipo: 'color' };
+  }
+  return null;
+}
+
 function baseSem(c) {
   var b = String(c).replace(/_nota$/, '');
   return b !== c && SEMAFOROS.indexOf(b) >= 0 ? b : c;
@@ -3434,7 +3506,7 @@ function pedidosDeCeldas(sheetId, fila, valores, colores) {
     var c = +idx;
     reqs.push({ repeatCell: {
       range: { sheetId: sheetId, startRowIndex: fila - 1, endRowIndex: fila, startColumnIndex: c, endColumnIndex: c + 1 },
-      cell: { userEnteredFormat: { backgroundColor: COLORES[colores[idx]] || COLORES.vacio } },
+      cell: { userEnteredFormat: { backgroundColor: typeof colores[idx] === 'object' ? colores[idx] : (COLORES[colores[idx]] || COLORES.vacio) } },
       fields: 'userEnteredFormat.backgroundColor' } });
   });
   return reqs;
@@ -6570,6 +6642,9 @@ function acomodarFlotantes() {
 
 // El botón «Comentar» de la barra sigue a la celda marcada.
 function actualizarBotonCom() {
+  // «Pintar» también depende de que haya una celda marcada.
+  var bp = document.querySelector('.btn-pintar');
+  if (bp) bp.disabled = !(S.celdaAct && filaPorId(S.celdaAct.id));
   var b = document.querySelector('.btn-com');
   if (!b) return;
   var emb = S.celdaAct && filaPorId(S.celdaAct.id);
@@ -6622,6 +6697,7 @@ async function cargarTodo() {
         // En las columnas semáforo el color es el estado y el texto es otra cosa:
         // en Docs. son anotaciones operativas ("recibir factura y enviar gas
         // free"), en T.R. la modalidad. Se guardan aparte para no perderlas.
+        o._bg = f.colores;      // el color de fondo de cada celda: lo que se pinta en Sheets se ve acá
         o._notas = {};
         SEMAFOROS.forEach(function (c) {
           var ic = det.mapa[c];
@@ -7105,6 +7181,7 @@ async function aplicarCambio(id, campo, valor) {
 var ICONOS = {
   mail:   'M2 4h12v8H2zM2 4l6 4 6-4',
   plus:   'M8 3v10M3 8h10',
+  balde:  'M3 8l5-5 5 5-5 5-5-5zM3 8h10M13.5 10.5c.8 1 1.2 1.7 1.2 2.2a1.2 1.2 0 0 1-2.4 0c0-.5.4-1.2 1.2-2.2z',
   lupa:   'M7 12.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zM11 11l3.5 3.5',
   refresh:'M13 8a5 5 0 1 1-1.5-3.5M13 2v3h-3',
   down:   'M8 2v8M5 7l3 3 3-3M3 13h10',
@@ -10631,7 +10708,7 @@ function poolColumnas(modo) {
   return base;
 }
 function columnasDisponibles() { return poolColumnas(S.modo); }
-function etqCol(c) { return c === '_etapa' ? 'Etapa' : (CAMPOS[c] ? CAMPOS[c].label : c); }
+function etqCol(c) { return c === '_etapa' ? 'Etapa' : (defCampo(c) ? defCampo(c).label : c); }
 
 // Cuántas columnas se inmovilizan de verdad (nunca más de las que se ven).
 var encabezadoPlanilla = null;
@@ -10671,6 +10748,27 @@ function htmlTablaPlanilla(filas, cols, enc, cuerpo) {
     (cuerpo !== undefined ? cuerpo : filasHtmlPlanilla(filas, cols)) + '</tbody></table>';
 }
 
+// Botón «Pintar» y su paleta: pinta el fondo de la celda marcada.
+function paletaHtml() {
+  var hay = !!(S.celdaAct && filaPorId(S.celdaAct.id));
+  var abierto = !!S.menuPintar && hay;
+  var actual = hay ? bgDe(filaPorId(S.celdaAct.id), S.celdaAct.c) : null;
+  return '<span class="pal-wrap"><button class="btn-pintar" data-act="pintarmenu" aria-haspopup="true" aria-expanded="' + abierto + '" ' +
+    'title="Pintar el fondo de la celda marcada, como en Sheets"' + (hay ? '' : ' disabled') + '>' + ico('balde') + 'Pintar</button>' +
+    (abierto
+      ? '<div class="pal-pop" role="menu" aria-label="Color de fondo">' +
+          '<p class="pal-tit">Fondo de la celda</p><div class="pal-grid">' +
+          PALETA_BG.map(function (o) {
+            var on = claveColor(actual) === claveColor(o[2]);
+            return '<button class="pal-sw' + (o[2] ? '' : ' sin') + (on ? ' on' : '') + '" role="menuitemradio" aria-checked="' + on + '" ' +
+              'data-act="pintar" data-k="' + o[0] + '" title="' + esc(o[1]) + '" aria-label="' + esc(o[1]) + '"' +
+              (o[2] ? ' style="background:' + cssColor(o[2]) + '"' : '') + '>' +
+              (o[2] ? '' : '<span aria-hidden="true">⌀</span>') + '</button>';
+          }).join('') + '</div>' +
+          '<p class="pal-ayuda">Se confirma con «Confirmar cambios» y se pinta también en Sheets.</p></div>'
+      : '') + '</span>';
+}
+
 function vistaPlanilla(filas) {
   asegurarVistaGrid();
   var todas = columnasDisponibles();
@@ -10685,6 +10783,7 @@ function vistaPlanilla(filas) {
       ? '<button data-act="limpiarcol">Quitar filtros de columna</button>' : '') +
     '<button class="btn-com" data-act="comcelda" title="Comentar la celda marcada (Ctrl+Alt+M). También con clic derecho sobre la celda."' +
       ((S.celdaAct && filaPorId(S.celdaAct.id)) ? '' : ' disabled') + '>' + ico('chat') + 'Comentar</button>' +
+    paletaHtml() +
     '<span class="ayuda" style="margin-left:auto">' + filas.length + ' filas</span>' +
     barraPendHtml() +
     menuConfigHtml(true) +
@@ -11021,6 +11120,7 @@ function pendFilas() { var f = {}; pendLista().forEach(function (p) { f[p.id] = 
 // Lo que hay que mostrar en una celda: lo pendiente si lo hay; el total se
 // recalcula en pantalla apenas cambia la cantidad o el precio.
 function valorVista(emb, c) {
+  if (String(c).indexOf('bg:') === 0) return bgDe(emb, c.slice(3));
   var p = pendDe(emb._id, c);
   if (p) return p.nuevo;
   if (c === 'total' && (pendDe(emb._id, 'tns') || pendDe(emb._id, 'price'))) {
@@ -11031,6 +11131,7 @@ function valorVista(emb, c) {
 }
 
 function mismoValor(tipo, antes, nuevo) {
+  if (tipo === 'color') return claveColor(antes) === claveColor(nuevo);
   if (tipo === 'fecha') return txtV(antes) === txtV(nuevo);
   if (tipo === 'numero') return normNum(antes) === normNum(nuevo);
   if (tipo === 'semaforo') return (antes || 'vacio') === (nuevo || 'vacio');
@@ -11044,19 +11145,22 @@ function identidadDe(emb) {
 
 // Devuelve true si cambió algo (y por lo tanto se redibujó).
 function encolarCambio(id, c, crudo) {
-  var emb = filaPorId(id), def = CAMPOS[c];
+  var emb = filaPorId(id), def = defCampo(c);
   if (!emb || !def || motivoNoEditable(emb, c)) return false;
-  var nuevo = def.tipo === 'semaforo' ? crudo
+  var esBg = String(c).indexOf('bg:') === 0;
+  var guardado = esBg ? bgGuardado(emb, c.slice(3)) : emb[c];
+  var nuevo = def.tipo === 'color' ? crudo
+    : def.tipo === 'semaforo' ? crudo
     : def.tipo === 'numero' ? numAR(crudo)
     : def.tipo === 'fecha' ? convertir(crudo, 'fecha')
     : String(crudo == null ? '' : crudo).trim();
   var k = clavePend(id, c), previo = S.pend[k];
-  var igualAlGuardado = mismoValor(def.tipo, emb[c], nuevo);
+  var igualAlGuardado = mismoValor(def.tipo, guardado, nuevo);
   if (igualAlGuardado && !previo) return false;                          // no hubo cambio
   if (previo && mismoValor(def.tipo, previo.nuevo, nuevo)) return false;  // ya estaba así
   if (igualAlGuardado) delete S.pend[k];                                  // volvió a lo que había
   else {
-    S.pend[k] = { id: id, campo: c, tipo: def.tipo, antes: emb[c], nuevo: nuevo,
+    S.pend[k] = { id: id, campo: c, tipo: def.tipo, antes: guardado, nuevo: nuevo,
                   tab: emb._tab, fila: emb._fila,
                   ident: previo ? previo.ident : identidadDe(emb) };
   }
@@ -11084,7 +11188,7 @@ function reanclarPendientes() {
       emb = c.length === 1 ? c[0] : null;
     }
     if (!emb) { perdidas++; return; }
-    p.id = emb._id; p.fila = emb._fila; p.antes = emb[p.campo];
+    p.id = emb._id; p.fila = emb._fila; p.antes = String(p.campo).indexOf('bg:') === 0 ? bgGuardado(emb, p.campo.slice(3)) : emb[p.campo];
     if (!mismoValor(p.tipo, p.antes, p.nuevo)) nuevas[clavePend(p.id, p.campo)] = p;   // si ya quedó igual, no hay nada que guardar
   });
   S.pend = nuevas;
@@ -11109,7 +11213,15 @@ function avisoContratoPend(p, emb) {
 }
 
 function txtPend(p, v) {
+  if (p.tipo === 'color') return nombreColor(v);
   return p.tipo === 'semaforo' ? etiqueta(p.campo, v || 'vacio') : txtV(v);
+}
+// Para la lista de la confirmación: los colores van con su muestra.
+function htmlPend(p, v) {
+  if (p.tipo === 'color') {
+    return '<span class="muestra-bg" style="background:' + (esBlanco(v) ? '#fff' : cssColor(v)) + '"></span>' + esc(nombreColor(v));
+  }
+  return esc(txtPend(p, v));
 }
 
 // Barra de arriba a la derecha de la tabla.
@@ -11156,8 +11268,8 @@ function modalRevision() {
       if (av) dif++;
       if (p.campo === 'tns' || p.campo === 'price') tocaTot = true;
       return '<li class="rev-cambio' + (av ? ' dif' : '') + '"><span class="rc-campo">' + esc(etqCol(p.campo)) + '</span>' +
-        '<span class="rc-antes">' + esc(txtPend(p, p.antes)) + '</span><span class="rc-flecha">→</span>' +
-        '<span class="rc-desp">' + esc(txtPend(p, p.nuevo)) + '</span>' +
+        '<span class="rc-antes">' + htmlPend(p, p.antes) + '</span><span class="rc-flecha">→</span>' +
+        '<span class="rc-desp">' + htmlPend(p, p.nuevo) + '</span>' +
         (!R.guardando
           ? '<button class="rc-quitar" data-act="pendquitar" data-k="' + esc(clavePend(p.id, p.campo)) +
             '" title="Quitar este cambio" aria-label="Quitar este cambio">×</button>' : '') +
@@ -11219,9 +11331,11 @@ async function guardarPendientes() {
         var fresca = ubicarFila(h, mp, cambios[0].ident, emb._fila);
         var valores = {}, colores = {}, tocaTotal = false;
         cambios.forEach(function (p) {
-          var idx = mp[baseSem(p.campo)];
+          var esBgP = p.tipo === 'color';
+          var idx = mp[esBgP ? p.campo.slice(3) : baseSem(p.campo)];
           if (idx === undefined) throw new Error('La columna «' + etqCol(p.campo) + '» ya no existe en «' + tabs[t] + '».');
-          if (p.tipo === 'semaforo') colores[idx] = p.nuevo || 'vacio';
+          if (p.tipo === 'color') colores[idx] = esBlanco(p.nuevo) ? 'vacio' : { red: p.nuevo.red || 0, green: p.nuevo.green || 0, blue: p.nuevo.blue || 0 };
+          else if (p.tipo === 'semaforo') colores[idx] = p.nuevo || 'vacio';
           else valores[idx] = (p.nuevo === null || p.nuevo === undefined) ? '' : p.nuevo;
           if (p.campo === 'tns' || p.campo === 'price') tocaTotal = true;
         });
@@ -11244,6 +11358,11 @@ async function guardarPendientes() {
     lista.forEach(function (p) {
       var e = filaPorId(p.id);
       if (!e) return;
+      if (p.tipo === 'color') {                       // fondo pintado: se refleja en lo que la app sabe de la fila
+        var ib = fuenteDe(e).mapa[p.campo.slice(3)];
+        if (ib !== undefined) { e._bg = (e._bg || []).slice(); e._bg[ib] = esBlanco(p.nuevo) ? { red: 1, green: 1, blue: 1 } : p.nuevo; }
+        return;
+      }
       e[p.campo] = p.nuevo;
       if (baseSem(p.campo) !== p.campo) {            // texto de Docs/Fotos/T.R.
         e._notas = e._notas || {}; e._notas[baseSem(p.campo)] = p.nuevo;
@@ -11274,7 +11393,10 @@ async function guardarPendientes() {
 
 function motivoNoEditable(emb, c) {
   if (c === '_etapa') return 'La etapa se calcula sola, según los datos que tiene la carga.';
-  var src = fuenteDe(emb), cb = baseSem(c);
+  var esBg = String(c).indexOf('bg:') === 0;
+  if (esBg && c === 'bg:_etapa') return 'La etapa se calcula sola: no tiene color propio en la planilla.';
+  var src = fuenteDe(emb), cb = esBg ? c.slice(3) : baseSem(c);
+  if (esBg && SEMAFOROS.indexOf(cb) >= 0) return 'El color de Docs, Fotos y T.R. es su estado: se cambia con doble clic.';
   if (src.mapa[cb] === undefined) return 'Esta columna no existe en «' + emb._tab + '».';
   if (src.noAplica && src.noAplica[cb]) return 'Esta columna no aplica en «' + emb._tab + '».';
   if (c === 'total') return 'El total se calcula solo: precio × toneladas. Cambiá la cantidad y se actualiza.';
@@ -11378,9 +11500,14 @@ function conClaseTd(td, cls) {
 
 function celdaPlanilla(emb, src, c) {
   var td = celdaPlanillaBase(emb, src, c).replace(/^<td/, '<td data-c="' + c + '"');
-  var pend = pendDe(emb._id, c) || (SEMAFOROS.indexOf(c) >= 0 && pendDe(emb._id, c + '_nota')) ||
+  var pend = pendDe(emb._id, c) || pendDe(emb._id, 'bg:' + c) || (SEMAFOROS.indexOf(c) >= 0 && pendDe(emb._id, c + '_nota')) ||
     (c === 'total' && (pendDe(emb._id, 'tns') || pendDe(emb._id, 'price')));
   if (pend) td = conClaseTd(td, 'pend-cel');
+  // Fondo de color (el de Sheets o el que se acaba de pintar). Docs/Fotos/T.R. ya llevan el suyo (es el estado).
+  if (c !== '_etapa' && SEMAFOROS.indexOf(c) < 0 && !/ class="na"|class="na"/.test(td)) {
+    var bgc = bgDe(emb, c);
+    if (!esBlanco(bgc) && enPaleta(bgc)) td = td.replace(/^<td/, '<td data-bg="1" style="background:' + cssColor(bgc) + '"');
+  }
   // Comentarios: la marca va según la CARGA y la columna, no según la posición en pantalla,
   // así que si se reordena o se filtra la planilla, la marca viaja con su fila.
   var hs = hilosDeCelda(emb, c).filter(function (h) { return comentariosVisibles(h).length; });
@@ -12175,6 +12302,10 @@ document.addEventListener('click', function (ev) {
     ev.stopPropagation();
     return abrirComentarios('celda', nroT.closest('tr').getAttribute('data-f'), '', false);
   }
+  // Paleta de colores abierta: un clic afuera la cierra.
+  if (S.menuPintar && ev.target.closest && !ev.target.closest('.pal-wrap')) {
+    S.menuPintar = false; pintar();
+  }
   // Menú «Configuración» abierto: un clic afuera lo cierra.
   if (S.menuCfg && ev.target.closest && !ev.target.closest('.cfg-wrap')) {
     S.menuCfg = false; ev.stopPropagation(); return pintar();
@@ -12303,7 +12434,17 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'modo') {
     S.planillaFull = false; S.modo = el.getAttribute('data-m'); return pintar(); }
-  if (act === 'menucfg') { S.menuCfg = !S.menuCfg; S.menuCol = null; return pintar(); }
+  if (act === 'menucfg') { S.menuCfg = !S.menuCfg; S.menuCol = null; S.menuPintar = false; return pintar(); }
+  if (act === 'pintarmenu') { S.menuPintar = !S.menuPintar; S.menuCfg = false; S.menuCol = null; return pintar(); }
+  if (act === 'pintar') {
+    var ca = S.celdaAct, op = PALETA_BG.filter(function (o) { return o[0] === (el.getAttribute('data-k') || ''); })[0];
+    S.menuPintar = false;
+    if (!ca || !op) return pintar();
+    var embP = filaPorId(ca.id), noP = embP && motivoNoEditable(embP, 'bg:' + ca.c);
+    if (noP) { pintar(); var tdP = document.querySelector('tr[data-f="' + ca.id.replace(/"/g, '\\"') + '"] td[data-c="' + ca.c + '"]'); return tdP ? avisoCelda(tdP, noP) : toast(noP, 'error'); }
+    if (!encolarCambio(ca.id, 'bg:' + ca.c, op[2])) pintar();
+    return;
+  }
   if (act === 'ocultar') { S.colsOcultas[el.getAttribute('data-c')] = true; guardarPrefsPlanilla(); return pintar(); }
   if (act === 'colstodas') { S.colsOcultas = {}; guardarPrefsPlanilla(); return pintar(); }
   if (act === 'colsminimas') {
@@ -13120,6 +13261,7 @@ document.addEventListener('keydown', function (e) {
   }
   if (e.key === 'Escape' && S.revision && !S.revision.guardando) { S.revision = null; return pintar(); }
   if (e.key === 'Escape' && S.moverCtr && !S.moverCtr.moviendo) { S.moverCtr = null; return pintar(); }
+  if (e.key === 'Escape' && S.menuPintar) { S.menuPintar = false; return pintar(); }
   if (e.key === 'Escape' && S.menuCfg) { S.menuCfg = false; return pintar(); }
   if (e.key === 'Escape' && S.combo) { S.combo = null; return pintar(); }
   if (e.key === 'Escape' && S.menuSem) { S.menuSem = null; return pintar(); }
@@ -13299,7 +13441,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.16-u';
+var APP_VERSION = '2026.10.19-v';
 
 function arrancar() {
   cargarPrefsPlanilla();
