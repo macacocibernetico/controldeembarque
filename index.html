@@ -2109,6 +2109,27 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 .tbl-fact td{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tbl-fact .fact-acc{display:flex;gap:6px;align-items:center;overflow:visible;max-width:none}
 .tbl-fact .nrofila{position:static}
+
+/* ===== Docs/Fotos/T.R. cómodo + filas marcadas (20/10/2026) ===== */
+.tbl-hoja td.editando{z-index:6}
+.sem-ed{position:fixed;left:0;top:0;z-index:60;width:260px;max-width:calc(100vw - 16px)}
+.sem-ed .sem-pie{display:flex;align-items:center;gap:8px;padding:6px 8px;background:#f8f9fa;border-top:1px solid #dadce0;border-radius:0 0 6px 6px}
+.sem-ed .sem-hint{margin-right:auto;font-size:12px;color:var(--tinta3)}
+.sem-ed .sem-cancelar,.sem-ed .sem-guardar{min-height:32px;padding:0 12px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #dadce0;background:#fff;color:var(--tinta)}
+.sem-ed .sem-guardar{background:#1a73e8;border-color:#1a73e8;color:#fff;font-weight:600}
+.sem-ed .sem-guardar:focus-visible,.sem-ed .sem-cancelar:focus-visible{outline:2px solid #1a73e8;outline-offset:2px}
+.tbl-hoja td.nrofila{cursor:pointer;-webkit-user-select:none;user-select:none}
+.tbl-hoja tbody tr.fila-sel td{background-image:linear-gradient(rgba(26,115,232,.14),rgba(26,115,232,.14))}
+.tbl-hoja tbody tr.fila-sel td.nrofila{background:#1a73e8 !important;background-image:none !important;color:#fff}
+.tbl-hoja tbody tr.fila-sel td.nrofila .nro{font-weight:700}
+.tbl-hoja tbody tr.fila-sel .fila-abrir,.tbl-hoja tbody tr.fila-sel .fila-fact,.tbl-hoja tbody tr.fila-sel .fila-com{color:#fff}
+.tbl-hoja tbody tr.fila-sel td{border-bottom-color:#8ab4f8}
+.fila-com{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;min-height:0;padding:0;margin-left:4px;
+  border:0;border-radius:6px;background:transparent;color:#b06f00;vertical-align:middle}
+.fila-com .ico{width:13px;height:13px}
+.fila-com:hover{background:rgba(0,0,0,.08)}
+.sel-info{display:inline-flex;align-items:center;gap:8px;margin-left:6px;padding:4px 6px 4px 12px;border-radius:999px;background:#e8f0fe;color:#174ea6;font-size:13px}
+.sel-info button{min-height:28px;padding:0 10px;border-radius:999px;font-size:12.5px}
 </style>
 </head>
 <body>
@@ -2268,6 +2289,7 @@ var S = {
   adviceTo: null,
   adviceFilas: {},
   marcados: {},
+  filasSel: {}, filasSelAncla: null, soloSel: false,
   advices: new Map(),
   advicesViejos: 0,
   paises: new Map(),
@@ -10866,6 +10888,7 @@ function vistaPlanilla(filas) {
     '<button class="btn-com" data-act="comcelda" title="Comentar la celda marcada (Ctrl+Alt+M). También con clic derecho sobre la celda."' +
       ((S.celdaAct && filaPorId(S.celdaAct.id)) ? '' : ' disabled') + '>' + ico('chat') + 'Comentar</button>' +
     paletaHtml() +
+    '<span class="sel-info-w">' + selInfoHtml() + '</span>' +
     '<span class="ayuda" style="margin-left:auto">' + filas.length + ' filas</span>' +
     barraPendHtml() +
     menuConfigHtml(true) +
@@ -11032,7 +11055,47 @@ function filasVisiblesPlanilla() {
     return true;
   });
   var filas = ordenar(aplicarFiltros(evs), S.orden);
+  if (S.soloSel && nSelFilas()) filas = filas.filter(function (x) { return S.filasSel[x.emb._id]; });
   return filas;
+}
+
+/* --- Filas marcadas (como en Sheets): clic en el número de fila; Ctrl suma o quita; Mayús marca un tramo. --- */
+function nSelFilas() { return Object.keys(S.filasSel).filter(function (k) { return S.filasSel[k] && filaPorId(k); }).length; }
+function selInfoHtml() {
+  var n = nSelFilas();
+  if (!n) return '';
+  return '<span class="sel-info"><b>' + n + (n === 1 ? ' fila marcada' : ' filas marcadas') + '</b>' +
+    '<button data-act="selsolo" aria-pressed="' + !!S.soloSel + '">' + (S.soloSel ? 'Ver todas' : 'Ver solo las marcadas') + '</button>' +
+    '<button data-act="selquitar">Quitar marcas</button></span>';
+}
+function refrescarSelFilas() {
+  if (!nSelFilas()) S.soloSel = false;
+  Array.prototype.forEach.call(document.querySelectorAll('.tbl-hoja tbody tr[data-f]'), function (tr) {
+    tr.classList.toggle('fila-sel', !!S.filasSel[tr.getAttribute('data-f')]);
+  });
+  var w = document.querySelector('.sel-info-w');
+  if (w) w.innerHTML = selInfoHtml();
+  if (S.soloSel) refrescarPlanilla();
+}
+function limpiarSelFilas() { S.filasSel = {}; S.filasSelAncla = null; S.soloSel = false; refrescarSelFilas(); refrescarPlanilla(); }
+function clicNumeroFila(ev, tr) {
+  var id = tr.getAttribute('data-f');
+  if (ev.shiftKey && S.filasSelAncla) {
+    var trs = Array.prototype.slice.call(document.querySelectorAll('.tbl-hoja tbody tr[data-f]'));
+    var ids = trs.map(function (t) { return t.getAttribute('data-f'); });
+    var a = ids.indexOf(S.filasSelAncla), b = ids.indexOf(id);
+    if (a >= 0 && b >= 0) {
+      if (!(ev.ctrlKey || ev.metaKey)) S.filasSel = {};
+      for (var i = Math.min(a, b); i <= Math.max(a, b); i++) S.filasSel[ids[i]] = true;
+      try { window.getSelection().removeAllRanges(); } catch (e) {}
+      return refrescarSelFilas();
+    }
+  }
+  if (ev.ctrlKey || ev.metaKey) { if (S.filasSel[id]) delete S.filasSel[id]; else S.filasSel[id] = true; }
+  else if (S.filasSel[id] && nSelFilas() === 1) delete S.filasSel[id];
+  else { S.filasSel = {}; S.filasSel[id] = true; }
+  S.filasSelAncla = id;
+  refrescarSelFilas();
 }
 
 // Al tipear en un filtro de columna: se cambian las filas y el conteo, nada
@@ -11159,11 +11222,14 @@ function filasHtmlPlanilla(filas, cols) {
     var clases = [];
     if (emb._id === S.sel) clases.push('sel');
     if (marcado) clases.push('marcado');
+    if (S.filasSel[emb._id]) clases.push('fila-sel');
     if (noCombina) clases.push('incompat');
     return '<tr' + (clases.length ? ' class="' + clases.join(' ') + '"' : '') +
       ' data-f="' + esc(emb._id) + '">' +
       '<td class="nrofila' + (hilosDeCelda(emb, '').some(function (h) { return comentariosVisibles(h).length; }) ? ' tiene-com' : '') + '" title="' + esc(emb._tab) +
         (adviceDe(emb) ? ' · advice enviado' : '') + '"><span class="nro">' + emb._fila + '</span>' +
+        (hilosDeCelda(emb, '').some(function (h) { return comentariosVisibles(h).length; })
+          ? '<button class="fila-com" title="Ver los comentarios de esta carga" aria-label="Comentarios de la fila ' + emb._fila + '">' + ico('chat') + '</button>' : '') +
         '<button class="fila-abrir" data-act="abrir" data-f="' + esc(emb._id) + '" ' +
           'title="Abrir el detalle de esta carga" aria-label="Abrir el detalle de la fila ' + emb._fila + '">' +
           ico('agrandar') + '</button>' +
@@ -11508,7 +11574,10 @@ function editarCelda(td) {
       }).join('') + '</div>' +
       '<input class="edit-cel" data-editcel="1" data-txtsem="1" autocomplete="off" aria-label="' +
       esc(CAMPOS[c].label) + ': texto" placeholder="Texto de la celda" value="' +
-      esc(valorVista(emb, c + '_nota') || '') + '"></div>';
+      esc(valorVista(emb, c + '_nota') || '') + '">' +
+      '<div class="sem-pie"><span class="sem-hint">Enter acepta · Esc cancela</span>' +
+      '<button type="button" class="sem-cancelar">Cancelar</button>' +
+      '<button type="button" class="sem-guardar">Aceptar</button></div></div>';
   } else {
     if (v instanceof Date) inicial = fmtFecha(v);
     else if (tipo === 'numero' && typeof v === 'number') {
@@ -11521,9 +11590,30 @@ function editarCelda(td) {
   }
   S.editCel = { id: emb._id, c: c, td: td, previo: null };
   var inp = td.querySelector(tipo === 'semaforo' ? '.sem-op[aria-checked="true"]' : '.edit-cel');
-  inp.focus();
+  acomodarEditorSem();
+  try { inp.focus({ preventScroll: true }); } catch (e0) { inp.focus(); }
   if (inp.select && tipo !== 'semaforo') inp.select();
 }
+
+// El editor de Docs/Fotos/T.R. flota sobre la pantalla (no dentro de la tabla, que lo cortaría) y se mantiene entero a la vista.
+function acomodarEditorSem() {
+  var E = S.editCel, ed = E && E.td && E.td.querySelector('.sem-ed');
+  if (!ed) return;
+  var r = E.td.getBoundingClientRect(), w = ed.offsetWidth, h = ed.offsetHeight;
+  var W = window.innerWidth, H = window.innerHeight;
+  var x = Math.max(8, Math.min(r.left, W - w - 8));
+  var y = r.top;
+  if (y + h > H - 8) y = r.bottom - h;
+  if (y + h > H - 8) y = H - h - 8;
+  ed.style.left = x + 'px'; ed.style.top = Math.max(8, y) + 'px';
+}
+window.addEventListener('scroll', function () { if (S.editCel) acomodarEditorSem(); }, true);
+window.addEventListener('resize', function () { if (S.editCel) acomodarEditorSem(); });
+document.addEventListener('click', function (ev) {
+  if (!S.editCel || !ev.target.closest) return;
+  if (ev.target.closest('.sem-guardar')) { ev.stopPropagation(); cerrarEdicionCelda(true); }
+  else if (ev.target.closest('.sem-cancelar')) { ev.stopPropagation(); cerrarEdicionCelda(false); }
+}, true);
 
 // Guarda (o descarta) lo que se escribió en la celda.
 function cerrarEdicionCelda(guardar) {
@@ -12211,6 +12301,7 @@ document.addEventListener('keydown', function (ev) {
   var t = ev.target;
   if (t && (/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(t.tagName) || t.isContentEditable)) return;
   var td = tdActiva();
+  if (ev.key === 'Escape' && nSelFilas()) { if (td) td.classList.remove('cel-act'); S.celdaAct = null; return limpiarSelFilas(); }
   if (!td) return;
   if (ev.key === 'Enter' || ev.key === 'F2') { ev.preventDefault(); return editarCelda(td); }
   if (ev.key === 'Escape') { td.classList.remove('cel-act'); S.celdaAct = null; return; }
@@ -12350,6 +12441,8 @@ document.addEventListener('focusin', function (e) {
 document.addEventListener('click', function (ev) {
   if (!ev.target.closest) return;
   // Editando una celda: un clic afuera guarda, como en Sheets.
+  var tdClic = ev.target.closest('.tbl-hoja td[data-c]');
+  var refClic = tdClic ? { f: tdClic.closest('tr').getAttribute('data-f'), c: tdClic.getAttribute('data-c') } : null;
   if (S.editCel && !ev.target.closest('.edit-cel, .sem-ed')) cerrarEdicionCelda(true);
   // Ventanita de comentarios o menú de clic derecho: un clic afuera los cierra.
   if ((S.comPop || S.comCtx) && !ev.target.closest('.com-pop, .com-ctx, [data-act^="com"], .tbl-hoja td, .tbl-hoja td.nrofila')) {
@@ -12364,9 +12457,22 @@ document.addEventListener('click', function (ev) {
   // Celda de la tabla: un clic la marca (como en Sheets) y no abre nada. El
   // detalle se abre con el botón del número de fila; el doble clic edita.
   var tdP = ev.target.closest('.tbl-hoja td[data-c]');
+  // Si al guardar la celda de antes la tabla se redibujó, el clic cae en una celda que ya no existe: se vuelve a buscar.
+  if (tdP && !tdP.isConnected && refClic) {
+    var trN = document.querySelector('.tbl-hoja tbody tr[data-f="' + refClic.f + '"]');
+    tdP = trN ? trN.querySelector('td[data-c="' + refClic.c + '"]') : null;
+  }
   if (tdP && !S.menuCol && !S.menuCfg && !ev.target.closest('.col-check')) {
+    var yaMarcada = tdP.classList.contains('cel-act');
     marcarCeldaActiva(tdP);
     ev.stopPropagation();
+    // Docs / Fotos / T.R.: un segundo clic sobre la celda ya marcada abre el editor (sin tener que hacer doble clic).
+    var embY = yaMarcada ? filaPorId(tdP.closest('tr').getAttribute('data-f')) : null;
+    var conHilo = !!embY && hilosDeCelda(embY, tdP.getAttribute('data-c')).some(function (h) { return comentariosVisibles(h).length; });
+    if (yaMarcada && !conHilo && !S.editCel && SEMAFOROS.indexOf(tdP.getAttribute('data-c')) >= 0) {
+      if (S.comPop || S.comCtx) { S.comPop = null; S.comCtx = null; S.comUI = {}; Array.prototype.forEach.call(document.querySelectorAll('.com-pop, .com-ctx'), function (n) { n.remove(); }); }
+      return editarCelda(tdP);
+    }
     // Una celda con comentarios abre su hilo (como en Sheets); una sin comentarios cierra el que hubiera.
     var idT = tdP.closest('tr').getAttribute('data-f'), cT = tdP.getAttribute('data-c');
     var embT = filaPorId(idT);
@@ -12380,9 +12486,13 @@ document.addEventListener('click', function (ev) {
   }
   // Número de fila: si la carga tiene comentarios generales, los abre.
   var nroT = ev.target.closest('.tbl-hoja td.nrofila');
-  if (nroT && !ev.target.closest('.fila-abrir') && nroT.classList.contains('tiene-com')) {
+  if (nroT && ev.target.closest('.fila-com')) {
     ev.stopPropagation();
     return abrirComentarios('celda', nroT.closest('tr').getAttribute('data-f'), '', false);
+  }
+  if (nroT && !ev.target.closest('.fila-abrir, .fila-fact, .ir-fact')) {
+    ev.stopPropagation();
+    return clicNumeroFila(ev, nroT.closest('tr'));
   }
   // Paleta de colores abierta: un clic afuera la cierra.
   if (S.menuPintar && ev.target.closest && !ev.target.closest('.pal-wrap')) {
@@ -12677,6 +12787,8 @@ document.addEventListener('click', function (ev) {
     if (b0) hermanasAdvice(b0).forEach(function (o) { S.marcados[o._id] = true; });
     return pintar();
   }
+  if (act === 'selsolo') { S.soloSel = !S.soloSel; refrescarSelFilas(); return refrescarPlanilla(); }
+  if (act === 'selquitar') { return limpiarSelFilas(); }
   if (act === 'desmarcar') { S.marcados = {}; S.adviceMsg = null; return pintar(); }
   if (act === 'advidioma') { S.adviceIdioma = el.getAttribute('data-v'); return pintar(); }
   if (act === 'expact') { S.expSoloActivas = el.getAttribute('data-v') === '1'; return pintar(); }
@@ -13529,7 +13641,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.19-x';
+var APP_VERSION = '2026.10.20-y';
 
 function arrancar() {
   cargarPrefsPlanilla();
