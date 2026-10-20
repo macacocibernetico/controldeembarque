@@ -2130,6 +2130,10 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 .fila-com:hover{background:rgba(0,0,0,.08)}
 .sel-info{display:inline-flex;align-items:center;gap:8px;margin-left:6px;padding:4px 6px 4px 12px;border-radius:999px;background:#e8f0fe;color:#174ea6;font-size:13px}
 .sel-info button{min-height:28px;padding:0 10px;border-radius:999px;font-size:12.5px}
+
+/* Pasar a A facturar desde las filas marcadas */
+.sel-info .sel-fact{display:inline-flex;align-items:center;gap:6px;min-height:30px;background:#1a73e8;border-color:#1a73e8;color:#fff;font-weight:600}
+.sel-info .sel-fact .ico{width:14px;height:14px}
 </style>
 </head>
 <body>
@@ -2289,7 +2293,7 @@ var S = {
   adviceTo: null,
   adviceFilas: {},
   marcados: {},
-  filasSel: {}, filasSelAncla: null, soloSel: false,
+  filasSel: {}, filasSelAncla: null, soloSel: false, loteFact: null,
   advices: new Map(),
   advicesViejos: 0,
   paises: new Map(),
@@ -7643,7 +7647,7 @@ function vistaApp() {
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     ((S.modo === 'planilla' || S.modo === 'tabla') && S.vista === 'carga' ? menuColumna() : '') +
-    modalMoverCtr() + modalRevision() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
+    modalMoverCtr() + modalLoteFact() + modalRevision() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -11064,10 +11068,92 @@ function nSelFilas() { return Object.keys(S.filasSel).filter(function (k) { retu
 function selInfoHtml() {
   var n = nSelFilas();
   if (!n) return '';
+  var nFact = idsParaFacturar().length, dest = (S.fuentesFact || [])[0];
   return '<span class="sel-info"><b>' + n + (n === 1 ? ' fila marcada' : ' filas marcadas') + '</b>' +
+    (dest && nFact ? '<button class="primario sel-fact" data-act="lotefact">' + ico('mover') + 'Pasar a ' + esc(dest.tab) +
+      (nFact > 1 ? ' (' + nFact + ')' : '') + '</button>' : '') +
     '<button data-act="selsolo" aria-pressed="' + !!S.soloSel + '">' + (S.soloSel ? 'Ver todas' : 'Ver solo las marcadas') + '</button>' +
     '<button data-act="selquitar">Quitar marcas</button></span>';
 }
+function idsParaFacturar() {
+  return Object.keys(S.filasSel).filter(function (k) {
+    var e = S.filasSel[k] && filaPorId(k);
+    return e && !e._aFacturar;
+  });
+}
+
+function modalLoteFact() {
+  var L = S.loteFact, destino = (S.fuentesFact || [])[0];
+  if (!L || !destino) return '';
+  var lista = L.ids.map(filaPorId).filter(Boolean).map(function (emb) {
+    var q = resumenMudanza(emb);
+    return '<li><b>' + esc(q.quien) + '</b> · ' + esc(q.contrato || 'sin contrato') + (q.bl ? ' · BL ' + esc(q.bl) : '') +
+      (q.tns ? ' · ' + fmtNum(q.tns) + ' tn' : '') + ' <span class="ayuda">(' + esc(nombreCorto(q.desde)) + ', fila ' + q.fila + ')</span></li>';
+  }).join('');
+  var n = L.ids.length;
+  return '<div class="modal-velo" data-act="lotefactno"></div>' +
+    '<div class="modal-caja"><div class="modal-cambio" role="alertdialog" aria-modal="true" aria-labelledby="lf-t">' +
+      '<h3 id="lf-t">¿Pasar ' + (n === 1 ? 'esta carga' : 'estas ' + n + ' cargas') + ' a «' + esc(destino.tab) + '»?</h3>' +
+      '<ul class="mover-ctr-lista">' + lista + '</ul>' +
+      '<ul class="mover-que"><li>Cada fila se copia a «' + esc(destino.tab) + '» arriba del TOTAL, con sus datos y colores, ' +
+        'se comprueba que quedó bien y recién entonces se borra de su pestaña.</li>' +
+        '<li>Para devolverla: «' + esc(destino.tab) + '» → Devolver.</li></ul>' +
+      '<label class="chk"><input type="checkbox" data-avisar="1"' + (S.avisarPia !== false ? ' checked' : '') + '>' +
+        '<span>Avisar a ' + esc(AVISO_FACTURAR) + (n > 1 ? ' (un aviso por carga)' : '') + '</span></label>' +
+      (S.avisarPia !== false
+        ? '<div class="modos" style="margin:8px 0 0"><button data-act="avmodo" data-v="0" aria-pressed="' + (!S.enviarPia) + '">Dejar borrador</button>' +
+          '<button data-act="avmodo" data-v="1" aria-pressed="' + (!!S.enviarPia) + '">Enviar ahora</button></div>' : '') +
+      (L.error ? '<div class="error" style="margin-top:12px">' + esc(L.error) + '</div>' : '') +
+      '<label class="chk entiendo"><input type="checkbox" data-loteentiendo="1"' + (L.entiendo ? ' checked' : '') + '>' +
+        '<span>Entiendo que se borran de su pestaña de origen</span></label>' +
+      '<div class="mcm-acc"><button data-act="lotefactno"' + (L.moviendo ? ' disabled' : '') + '>Cancelar</button>' +
+        '<button class="primario" data-act="lotefactok"' + (!L.entiendo || L.moviendo ? ' disabled' : '') + '>' +
+          (L.moviendo ? 'Pasando… ' + (L.hechas || 0) + ' de ' + n : 'Pasar ' + (n === 1 ? 'la carga' : n + ' cargas')) + '</button></div>' +
+    '</div></div>';
+}
+
+// Pasa varias cargas, una por una y cada una verificada; si una falla se frena y no se toca el resto.
+async function pasarLoteAFacturar() {
+  var L = S.loteFact, destino = (S.fuentesFact || [])[0];
+  if (!L || !destino || L.moviendo) return;
+  var embs = L.ids.map(filaPorId).filter(Boolean);
+  var conPend = embs.filter(function (e) { return pendDeFila(e._id); });
+  if (conPend.length) {
+    L.error = 'Hay cambios sin confirmar en ' + (conPend.length === 1 ? 'una de las cargas' : conPend.length + ' de las cargas') +
+      '. Tocá «Confirmar cambios» y después pasalas a facturar.';
+    return pintar();
+  }
+  L.moviendo = true; L.hechas = 0; L.error = null; pintar();
+  var hechas = [], aviso = '';
+  try {
+    for (var i = 0; i < embs.length; i++) {
+      var emb = embs[i], res = resumenMudanza(emb);
+      var h = await leerHoja(S.cfg.sheetId, emb._tab);
+      var mp = detectar(h.encabezados, CAMPOS).mapa;
+      var fresca = ubicarFila(h, mp, emb, emb._fila);
+      await moverFila({ tab: emb._tab, sheetId: h.sheetId, mapa: mp, fila: fresca.fila, celdas: fresca.celdas, colores: fresca.colores }, destino.tab);
+      hechas.push(emb._id); L.hechas = hechas.length;
+      if (S.avisarPia !== false) {
+        try { aviso = await avisarFacturar(res, destino.tab, !!S.enviarPia); } catch (e2) { aviso = ' El mail no salió: ' + e2.message; }
+      }
+      pintar();
+    }
+    S.avisoOk = (hechas.length === 1 ? 'Pasada' : hechas.length + ' cargas pasadas') + ' a "' + destino.tab + '".' + (hechas.length === 1 ? aviso : '');
+    S.loteFact = null;
+    hechas.forEach(function (id) { delete S.filasSel[id]; });
+    await cargarTodo();
+    toast(hechas.length === 1 ? 'Enviada a «' + destino.tab + '»' : hechas.length + ' cargas enviadas a «' + destino.tab + '»', 'ok');
+  } catch (e) {
+    L.moviendo = false;
+    L.error = (hechas.length ? 'Se pasaron ' + hechas.length + ' de ' + embs.length + '; se frenó en la siguiente: ' : 'No se pasó nada: ') + e.message;
+    hechas.forEach(function (id) { delete S.filasSel[id]; });
+    L.ids = L.ids.filter(function (id) { return hechas.indexOf(id) < 0; });
+    try { await cargarTodo(); } catch (e3) { /* se ve el error de arriba */ }
+  } finally {
+    pintar();
+  }
+}
+
 function refrescarSelFilas() {
   if (!nSelFilas()) S.soloSel = false;
   Array.prototype.forEach.call(document.querySelectorAll('.tbl-hoja tbody tr[data-f]'), function (tr) {
@@ -11233,10 +11319,6 @@ function filasHtmlPlanilla(filas, cols) {
         '<button class="fila-abrir" data-act="abrir" data-f="' + esc(emb._id) + '" ' +
           'title="Abrir el detalle de esta carga" aria-label="Abrir el detalle de la fila ' + emb._fila + '">' +
           ico('agrandar') + '</button>' +
-        ((S.fuentesFact || []).length && !emb._aFacturar
-          ? '<button class="ir-fact fila-fact" data-f="' + esc(emb._id) + '" title="Pasar a ' + esc(S.fuentesFact[0].tab) + '" ' +
-            'aria-label="Pasar a ' + esc(S.fuentesFact[0].tab) + ' la carga de la fila ' + emb._fila + '">' + ico('mover') + '</button>'
-          : '') +
         (adviceDe(emb) ? '<i class="pt-adv"></i>' : '') + '</td>' +
       '<td class="sel-col">' +
         '<label class="col-check" title="' + esc(noCombina || (marcado
@@ -12787,6 +12869,14 @@ document.addEventListener('click', function (ev) {
     if (b0) hermanasAdvice(b0).forEach(function (o) { S.marcados[o._id] = true; });
     return pintar();
   }
+  if (act === 'lotefact') {
+    var idsF = idsParaFacturar();
+    if (!idsF.length) return;
+    S.loteFact = { ids: idsF, entiendo: false, moviendo: false, error: null };
+    return pintar();
+  }
+  if (act === 'lotefactno') { if (S.loteFact && !S.loteFact.moviendo) { S.loteFact = null; pintar(); } return; }
+  if (act === 'lotefactok') { return pasarLoteAFacturar(); }
   if (act === 'selsolo') { S.soloSel = !S.soloSel; refrescarSelFilas(); return refrescarPlanilla(); }
   if (act === 'selquitar') { return limpiarSelFilas(); }
   if (act === 'desmarcar') { S.marcados = {}; S.adviceMsg = null; return pintar(); }
@@ -13293,6 +13383,12 @@ document.addEventListener('change', function (e) {
     S.topeContratos = 40;
     return pintar();
   }
+  if (e.target.getAttribute && e.target.getAttribute('data-loteentiendo') && S.loteFact) {
+    S.loteFact.entiendo = e.target.checked;
+    var bLf = document.querySelector('.modal-cambio [data-act="lotefactok"]');
+    if (bLf) bLf.disabled = !e.target.checked || !!S.loteFact.moviendo;
+    return;
+  }
   if (e.target.getAttribute && e.target.getAttribute('data-moverentiendo') && S.moverCtr) {
     S.moverCtr.entiendo = e.target.checked;
     var bMv = document.querySelector('.modal-cambio [data-act="ctrmoverok"]');
@@ -13641,7 +13737,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.20-y';
+var APP_VERSION = '2026.10.20-z';
 
 function arrancar() {
   cargarPrefsPlanilla();
