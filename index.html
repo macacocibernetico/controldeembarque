@@ -2134,6 +2134,31 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 /* Pasar a A facturar desde las filas marcadas */
 .sel-info .sel-fact{display:inline-flex;align-items:center;gap:6px;min-height:30px;background:#1a73e8;border-color:#1a73e8;color:#fff;font-weight:600}
 .sel-info .sel-fact .ico{width:14px;height:14px}
+
+/* ===== Tabla más aprovechada, filas marcadas que no tapan el color (20/10/2026) ===== */
+.alta-chica{min-height:40px;padding:0 14px;font-size:14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.modo-hoja .titulo-vista{margin-bottom:10px}
+.modo-hoja .conteo{margin:6px 0 4px}
+.modo-hoja .segmento{margin-bottom:10px}
+.tbl-hoja tbody tr.fila-sel td{background-image:none}
+.tbl-hoja tbody tr.fila-sel td:not([class^="cel-"]):not(.pend-cel){background-image:linear-gradient(rgba(26,115,232,.10),rgba(26,115,232,.10))}
+.tbl-hoja tbody tr.fila-sel td{box-shadow:inset 0 2px 0 #1a73e8,inset 0 -2px 0 #1a73e8}
+.tbl-hoja tbody tr.fila-sel td.pend-cel{box-shadow:inset 0 0 0 2px #f5a524,inset 0 2px 0 #1a73e8,inset 0 -2px 0 #1a73e8}
+.tbl-hoja tbody tr.fila-sel td.nrofila{box-shadow:inset 4px 0 0 #0b4fb3}
+.tbl-hoja td.nrofila:hover{background:#e8f0fe}
+.tbl-hoja td.nrofila:focus-visible{outline:3px solid #1a73e8;outline-offset:-3px}
+.ayuda-hoja{margin-top:10px;font-size:13px;color:var(--tinta3)}
+.ayuda-hoja summary{cursor:pointer;min-height:32px;display:inline-flex;align-items:center}
+.ayuda-hoja ul{margin:6px 0 0;padding-left:20px;line-height:1.55}
+
+/* Eliminar cargas */
+.btn-elim{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 11px;border-radius:8px;font-size:13px;
+  background:#fff;border:1px solid #d93025;color:#b3261e;cursor:pointer}
+.btn-elim:hover{background:#fdecea}
+.btn-elim .ico{width:14px;height:14px}
+.btn-elim.chico{min-height:28px;min-width:28px;padding:0 6px;border-color:transparent;background:none;color:var(--tinta3)}
+.btn-elim.chico:hover{background:#fdecea;color:#b3261e;border-color:#f3b8b3}
+.sel-info .btn-elim{min-height:28px;border-radius:999px;font-size:12.5px}
 </style>
 </head>
 <body>
@@ -2293,7 +2318,7 @@ var S = {
   adviceTo: null,
   adviceFilas: {},
   marcados: {},
-  filasSel: {}, filasSelAncla: null, soloSel: false, loteFact: null,
+  filasSel: {}, filasSelAncla: null, soloSel: false, loteFact: null, elim: null,
   advices: new Map(),
   advicesViejos: 0,
   paises: new Map(),
@@ -7233,6 +7258,7 @@ async function aplicarCambio(id, campo, valor) {
 var ICONOS = {
   mail:   'M2 4h12v8H2zM2 4l6 4 6-4',
   plus:   'M8 3v10M3 8h10',
+  papelera: 'M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5M7 7v4M9 7v4',
   balde:  'M3 8l5-5 5 5-5 5-5-5zM3 8h10M13.5 10.5c.8 1 1.2 1.7 1.2 2.2a1.2 1.2 0 0 1-2.4 0c0-.5.4-1.2 1.2-2.2z',
   lupa:   'M7 12.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zM11 11l3.5 3.5',
   refresh:'M13 8a5 5 0 1 1-1.5-3.5M13 2v3h-3',
@@ -7636,7 +7662,7 @@ function vistaApp() {
   }
 
   return '<a class="saltar" href="#principal" data-act="saltar">Saltar al contenido</a>' + barraMobile() +
-    '<div class="marco-app v-' + colorDeVista(S.vista) + '">' + navLateral(todosEvs) +
+    '<div class="marco-app v-' + colorDeVista(S.vista) + (S.vista === 'carga' && !S.verFact && (S.modo === 'tabla' || S.modo === 'planilla') ? ' modo-hoja' : '') + '">' + navLateral(todosEvs) +
     '<main class="app" id="principal" tabindex="-1">' + avisoSesion() +
       (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
       (S.avisoOk ? '<div class="ok-aviso">' + esc(S.avisoOk) +
@@ -7647,7 +7673,7 @@ function vistaApp() {
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     ((S.modo === 'planilla' || S.modo === 'tabla') && S.vista === 'carga' ? menuColumna() : '') +
-    modalMoverCtr() + modalLoteFact() + modalRevision() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
+    modalMoverCtr() + modalLoteFact() + modalElim() + modalRevision() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -8987,6 +9013,9 @@ function filaEmbarque(x, opts) {
             'title="Pasar a ' + esc(S.fuentesFact[0].tab) + '">' + ico('mover') +
             'A facturar</button>'
           : '') +
+        (opts.acciones !== false
+          ? '<button class="btn-elim chico" data-act="elimabrir" data-f="' + esc(emb._id) + '" title="Eliminar esta carga de la planilla" aria-label="Eliminar esta carga">' + ico('papelera') + '</button>'
+          : '') +
         (function () {
           var a = adviceDe(emb);
           if (!a) return '';
@@ -9216,7 +9245,10 @@ function vistaGrilla(evs) {
   var nf = filtrosActivos();
 
   var h = '';
-  if (!S.altaEmb) {
+  var enHoja = S.modo === 'tabla' || S.modo === 'planilla';
+  if (!S.altaEmb && enHoja) {
+    // Tabla/Planilla: la tabla es lo importante; el alta queda a mano, en la línea de la búsqueda.
+  } else if (!S.altaEmb) {
     h += '<div class="barra-alta">' +
       '<div class="accion-bloque">' +
         '<button class="primario grande" data-act="altaemb">' +
@@ -9228,6 +9260,8 @@ function vistaGrilla(evs) {
   }
 
   h += '<div class="filtros">' +
+    (enHoja && !S.altaEmb ? '<button class="primario alta-chica" data-act="altaemb" title="Se inserta arriba de la fila TOTAL de la pestaña que elijas">' +
+      ico('plus') + 'Cargar embarque</button>' : '') +
     '<input id="busca-cargas" placeholder="Buscar cliente, contrato, BL, factura…" value="' +
       esc(S.busca) + '" aria-label="Buscar">' +
     '<select id="orden" aria-label="Ordenar por">' +
@@ -9649,7 +9683,8 @@ function detalleCargas(cargas) {
             (ev.alertas.length === 1 ? ' alerta' : ' alertas') + '</span>'
           : '') +
         ((S.fuentesFact || []).length && !e._aFacturar
-          ? '<button class="ir-fact" data-f="' + esc(e._id) + '" title="Pasar a ' + esc(S.fuentesFact[0].tab) + '">' +
+          ? '<button class="btn-elim chico" data-act="elimabrir" data-f="' + esc(e._id) + '" title="Eliminar esta carga de la planilla" aria-label="Eliminar esta carga">' + ico('papelera') + '</button>' +
+            '<button class="ir-fact" data-f="' + esc(e._id) + '" title="Pasar a ' + esc(S.fuentesFact[0].tab) + '">' +
             ico('mover') + 'A facturar</button>'
           : '') + '</span>' +
       '</div>' +
@@ -10951,15 +10986,13 @@ function vistaPlanilla(filas) {
 
   return '<div class="full' + (S.planillaFull ? ' pantalla-completa' : '') + '">' + barra +
     '<div class="hoja">' + htmlTablaPlanilla(filas, cols, enc, cuerpo) + '</div>' +
-    '<p class="ayuda" style="margin-top:9px">Los colores son los mismos de la planilla. ' +
-    'El número de la izquierda es la fila real; el botón que aparece al pasar el mouse por ahí abre el detalle. ' +
-    '<b>Doble clic en una celda la edita</b> (Enter la acepta, Esc cancela): el cambio queda marcado en naranja ' +
-    'y no se escribe nada hasta que lo confirmes con «Revisar y guardar», arriba a la derecha. ' +
-    'Arrastrá el borde de un encabezado para cambiar el ancho; las columnas se inmovilizan desde Configuración. ' +
-    'Clic en el nombre de una columna ordena, el embudo filtra y la × la oculta. ' +
-    'Las columnas con enlace vienen del contrato: se pueden cambiar, pero la revisión avisa si no coinciden. ' +
-    'La casilla de al lado elige filas para el shipment advice: las que no son del mismo ' +
-    'embarque se apagan solas.</p>' +
+    '<details class="ayuda-hoja"><summary>Cómo se usa esta tabla</summary><ul>' +
+      '<li><b>Marcar filas:</b> clic en el número de la izquierda (Ctrl suma, Mayús marca un tramo, Esc quita). Con filas marcadas aparece «Pasar a A facturar».</li>' +
+      '<li><b>Editar:</b> doble clic en una celda (en Docs, Fotos y T.R. también sirve un segundo clic). Enter acepta y Esc cancela. El cambio queda en naranja y no se escribe nada hasta tocar «Confirmar cambios», arriba a la derecha.</li>' +
+      '<li><b>Pintar:</b> marcá una celda y usá «Pintar». Los colores son los mismos de la planilla.</li>' +
+      '<li><b>Columnas:</b> clic en el nombre ordena, el embudo filtra y la × la oculta. Arrastrá el borde para cambiar el ancho; inmovilizar se hace desde Configuración.</li>' +
+      '<li>Las columnas con enlace vienen del contrato: se pueden cambiar, pero la revisión avisa si no coinciden. La casilla de al lado elige filas para el shipment advice.</li>' +
+    '</ul></details>' +
     '</div>';
 }
 
@@ -11069,17 +11102,88 @@ function selInfoHtml() {
   var n = nSelFilas();
   if (!n) return '';
   var nFact = idsParaFacturar().length, dest = (S.fuentesFact || [])[0];
-  return '<span class="sel-info"><b>' + n + (n === 1 ? ' fila marcada' : ' filas marcadas') + '</b>' +
+  return '<span class="sel-info" role="status"><b>' + n + (n === 1 ? ' marcada' : ' marcadas') + '</b>' +
     (dest && nFact ? '<button class="primario sel-fact" data-act="lotefact">' + ico('mover') + 'Pasar a ' + esc(dest.tab) +
       (nFact > 1 ? ' (' + nFact + ')' : '') + '</button>' : '') +
-    '<button data-act="selsolo" aria-pressed="' + !!S.soloSel + '">' + (S.soloSel ? 'Ver todas' : 'Ver solo las marcadas') + '</button>' +
-    '<button data-act="selquitar">Quitar marcas</button></span>';
+    '<button class="btn-elim" data-act="elimsel" title="Eliminar las filas marcadas de la planilla">' + ico('papelera') + 'Eliminar' + (n > 1 ? ' (' + n + ')' : '') + '</button>' +
+    '<button data-act="selsolo" aria-pressed="' + !!S.soloSel + '">' + (S.soloSel ? 'Ver todas' : 'Solo marcadas') + '</button>' +
+    '<button data-act="selquitar" title="Quitar todas las marcas (Esc)">Quitar</button></span>';
 }
 function idsParaFacturar() {
   return Object.keys(S.filasSel).filter(function (k) {
     var e = S.filasSel[k] && filaPorId(k);
     return e && !e._aFacturar;
   });
+}
+
+/* --- Eliminar cargas (cargadas por error o que al final no se confirmaron) --- */
+function modalElim() {
+  var E = S.elim;
+  if (!E) return '';
+  var embs = E.ids.map(filaPorId).filter(Boolean);
+  var n = embs.length;
+  var lista = embs.map(function (emb) {
+    var q = resumenMudanza(emb);
+    return '<li><b>' + esc(q.quien) + '</b> · ' + esc(q.contrato || 'sin contrato') + (q.bl ? ' · BL ' + esc(q.bl) : '') +
+      (q.tns ? ' · ' + fmtNum(q.tns) + ' tn' : '') + ' <span class="ayuda">(' + esc(nombreCorto(q.desde)) + ', fila ' + q.fila + ')</span></li>';
+  }).join('');
+  return '<div class="modal-velo" data-act="elimno"></div>' +
+    '<div class="modal-caja"><div class="modal-cambio" role="alertdialog" aria-modal="true" aria-labelledby="el-t">' +
+      '<h3 id="el-t">¿Eliminar ' + (n === 1 ? 'esta carga' : 'estas ' + n + ' cargas') + ' de la planilla?</h3>' +
+      '<ul class="mover-ctr-lista">' + lista + '</ul>' +
+      '<ul class="mover-que"><li>Se borra la fila entera de la pestaña. No queda ninguna fila vacía.</li>' +
+        '<li>No hay botón de deshacer: si fue un error, se recupera desde Sheets con <b>Archivo → Historial de versiones</b>.</li>' +
+        '<li>Si lo que querés es que la carga vaya a facturar, usá «Pasar a A facturar»: eso no la pierde.</li></ul>' +
+      (E.error ? '<div class="error" style="margin-top:12px">' + esc(E.error) + '</div>' : '') +
+      '<label class="chk entiendo"><input type="checkbox" data-elimentiendo="1"' + (E.entiendo ? ' checked' : '') + '>' +
+        '<span>Entiendo que se borra de la planilla</span></label>' +
+      '<div class="mcm-acc"><button data-act="elimno"' + (E.moviendo ? ' disabled' : '') + '>Cancelar</button>' +
+        '<button class="primario peligro" data-act="elimok"' + (!E.entiendo || E.moviendo ? ' disabled' : '') + '>' +
+          (E.moviendo ? 'Eliminando… ' + (E.hechas || 0) + ' de ' + n : ico('papelera') + 'Eliminar ' + (n === 1 ? 'la carga' : n + ' cargas')) + '</button></div>' +
+    '</div></div>';
+}
+
+// Cada fila se vuelve a ubicar en la hoja JUSTO antes de borrarla (por contrato, BL, cliente y toneladas, no por número).
+async function eliminarCargas() {
+  var E = S.elim;
+  if (!E || E.moviendo) return;
+  var embs = E.ids.map(filaPorId).filter(Boolean);
+  var conPend = embs.filter(function (e) { return pendDeFila(e._id); });
+  if (conPend.length) {
+    E.error = 'Hay cambios sin confirmar en ' + (conPend.length === 1 ? 'esa carga' : conPend.length + ' de esas cargas') +
+      '. Tocá «Confirmar cambios» o «Descartar» y volvé a intentar.';
+    return pintar();
+  }
+  E.moviendo = true; E.hechas = 0; E.error = null; pintar();
+  var hechas = [];
+  try {
+    for (var i = 0; i < embs.length; i++) {
+      var emb = embs[i];
+      var h = await leerHoja(S.cfg.sheetId, emb._tab);
+      var mp = detectar(h.encabezados, CAMPOS).mapa;
+      var fresca = ubicarFila(h, mp, emb, emb._fila);
+      await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: h.sheetId, dimension: 'ROWS',
+          startIndex: fresca.fila - 1, endIndex: fresca.fila } } }] })
+      });
+      hechas.push(emb._id); E.hechas = hechas.length; pintar();
+    }
+    S.avisoOk = hechas.length === 1 ? 'Carga eliminada de la planilla.' : hechas.length + ' cargas eliminadas de la planilla.';
+    S.elim = null;
+    hechas.forEach(function (id) { delete S.filasSel[id]; });
+    if (S.sel && hechas.indexOf(S.sel) >= 0) { S.sel = null; S.pasar = null; }
+    await cargarTodo();
+    toast(S.avisoOk, 'ok');
+  } catch (e) {
+    E.moviendo = false;
+    E.error = (hechas.length ? 'Se eliminaron ' + hechas.length + ' de ' + embs.length + '; se frenó en la siguiente: ' : 'No se eliminó nada: ') + e.message;
+    hechas.forEach(function (id) { delete S.filasSel[id]; });
+    E.ids = E.ids.filter(function (id) { return hechas.indexOf(id) < 0; });
+    try { await cargarTodo(); } catch (e3) { /* se ve el error de arriba */ }
+  } finally {
+    pintar();
+  }
 }
 
 function modalLoteFact() {
@@ -11158,14 +11262,22 @@ function refrescarSelFilas() {
   if (!nSelFilas()) S.soloSel = false;
   Array.prototype.forEach.call(document.querySelectorAll('.tbl-hoja tbody tr[data-f]'), function (tr) {
     tr.classList.toggle('fila-sel', !!S.filasSel[tr.getAttribute('data-f')]);
+    tr.setAttribute('aria-selected', S.filasSel[tr.getAttribute('data-f')] ? 'true' : 'false');
   });
   var w = document.querySelector('.sel-info-w');
   if (w) w.innerHTML = selInfoHtml();
   if (S.soloSel) refrescarPlanilla();
 }
 function limpiarSelFilas() { S.filasSel = {}; S.filasSelAncla = null; S.soloSel = false; refrescarSelFilas(); refrescarPlanilla(); }
+document.addEventListener('keydown', function (ev) {
+  var td = ev.target && ev.target.classList && ev.target.classList.contains('nrofila') ? ev.target : null;
+  if (!td || (ev.key !== ' ' && ev.key !== 'Enter') || S.editCel) return;
+  ev.preventDefault();
+  clicNumeroFila(ev, td.closest('tr'));
+});
 function clicNumeroFila(ev, tr) {
   var id = tr.getAttribute('data-f');
+  S.copiarFilas = true;
   if (ev.shiftKey && S.filasSelAncla) {
     var trs = Array.prototype.slice.call(document.querySelectorAll('.tbl-hoja tbody tr[data-f]'));
     var ids = trs.map(function (t) { return t.getAttribute('data-f'); });
@@ -11311,9 +11423,9 @@ function filasHtmlPlanilla(filas, cols) {
     if (S.filasSel[emb._id]) clases.push('fila-sel');
     if (noCombina) clases.push('incompat');
     return '<tr' + (clases.length ? ' class="' + clases.join(' ') + '"' : '') +
-      ' data-f="' + esc(emb._id) + '">' +
+      ' data-f="' + esc(emb._id) + '" aria-selected="' + (S.filasSel[emb._id] ? 'true' : 'false') + '">' +
       '<td class="nrofila' + (hilosDeCelda(emb, '').some(function (h) { return comentariosVisibles(h).length; }) ? ' tiene-com' : '') + '" title="' + esc(emb._tab) +
-        (adviceDe(emb) ? ' · advice enviado' : '') + '"><span class="nro">' + emb._fila + '</span>' +
+        (adviceDe(emb) ? ' · advice enviado' : '') + '" tabindex="0" role="rowheader" aria-label="Fila ' + emb._fila + ': marcar o desmarcar (Espacio)"><span class="nro">' + emb._fila + '</span>' +
         (hilosDeCelda(emb, '').some(function (h) { return comentariosVisibles(h).length; })
           ? '<button class="fila-com" title="Ver los comentarios de esta carga" aria-label="Comentarios de la fila ' + emb._fila + '">' + ico('chat') + '</button>' : '') +
         '<button class="fila-abrir" data-act="abrir" data-f="' + esc(emb._id) + '" ' +
@@ -11929,6 +12041,10 @@ function vistaPanel(x) {
   }
 
 
+  h += '<div class="bloque"><h3 class="gt">Eliminar</h3>' +
+    '<button class="btn-elim" data-act="elimabrir" data-f="' + esc(emb._id) + '">' + ico('papelera') + 'Eliminar esta carga</button>' +
+    '<p class="ayuda">Para cargas que se cargaron y al final no se confirmaron. Borra la fila de «' + esc(emb._tab) + '».</p></div>';
+
   // Lo que hay que hacer, arriba de todo.
   if (ev.alertas.length) {
     h += '<div class="bloque"><h3 class="gt">Pendientes · ' + ev.alertas.length + '</h3>';
@@ -12301,6 +12417,7 @@ function pintar() {
 /* Celda marcada: el borde azul de Sheets. Con ella marcada se puede navegar con
    las flechas, editar con Enter o F2, vaciar con Supr y copiar con Ctrl+C. */
 function marcarCeldaActiva(td) {
+  S.copiarFilas = false;
   var viejo = document.querySelector('.tbl-hoja td.cel-act');
   if (viejo) viejo.classList.remove('cel-act');
   td.classList.add('cel-act');
@@ -12409,12 +12526,49 @@ document.addEventListener('keydown', function (ev) {
 });
 
 // Ctrl+C con una celda marcada y nada seleccionado: se copia el contenido de la celda.
-document.addEventListener('copy', function (ev) {
-  try { if (String(window.getSelection())) return; } catch (e) {}
+// Si lo último que se marcó fueron filas, se copian como en Sheets (columnas separadas por tab) para pegarlas en una planilla.
+function textoParaCopiar() {
+  if (S.editCel) return null;
+  try { if (String(window.getSelection())) return null; } catch (e) {}
+  var limpiar = function (td) { return td.innerText.replace(/\s+/g, ' ').trim(); };
+  if (S.copiarFilas && nSelFilas()) {
+    var trs = document.querySelectorAll('.tbl-hoja tbody tr.fila-sel');
+    return Array.prototype.map.call(trs, function (tr) {
+      return Array.prototype.map.call(tr.querySelectorAll('td[data-c]'), limpiar).join('\t');
+    }).join('\n');
+  }
   var td = tdActiva();
-  if (!td || S.editCel) return;
-  ev.clipboardData.setData('text/plain', td.innerText.replace(/\s+/g, ' ').trim());
+  return td ? limpiar(td) : null;
+}
+function copiarAlPortapapeles(texto) {
+  var respaldo = function () {
+    var ta = document.createElement('textarea');
+    ta.value = texto; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.parentNode.removeChild(ta); return ok;
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(texto).catch(function () { return respaldo(); });
+  respaldo();
+}
+document.addEventListener('copy', function (ev) {
+  var tx = textoParaCopiar();
+  if (tx === null || tx === '') return;
+  ev.clipboardData.setData('text/plain', tx);
   ev.preventDefault();
+  S.copiadoEn = Date.now();
+});
+// Algunos navegadores no disparan «copy» si no hay nada seleccionado: se atiende la tecla directamente.
+document.addEventListener('keydown', function (ev) {
+  if (!(ev.ctrlKey || ev.metaKey) || ev.altKey || String(ev.key).toLowerCase() !== 'c') return;
+  var t = ev.target;
+  if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+  var tx = textoParaCopiar();
+  if (tx === null || tx === '') return;
+  setTimeout(function () {
+    if (S.copiadoEn && Date.now() - S.copiadoEn < 400) { toast('Copiado', 'ok', 1200); return; }   // ya lo copió el evento «copy»
+    copiarAlPortapapeles(tx); toast('Copiado', 'ok', 1200);
+  }, 60);
 });
 
 // Enter guarda, Escape descarta, Tab guarda y deja seguir.
@@ -12520,8 +12674,13 @@ document.addEventListener('focusin', function (e) {
   if (cb && S.combo !== cb) { S.combo = cb; pintar(); }
 });
 
+// El clic empezó DENTRO del editor (por ejemplo, arrastrando para seleccionar texto y soltando afuera): no es un «clic afuera».
+document.addEventListener('mousedown', function (ev) {
+  S.mdEnEditor = !!(ev.target.closest && ev.target.closest('.edit-cel, .sem-ed'));
+}, true);
 document.addEventListener('click', function (ev) {
   if (!ev.target.closest) return;
+  if (S.editCel && S.mdEnEditor && !ev.target.closest('.edit-cel, .sem-ed')) { S.mdEnEditor = false; ev.stopPropagation(); return; }
   // Editando una celda: un clic afuera guarda, como en Sheets.
   var tdClic = ev.target.closest('.tbl-hoja td[data-c]');
   var refClic = tdClic ? { f: tdClic.closest('tr').getAttribute('data-f'), c: tdClic.getAttribute('data-c') } : null;
@@ -12869,6 +13028,19 @@ document.addEventListener('click', function (ev) {
     if (b0) hermanasAdvice(b0).forEach(function (o) { S.marcados[o._id] = true; });
     return pintar();
   }
+  if (act === 'elimsel') {
+    var idsE = Object.keys(S.filasSel).filter(function (k) { return S.filasSel[k] && filaPorId(k); });
+    if (!idsE.length) return;
+    S.elim = { ids: idsE, entiendo: false, moviendo: false, error: null };
+    return pintar();
+  }
+  if (act === 'elimabrir') {
+    ev.stopPropagation();
+    S.elim = { ids: [el.getAttribute('data-f')], entiendo: false, moviendo: false, error: null };
+    return pintar();
+  }
+  if (act === 'elimno') { if (S.elim && !S.elim.moviendo) { S.elim = null; pintar(); } return; }
+  if (act === 'elimok') { return eliminarCargas(); }
   if (act === 'lotefact') {
     var idsF = idsParaFacturar();
     if (!idsF.length) return;
@@ -13383,6 +13555,12 @@ document.addEventListener('change', function (e) {
     S.topeContratos = 40;
     return pintar();
   }
+  if (e.target.getAttribute && e.target.getAttribute('data-elimentiendo') && S.elim) {
+    S.elim.entiendo = e.target.checked;
+    var bEl = document.querySelector('.modal-cambio [data-act="elimok"]');
+    if (bEl) bEl.disabled = !e.target.checked || !!S.elim.moviendo;
+    return;
+  }
   if (e.target.getAttribute && e.target.getAttribute('data-loteentiendo') && S.loteFact) {
     S.loteFact.entiendo = e.target.checked;
     var bLf = document.querySelector('.modal-cambio [data-act="lotefactok"]');
@@ -13737,7 +13915,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.20-z';
+var APP_VERSION = '2026.10.20-a';
 
 function arrancar() {
   cargarPrefsPlanilla();
