@@ -2163,6 +2163,22 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 .pend-barra.error{background:#fdecea;box-shadow:inset 0 0 0 1px rgba(217,48,37,.45);color:#8c1d18}
 .pend-barra.error .pb-punto{background:#d93025}
 .pend-barra.error .pb-sub{color:#8c1d18}
+
+/* Deshacer / Rehacer */
+.hist-btns{display:inline-flex;gap:4px}
+.hist-btns button{min-width:40px;min-height:40px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:10px}
+.hist-btns button .ico{width:17px;height:17px}
+.hist-btns button:disabled{opacity:.38;cursor:default}
+.toast .t-acc{pointer-events:auto;margin-left:8px;min-height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(255,255,255,.35);
+  background:transparent;color:#8ab4f8;font-weight:600;font-size:13px;cursor:pointer}
+.toast .t-acc:hover{background:rgba(255,255,255,.12)}
+
+.barra-modos{margin-left:auto;display:inline-flex;align-items:center;gap:10px}
+@media(max-width:700px){
+  .barra-modos{width:100%;margin-left:0;flex-direction:column;align-items:stretch;gap:6px}
+  .barra-modos .hist-btns{align-self:flex-end}
+  .barra-modos .modos{width:100%;min-width:0}
+}
 </style>
 </head>
 <body>
@@ -2323,7 +2339,7 @@ var S = {
   adviceTo: null,
   adviceFilas: {},
   marcados: {},
-  filasSel: {}, filasSelAncla: null, soloSel: false, loteFact: null, elim: null,
+  filasSel: {}, filasSelAncla: null, soloSel: false, loteFact: null, elim: null, hist: [], rehacer: [], histOcupado: false,
   advices: new Map(),
   advicesViejos: 0,
   paises: new Map(),
@@ -4529,9 +4545,10 @@ async function pasarAFacturar(id, avisar, enviar) {
 
     S.avisoOk = 'Pasada a "' + destino.tab + '" (fila ' + movida.fila + ') y quitada de "' + res.desde + '".' + aviso;
     S.ultimoMov = { desde: res.desde, quien: res.quien, contrato: res.contrato, bl: res.bl };
+    histRegistrar({ tipo: 'facturar', desde: res.desde, hacia: destino.tab, items: [{ ident: identidadDe(emb), quien: res.quien }] });
     S.sel = null; S.pasar = null;
     await cargarTodo();
-    toast('Enviada a «' + destino.tab + '», fila ' + movida.fila + ': ' + (res.contrato || res.quien), 'ok');
+    toast('Enviada a «' + destino.tab + '», fila ' + movida.fila + ': ' + (res.contrato || res.quien), 'ok', 8000, { texto: 'Deshacer', fn: function () { deshacer(); } });
   } catch (e) {
     S.factError = 'No se pudo pasar: ' + e.message;
     toast('No se pudo enviar a facturar', 'error');
@@ -7105,7 +7122,7 @@ function filaPorId(id) {
 
 /* --- Aviso flotante ("toast") -----------------------------------------------
    Vive fuera de #root: así ningún redibujo lo borra a mitad de camino. */
-function toast(texto, tipo, ms) {
+function toast(texto, tipo, ms, accion) {
   if (typeof document === 'undefined' || !document.body) return;
   var caja = document.getElementById('toasts');
   if (!caja) {
@@ -7117,12 +7134,19 @@ function toast(texto, tipo, ms) {
   }
   var t = document.createElement('div');
   t.className = 'toast ' + (tipo || 'ok');
-  t.innerHTML = '<span class="ti">' + ico(tipo === 'error' ? 'x' : 'check') + '</span><span>' + esc(texto) + '</span>';
+  t.innerHTML = '<span class="ti">' + ico(tipo === 'error' ? 'x' : 'check') + '</span><span>' + esc(texto) + '</span>' +
+    (accion ? '<button type="button" class="t-acc">' + esc(accion.texto) + '</button>' : '');
+  if (accion) {
+    t.querySelector('.t-acc').addEventListener('click', function () {
+      if (t.parentNode) t.parentNode.removeChild(t);
+      accion.fn();
+    });
+  }
   caja.appendChild(t);
   setTimeout(function () {
     t.classList.add('sale');
     setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 320);
-  }, ms || (tipo === 'error' ? 6000 : 3800));
+  }, ms || (accion ? 7000 : tipo === 'error' ? 6000 : 3800));
 }
 
 /* --- Cambiar un dato de una carga --------------------------------------------
@@ -7267,6 +7291,7 @@ var ICONOS = {
   mail:   'M2 4h12v8H2zM2 4l6 4 6-4',
   plus:   'M8 3v10M3 8h10',
   papelera: 'M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5M7 7v4M9 7v4',
+  rehacer: 'M13 6H6.5a3.5 3.5 0 0 0 0 7H10M13 6l-3-3M13 6l-3 3',
   balde:  'M3 8l5-5 5 5-5 5-5-5zM3 8h10M13.5 10.5c.8 1 1.2 1.7 1.2 2.2a1.2 1.2 0 0 1-2.4 0c0-.5.4-1.2 1.2-2.2z',
   lupa:   'M7 12.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zM11 11l3.5 3.5',
   refresh:'M13 8a5 5 0 1 1-1.5-3.5M13 2v3h-3',
@@ -9279,14 +9304,15 @@ function vistaGrilla(evs) {
       }).join('') + '</select>' +
     '<button data-act="pfiltros" aria-pressed="' + S.panelFiltros + '">Filtros' +
       (nf ? ' · ' + nf : '') + '</button>' +
-    '<span class="modos" style="margin-left:auto">' +
+    '<span class="barra-modos">' + botonesHistHtml() +
+    '<span class="modos">' +
       [['tarjetas', 'Tarjetas'], ['tabla', 'Tabla'], ['planilla', 'Planilla'],
        ['exportadores', 'Por exportador']]
         .map(function (m) {
           return '<button data-act="modo" data-m="' + m[0] + '" aria-pressed="' +
             (S.modo === m[0]) + '">' + m[1] + '</button>';
         }).join('') +
-    '</span>' +
+    '</span></span>' +
     (S.modo === 'tarjetas' ? menuConfigHtml(false) : '') +
     '</div>';
 
@@ -11124,6 +11150,153 @@ function idsParaFacturar() {
   });
 }
 
+/* --- Deshacer / Rehacer (Ctrl+Z / Ctrl+Y) --------------------------------------------
+   Cubre: cambios de celdas (cada tanda guardada es un paso), eliminar cargas y pasar a facturar. Se guarda
+   en memoria de esta pestaña (al recargar la página empieza de cero). Cada paso se vuelve a verificar contra
+   la planilla: si la carga ya no está donde estaba, no toca nada y lo explica. */
+function histRegistrar(e) {
+  S.hist.push(e);
+  if (S.hist.length > 40) S.hist.shift();
+  S.rehacer = [];
+}
+function histDesc(e) {
+  if (e.tipo === 'celdas') {
+    var filasU = {}; e.items.forEach(function (it) { filasU[JSON.stringify(it.identAntes)] = 1; });
+    var nf = Object.keys(filasU).length;
+    return 'cambio' + (e.items.length === 1 ? '' : 's') + ' en ' + (e.items.length === 1 ? etqCol(e.items[0].campo).toLowerCase() : nf + (nf === 1 ? ' fila' : ' filas'));
+  }
+  if (e.tipo === 'eliminar') return 'eliminar ' + (e.filas.length === 1 ? e.filas[0].quien : e.filas.length + ' cargas');
+  if (e.tipo === 'facturar') return 'pasar a ' + e.hacia + (e.items.length === 1 ? ' ' + e.items[0].quien : ' (' + e.items.length + ' cargas)');
+  return 'acción';
+}
+function cargaPorIdent(tab, id) {
+  var c = (S.datos ? S.datos.filas : []).filter(function (e) {
+    return e._tab === tab && clave(e.contract) === clave(id.contract) && clave(e.bl) === clave(id.bl) &&
+      clave(e.importer) === clave(id.importer) && Math.abs((normNum(e.tns) || 0) - (normNum(id.tns) || 0)) < 0.0001;
+  });
+  return c.length === 1 ? c[0] : null;
+}
+
+// Copia exacta de una fila (valores tal como se escribieron —con fórmulas— y formato).
+async function filaCruda(sheetId, tab, fila) {
+  var rango = "'" + tab.replace(/'/g, "''") + "'!A" + fila + ':' + letraCol(MAX_COLS - 1) + fila;
+  var campos = 'sheets(data(rowData(values(userEnteredValue,userEnteredFormat))))';
+  var d = await api(BASE + S.cfg.sheetId + '?includeGridData=true&ranges=' + encodeURIComponent(rango) + '&fields=' + encodeURIComponent(campos));
+  var rd = d.sheets && d.sheets[0] && d.sheets[0].data && d.sheets[0].data[0] && d.sheets[0].data[0].rowData;
+  var vals = (rd && rd[0] && rd[0].values) || [];
+  if (!vals.length) throw new Error('Google no devolvió el contenido de la fila.');
+  return vals;
+}
+async function reinsertarFila(f) {
+  var reqs = [{ insertDimension: { range: { sheetId: f.sheetId, dimension: 'ROWS', startIndex: f.indice, endIndex: f.indice + 1 }, inheritFromBefore: false } }];
+  if (f.valores && f.valores.length) {
+    reqs.push({ updateCells: { range: { sheetId: f.sheetId, startRowIndex: f.indice, endRowIndex: f.indice + 1, startColumnIndex: 0, endColumnIndex: f.valores.length },
+      rows: [{ values: f.valores }], fields: 'userEnteredValue,userEnteredFormat' } });
+  }
+  await api(BASE + S.cfg.sheetId + ':batchUpdate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: reqs }) });
+  // Se vuelve a leer: la carga tiene que estar ahí.
+  var h = await leerHoja(S.cfg.sheetId, f.tab), mp = detectar(h.encabezados, CAMPOS).mapa;
+  ubicarFila(h, mp, f.ident, f.indice + 1);
+}
+async function borrarPorIdent(f) {
+  var h = await leerHoja(S.cfg.sheetId, f.tab), mp = detectar(h.encabezados, CAMPOS).mapa;
+  var fila = ubicarFila(h, mp, f.ident, f.indice + 1);
+  await api(BASE + S.cfg.sheetId + ':batchUpdate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: h.sheetId, dimension: 'ROWS', startIndex: fila.fila - 1, endIndex: fila.fila } } }] }) });
+  f.indice = fila.fila - 1;
+}
+async function moverPorIdent(desdeTab, haciaTab, ident) {
+  var h = await leerHoja(S.cfg.sheetId, desdeTab), mp = detectar(h.encabezados, CAMPOS).mapa;
+  var f = ubicarFila(h, mp, ident, undefined);
+  await moverFila({ tab: desdeTab, sheetId: h.sheetId, mapa: mp, fila: f.fila, celdas: f.celdas, colores: f.colores }, haciaTab);
+}
+
+async function aplicarHist(e, atras) {
+  if (e.tipo === 'celdas') {
+    var creados = 0;
+    e.items.forEach(function (it) {
+      var emb = cargaPorIdent(it.tab, atras ? it.identDespues : it.identAntes);
+      if (!emb) throw new Error('no encuentro la carga (¿alguien la cambió o la movió?). No toqué nada.');
+    });
+    e.items.forEach(function (it) {
+      var emb = cargaPorIdent(it.tab, atras ? it.identDespues : it.identAntes);
+      if (encolarNuevo(emb._id, it.campo, atras ? it.antes : it.nuevo, { deHist: true })) creados++;
+    });
+    if (!creados) return;
+    var ok = await asegurarGuardado();
+    if (!ok) {
+      Object.keys(S.pend).forEach(function (k) { if (S.pend[k].deHist) delete S.pend[k]; });
+      S.revision = null; pintar();
+      throw new Error('Google no aceptó el cambio. No toqué nada.');
+    }
+    return;
+  }
+  if (e.tipo === 'eliminar') {
+    if (atras) {
+      for (var i = e.filas.length - 1; i >= 0; i--) await reinsertarFila(e.filas[i]);
+    } else {
+      for (var j = 0; j < e.filas.length; j++) await borrarPorIdent(e.filas[j]);
+    }
+    await cargarTodo();
+    return;
+  }
+  if (e.tipo === 'facturar') {
+    var fact = (S.fuentesFact || [])[0];
+    if (!fact) throw new Error('no hay pestaña de A facturar.');
+    var lista = atras ? e.items.slice().reverse() : e.items;
+    for (var q = 0; q < lista.length; q++) {
+      if (atras) await moverPorIdent(e.hacia, lista[q].tab, lista[q].ident);
+      else await moverPorIdent(lista[q].tab, e.hacia, lista[q].ident);
+    }
+    await cargarTodo();
+    return;
+  }
+}
+
+async function histAplicar(atras) {
+  if (S.histOcupado) return;
+  if (nPend() || (S.revision && S.revision.guardando)) {          // lo recién editado se guarda primero, así queda en el historial
+    S.histOcupado = true;
+    try { var okG = await asegurarGuardado(); } finally { S.histOcupado = false; }
+    if (!okG) { toast('Hay un cambio que no se pudo guardar: resolvelo antes de deshacer', 'error'); return; }
+  }
+  var pila = atras ? S.hist : S.rehacer;
+  if (!pila.length) { toast(atras ? 'No hay nada para deshacer' : 'No hay nada para rehacer', 'ok', 1800); return; }
+  var e = pila.pop();
+  S.histOcupado = true; pintar();
+  try {
+    await aplicarHist(e, atras);
+    (atras ? S.rehacer : S.hist).push(e);
+    toast((atras ? 'Deshecho: ' : 'Rehecho: ') + histDesc(e), 'ok', 5000,
+      null);
+  } catch (err) {
+    pila.push(e);
+    toast('No se pudo ' + (atras ? 'deshacer' : 'rehacer') + ': ' + err.message, 'error', 9000);
+    try { await cargarTodo(); } catch (e2) { /* el aviso ya está */ }
+  } finally {
+    S.histOcupado = false; pintar();
+  }
+}
+function deshacer() { return histAplicar(true); }
+function rehacerHist() { return histAplicar(false); }
+
+function botonesHistHtml() {
+  var u = S.hist[S.hist.length - 1], rr = S.rehacer[S.rehacer.length - 1], oc = S.histOcupado;
+  return '<span class="hist-btns" role="group" aria-label="Deshacer y rehacer">' +
+    '<button data-act="deshacer" aria-label="Deshacer"' + (u && !oc ? '' : ' disabled') + ' title="' + (u ? 'Deshacer: ' + esc(histDesc(u)) + ' (Ctrl+Z)' : 'Nada para deshacer (Ctrl+Z)') + '">' + ico('volver') + '</button>' +
+    '<button data-act="rehacer" aria-label="Rehacer"' + (rr && !oc ? '' : ' disabled') + ' title="' + (rr ? 'Rehacer: ' + esc(histDesc(rr)) + ' (Ctrl+Y)' : 'Nada para rehacer (Ctrl+Y)') + '">' + ico('rehacer') + '</button></span>';
+}
+document.addEventListener('keydown', function (ev) {
+  if (!(ev.ctrlKey || ev.metaKey) || ev.altKey) return;
+  var k = String(ev.key).toLowerCase();
+  if (k !== 'z' && k !== 'y') return;
+  var t = ev.target;
+  if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;    // escribiendo: el deshacer del texto es el del navegador
+  if (S.editCel || S.elim || S.loteFact || S.moverCtr || S.pantalla !== 'app') return;
+  ev.preventDefault();
+  if (k === 'y' || ev.shiftKey) rehacerHist(); else deshacer();
+});
+
 /* --- Eliminar cargas (cargadas por error o que al final no se confirmaron) --- */
 function modalElim() {
   var E = S.elim;
@@ -11167,28 +11340,35 @@ async function eliminarCargas() {
     }
   }
   E.moviendo = true; E.hechas = 0; E.error = null; pintar();
-  var hechas = [];
+  var hechas = [], borradas = [];
   try {
     for (var i = 0; i < embs.length; i++) {
       var emb = embs[i];
       var h = await leerHoja(S.cfg.sheetId, emb._tab);
       var mp = detectar(h.encabezados, CAMPOS).mapa;
       var fresca = ubicarFila(h, mp, emb, emb._fila);
+      // Copia exacta de la fila (valores, fórmulas y formato) para poder deshacer. Sin copia no se borra.
+      var copia;
+      try { copia = await filaCruda(h.sheetId, emb._tab, fresca.fila); }
+      catch (e0) { throw new Error('No pude guardar una copia de la fila para poder deshacer, así que no la borré. ' + e0.message); }
       await api(BASE + S.cfg.sheetId + ':batchUpdate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: h.sheetId, dimension: 'ROWS',
           startIndex: fresca.fila - 1, endIndex: fresca.fila } } }] })
       });
+      borradas.push({ tab: emb._tab, sheetId: h.sheetId, indice: fresca.fila - 1, valores: copia, ident: identidadDe(emb), quien: resumenMudanza(emb).quien });
       hechas.push(emb._id); E.hechas = hechas.length; pintar();
     }
+    histRegistrar({ tipo: 'eliminar', filas: borradas });
     S.avisoOk = hechas.length === 1 ? 'Carga eliminada de la planilla.' : hechas.length + ' cargas eliminadas de la planilla.';
     S.elim = null;
     hechas.forEach(function (id) { delete S.filasSel[id]; });
     if (S.sel && hechas.indexOf(S.sel) >= 0) { S.sel = null; S.pasar = null; }
     await cargarTodo();
-    toast(S.avisoOk, 'ok');
+    toast(S.avisoOk, 'ok', 8000, { texto: 'Deshacer', fn: function () { deshacer(); } });
   } catch (e) {
     E.moviendo = false;
+    if (borradas.length) histRegistrar({ tipo: 'eliminar', filas: borradas });
     E.error = (hechas.length ? 'Se eliminaron ' + hechas.length + ' de ' + embs.length + '; se frenó en la siguiente: ' : 'No se eliminó nada: ') + e.message;
     hechas.forEach(function (id) { delete S.filasSel[id]; });
     E.ids = E.ids.filter(function (id) { return hechas.indexOf(id) < 0; });
@@ -11244,7 +11424,7 @@ async function pasarLoteAFacturar() {
     }
   }
   L.moviendo = true; L.hechas = 0; L.error = null; pintar();
-  var hechas = [], aviso = '';
+  var hechas = [], aviso = '', movidas = [];
   try {
     for (var i = 0; i < embs.length; i++) {
       var emb = embs[i], res = resumenMudanza(emb);
@@ -11253,6 +11433,7 @@ async function pasarLoteAFacturar() {
       var fresca = ubicarFila(h, mp, emb, emb._fila);
       await moverFila({ tab: emb._tab, sheetId: h.sheetId, mapa: mp, fila: fresca.fila, celdas: fresca.celdas, colores: fresca.colores }, destino.tab);
       hechas.push(emb._id); L.hechas = hechas.length;
+      movidas.push({ tab: emb._tab, ident: identidadDe(emb), quien: res.quien });
       if (S.avisarPia !== false) {
         try { aviso = await avisarFacturar(res, destino.tab, !!S.enviarPia); } catch (e2) { aviso = ' El mail no salió: ' + e2.message; }
       }
@@ -11261,10 +11442,12 @@ async function pasarLoteAFacturar() {
     S.avisoOk = (hechas.length === 1 ? 'Pasada' : hechas.length + ' cargas pasadas') + ' a "' + destino.tab + '".' + (hechas.length === 1 ? aviso : '');
     S.loteFact = null;
     hechas.forEach(function (id) { delete S.filasSel[id]; });
+    histRegistrar({ tipo: 'facturar', hacia: destino.tab, items: movidas });
     await cargarTodo();
-    toast(hechas.length === 1 ? 'Enviada a «' + destino.tab + '»' : hechas.length + ' cargas enviadas a «' + destino.tab + '»', 'ok');
+    toast(hechas.length === 1 ? 'Enviada a «' + destino.tab + '»' : hechas.length + ' cargas enviadas a «' + destino.tab + '»', 'ok', 8000, { texto: 'Deshacer', fn: function () { deshacer(); } });
   } catch (e) {
     L.moviendo = false;
+    if (movidas.length) histRegistrar({ tipo: 'facturar', hacia: destino.tab, items: movidas });
     L.error = (hechas.length ? 'Se pasaron ' + hechas.length + ' de ' + embs.length + '; se frenó en la siguiente: ' : 'No se pasó nada: ') + e.message;
     hechas.forEach(function (id) { delete S.filasSel[id]; });
     L.ids = L.ids.filter(function (id) { return hechas.indexOf(id) < 0; });
@@ -11505,13 +11688,20 @@ function identidadDe(emb) {
 function encolarCambio(id, c, crudo) {
   var emb = filaPorId(id), def = defCampo(c);
   if (!emb || !def || motivoNoEditable(emb, c)) return false;
-  var esBg = String(c).indexOf('bg:') === 0;
-  var guardado = esBg ? bgGuardado(emb, c.slice(3)) : emb[c];
   var nuevo = def.tipo === 'color' ? crudo
     : def.tipo === 'semaforo' ? crudo
     : def.tipo === 'numero' ? numAR(crudo)
     : def.tipo === 'fecha' ? convertir(crudo, 'fecha')
     : String(crudo == null ? '' : crudo).trim();
+  return encolarNuevo(id, c, nuevo, null);
+}
+
+// Encola un valor YA convertido. `opts.deHist`: lo origina un deshacer/rehacer (no se anota de nuevo en el historial).
+function encolarNuevo(id, c, nuevo, opts) {
+  var emb = filaPorId(id), def = defCampo(c);
+  if (!emb || !def || motivoNoEditable(emb, c)) return false;
+  var esBg = String(c).indexOf('bg:') === 0;
+  var guardado = esBg ? bgGuardado(emb, c.slice(3)) : emb[c];
   var k = clavePend(id, c), previo = S.pend[k];
   var igualAlGuardado = mismoValor(def.tipo, guardado, nuevo);
   if (igualAlGuardado && !previo) return false;                          // no hubo cambio
@@ -11519,7 +11709,7 @@ function encolarCambio(id, c, crudo) {
   if (igualAlGuardado) delete S.pend[k];                                  // volvió a lo que había
   else {
     S.pend[k] = { id: id, campo: c, tipo: def.tipo, antes: guardado, nuevo: nuevo,
-                  tab: emb._tab, fila: emb._fila,
+                  tab: emb._tab, fila: emb._fila, deHist: !!(opts && opts.deHist),
                   ident: previo ? previo.ident : identidadDe(emb) };
   }
   S.pendNada = false;
@@ -11702,6 +11892,11 @@ async function guardarPendientes() {
       if (ubicadas[p.id] !== e._fila) corridas = true;
     });
     var n = lista.length;
+    var itemsHist = lista.filter(function (p) { return !p.deHist; }).map(function (p) {
+      var e1 = filaPorId(p.id);
+      return { tab: p.tab, campo: p.campo, tipo: p.tipo, antes: p.antes, nuevo: p.nuevo, identAntes: p.ident, identDespues: e1 ? identidadDe(e1) : p.ident };
+    });
+    if (itemsHist.length) histRegistrar({ tipo: 'celdas', items: itemsHist });
     // Se sacan solo los que se guardaron: lo que se tocó mientras tanto sigue pendiente.
     lista.forEach(function (p) {
       var k = clavePend(p.id, p.campo), cur = S.pend[k];
@@ -11710,7 +11905,8 @@ async function guardarPendientes() {
     });
     S.revision = null; S.pendNada = false;
     toast((n === 1 ? 'Cambio guardado' : n + ' cambios guardados') +
-      (noCoinciden ? ' · ' + (noCoinciden === 1 ? '1 no coincide' : noCoinciden + ' no coinciden') + ' con el contrato' : ''), 'ok', noCoinciden ? 6500 : 2600);
+      (noCoinciden ? ' · ' + (noCoinciden === 1 ? '1 no coincide' : noCoinciden + ' no coinciden') + ' con el contrato' : ''), 'ok', noCoinciden ? 6500 : 4500,
+      itemsHist.length ? { texto: 'Deshacer', fn: function () { deshacer(); } } : null);
     if (corridas) await cargarTodo();
   } catch (e) {
     R.guardando = false;
@@ -13010,6 +13206,8 @@ document.addEventListener('click', function (ev) {
     if (b0) hermanasAdvice(b0).forEach(function (o) { S.marcados[o._id] = true; });
     return pintar();
   }
+  if (act === 'deshacer') { return deshacer(); }
+  if (act === 'rehacer') { return rehacerHist(); }
   if (act === 'elimsel') {
     var idsE = Object.keys(S.filasSel).filter(function (k) { return S.filasSel[k] && filaPorId(k); });
     if (!idsE.length) return;
@@ -13898,7 +14096,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.21-b';
+var APP_VERSION = '2026.10.21-c';
 
 function arrancar() {
   cargarPrefsPlanilla();
