@@ -1446,7 +1446,7 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 }
 
 /* Aviso flotante */
-#toasts{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:95;display:flex;
+#toasts{pointer-events:none;position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:95;display:flex;
   flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 24px)}
 .toast{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:12px;background:#202124;
   color:#fff;font-size:13.5px;line-height:1.35;box-shadow:0 8px 24px rgba(0,0,0,.28);pointer-events:auto;
@@ -2159,6 +2159,10 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 .btn-elim.chico{min-height:28px;min-width:28px;padding:0 6px;border-color:transparent;background:none;color:var(--tinta3)}
 .btn-elim.chico:hover{background:#fdecea;color:#b3261e;border-color:#f3b8b3}
 .sel-info .btn-elim{min-height:28px;border-radius:999px;font-size:12.5px}
+
+.pend-barra.error{background:#fdecea;box-shadow:inset 0 0 0 1px rgba(217,48,37,.45);color:#8c1d18}
+.pend-barra.error .pb-punto{background:#d93025}
+.pend-barra.error .pb-sub{color:#8c1d18}
 </style>
 </head>
 <body>
@@ -2276,7 +2280,8 @@ var S = {
   anchos: {},
   celdaAct: null,        // celda marcada con un clic: { id, c }
   pend: {},              // cambios escritos en la tabla que todavía no se guardaron
-  revision: null,        // el cartel «Confirmar cambios» ({ guardando, error })
+  revision: null,        // estado del guardado automático ({ guardando, error })
+  autoMs: 1200,          // espera antes de guardar solo (para juntar varios cambios seguidos en un solo pedido)
   pendNada: false,
   fCol: {},
   ordenCol: null,
@@ -4494,9 +4499,12 @@ async function pasarAFacturar(id, avisar, enviar) {
   var emb = filaPorId(id);
   if (!emb) return;
   if (pendDeFila(id)) {
-    S.factError = 'Esa carga tiene cambios sin confirmar. Tocá «Confirmar cambios» (arriba a la derecha) y después pasala a facturar.';
-    toast('Primero confirmá los cambios de esa carga', 'error');
-    return pintar();
+    var okG = await asegurarGuardado();
+    if (!okG || pendDeFila(id)) {
+      S.factError = 'No se pudieron guardar los cambios de esa carga, así que no la pasé. Probá de nuevo.';
+      toast('No se pudieron guardar los cambios de esa carga', 'error');
+      return pintar();
+    }
   }
   var destino = (S.fuentesFact || [])[0];
   if (!destino) { S.factError = 'No hay ninguna pestaña de "A facturar" configurada.'; return pintar(); }
@@ -7673,7 +7681,7 @@ function vistaApp() {
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     ((S.modo === 'planilla' || S.modo === 'tabla') && S.vista === 'carga' ? menuColumna() : '') +
-    modalMoverCtr() + modalLoteFact() + modalElim() + modalRevision() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
+    modalMoverCtr() + modalLoteFact() + modalElim() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -10908,7 +10916,7 @@ function paletaHtml() {
               (o[2] ? ' style="background:' + cssColor(o[2]) + '"' : '') + '>' +
               (o[2] ? '' : '<span aria-hidden="true">⌀</span>') + '</button>';
           }).join('') + '</div>' +
-          '<p class="pal-ayuda">Se confirma con «Confirmar cambios» y se pinta también en Sheets.</p></div>'
+          '<p class="pal-ayuda">Se guarda solo y se pinta también en Sheets.</p></div>'
       : '') + '</span>';
 }
 
@@ -10988,7 +10996,7 @@ function vistaPlanilla(filas) {
     '<div class="hoja">' + htmlTablaPlanilla(filas, cols, enc, cuerpo) + '</div>' +
     '<details class="ayuda-hoja"><summary>Cómo se usa esta tabla</summary><ul>' +
       '<li><b>Marcar filas:</b> clic en el número de la izquierda (Ctrl suma, Mayús marca un tramo, Esc quita). Con filas marcadas aparece «Pasar a A facturar».</li>' +
-      '<li><b>Editar:</b> doble clic en una celda (en Docs, Fotos y T.R. también sirve un segundo clic). Enter acepta y Esc cancela. El cambio queda en naranja y no se escribe nada hasta tocar «Confirmar cambios», arriba a la derecha.</li>' +
+      '<li><b>Editar:</b> doble clic en una celda (en Docs, Fotos y T.R. también sirve un segundo clic). Enter acepta y Esc cancela. El cambio se guarda solo en un instante (queda en naranja hasta que Google lo confirma).</li>' +
       '<li><b>Pintar:</b> marcá una celda y usá «Pintar». Los colores son los mismos de la planilla.</li>' +
       '<li><b>Columnas:</b> clic en el nombre ordena, el embudo filtra y la × la oculta. Arrastrá el borde para cambiar el ancho; inmovilizar se hace desde Configuración.</li>' +
       '<li>Las columnas con enlace vienen del contrato: se pueden cambiar, pero la revisión avisa si no coinciden. La casilla de al lado elige filas para el shipment advice.</li>' +
@@ -11150,9 +11158,13 @@ async function eliminarCargas() {
   var embs = E.ids.map(filaPorId).filter(Boolean);
   var conPend = embs.filter(function (e) { return pendDeFila(e._id); });
   if (conPend.length) {
-    E.error = 'Hay cambios sin confirmar en ' + (conPend.length === 1 ? 'esa carga' : conPend.length + ' de esas cargas') +
-      '. Tocá «Confirmar cambios» o «Descartar» y volvé a intentar.';
-    return pintar();
+    E.moviendo = true; pintar();
+    var okE = await asegurarGuardado();
+    E.moviendo = false;
+    if (!okE || embs.some(function (e) { return pendDeFila(e._id); })) {
+      E.error = 'No se pudieron guardar los cambios pendientes de ' + (conPend.length === 1 ? 'esa carga' : 'esas cargas') + ', así que no borré nada. Probá de nuevo.';
+      return pintar();
+    }
   }
   E.moviendo = true; E.hechas = 0; E.error = null; pintar();
   var hechas = [];
@@ -11223,9 +11235,13 @@ async function pasarLoteAFacturar() {
   var embs = L.ids.map(filaPorId).filter(Boolean);
   var conPend = embs.filter(function (e) { return pendDeFila(e._id); });
   if (conPend.length) {
-    L.error = 'Hay cambios sin confirmar en ' + (conPend.length === 1 ? 'una de las cargas' : conPend.length + ' de las cargas') +
-      '. Tocá «Confirmar cambios» y después pasalas a facturar.';
-    return pintar();
+    L.moviendo = true; pintar();
+    var okL = await asegurarGuardado();
+    L.moviendo = false;
+    if (!okL || embs.some(function (e) { return pendDeFila(e._id); })) {
+      L.error = 'No se pudieron guardar los cambios pendientes de ' + (conPend.length === 1 ? 'una de las cargas' : 'las cargas') + ', así que no pasé nada. Probá de nuevo.';
+      return pintar();
+    }
   }
   L.moviendo = true; L.hechas = 0; L.error = null; pintar();
   var hechas = [], aviso = '';
@@ -11509,7 +11525,34 @@ function encolarCambio(id, c, crudo) {
   S.pendNada = false;
   if (!nPend()) S.revision = null;
   pintar();
+  if (nPend()) programarGuardado();
   return true;
+}
+
+/* Los cambios se guardan solos: se espera un instante por si siguen más (así van todos en un solo pedido a Google)
+   y se avisa con un cartelito. Si Google falla, los cambios quedan marcados y la barra ofrece «Reintentar». */
+function programarGuardado() {
+  clearTimeout(S.tAuto);
+  if (!S.autoMs) return;
+  S.tAuto = setTimeout(function () { guardarYa(); }, S.autoMs);
+}
+function guardarYa() {
+  clearTimeout(S.tAuto);
+  if (!nPend()) return Promise.resolve(true);
+  if (S.revision && S.revision.guardando) { S.guardarOtraVez = true; return Promise.resolve(false); }
+  S.revision = { guardando: false, error: null };
+  return guardarPendientes();
+}
+// Para acciones que no pueden seguir con cambios a medio guardar (pasar a facturar, eliminar): espera a que se guarden.
+async function asegurarGuardado() {
+  var tope = Date.now() + 20000;
+  while (Date.now() < tope) {
+    if (S.revision && S.revision.guardando) { await new Promise(function (ok) { setTimeout(ok, 80); }); continue; }
+    if (!nPend()) return true;
+    await guardarYa();
+    if (S.revision && S.revision.error) return false;
+  }
+  return !nPend();
 }
 
 // Tras recargar la planilla las filas pueden haberse corrido: cada cambio
@@ -11566,85 +11609,26 @@ function htmlPend(p, v) {
   return esc(txtPend(p, v));
 }
 
-// Barra de arriba a la derecha de la tabla.
+// Barra de la tabla: solo avisa mientras se guarda, o si Google falló (con «Reintentar»).
 function barraPendHtml() {
   var n = nPend();
   if (!n) return '';
-  var m = pendFilas().length;
-  return '<div class="pend-barra" role="region" aria-label="Cambios sin guardar">' +
-    '<span class="pb-punto"></span><b>' + n + (n === 1 ? ' cambio' : ' cambios') + ' sin guardar</b>' +
-    '<span class="pb-sub">en ' + m + (m === 1 ? ' fila' : ' filas') + '</span>' +
-    '<button data-act="pendnada">' + (S.pendNada ? '¿Descartar todo?' : 'Descartar') + '</button>' +
-    '<button class="primario" data-act="pendrevisar">Confirmar cambios</button></div>';
-}
-
-// En las otras vistas (tarjetas, control, contratos) no hay barra de tabla: queda
-// un botón arriba a la derecha que abre directo la confirmación.
-function pendFlotaHtml() {
-  if (!nPend()) return '';
-  // En Tabla y Planilla la barra de la tabla ya hace de botón, salvo que el panel de detalle la tape.
-  if (S.vista === 'carga' && (S.modo === 'planilla' || S.modo === 'tabla') && !S.sel) return '';
-  var n = nPend();
-  return '<button class="pend-flota' + (S.sel ? ' con-panel' : '') + '" data-act="pendrevisar"><span class="pb-punto"></span>Confirmar ' + n +
-    (n === 1 ? ' cambio' : ' cambios') + '</button>';
-}
-
-function modalRevision() {
   var R = S.revision;
-  if (!R || !nPend()) return '';
-  var lista = pendLista(), porFila = {}, orden = [];
-  lista.forEach(function (p) {
-    if (!porFila[p.id]) { porFila[p.id] = []; orden.push(p.id); }
-    porFila[p.id].push(p);
-  });
-  orden.sort(function (a, b) {
-    var ea = filaPorId(a) || {}, eb = filaPorId(b) || {};
-    return String(ea._tab).localeCompare(String(eb._tab)) || (ea._fila - eb._fila);
-  });
-  var n = lista.length, m = orden.length, dif = 0;
-  var bloques = orden.map(function (id) {
-    var emb = filaPorId(id) || {};
-    var tocaTot = false;
-    var lineas = porFila[id].map(function (p) {
-      var av = avisoContratoPend(p, emb);
-      if (av) dif++;
-      if (p.campo === 'tns' || p.campo === 'price') tocaTot = true;
-      return '<li class="rev-cambio' + (av ? ' dif' : '') + '"><span class="rc-campo">' + esc(etqCol(p.campo)) + '</span>' +
-        '<span class="rc-antes">' + htmlPend(p, p.antes) + '</span><span class="rc-flecha">→</span>' +
-        '<span class="rc-desp">' + htmlPend(p, p.nuevo) + '</span>' +
-        (!R.guardando
-          ? '<button class="rc-quitar" data-act="pendquitar" data-k="' + esc(clavePend(p.id, p.campo)) +
-            '" title="Quitar este cambio" aria-label="Quitar este cambio">×</button>' : '') +
-        (av ? '<span class="rc-aviso">' + ico('enlace') + esc(av) + '</span>' : '') + '</li>';
-    }).join('');
-    var tot = '';
-    if (tocaTot) {
-      var antes = normNum(emb.total);
-      tot = '<p class="rev-total">Total: <b>' + (antes === null ? '—' : fmtNum(antes)) + '</b> → <b>' +
-        fmtNum(valorVista(emb, 'total')) + '</b> (se recalcula solo)</p>';
-    }
-    return '<section class="rev-fila"><header><b>' + esc(emb.contract || 'Sin contrato') + '</b>' +
-      '<span>' + esc(emb.importer || '') + ' · ' + esc(emb._tab) + ' · fila ' + emb._fila + '</span></header>' +
-      '<ul>' + lineas + '</ul>' + tot + '</section>';
-  }).join('');
+  if (R && R.error) {
+    return '<div class="pend-barra error" role="alert"><span class="pb-punto"></span><b>No se pudo guardar</b>' +
+      '<span class="pb-sub">' + esc(String(R.error).split('\n')[0]) + ' Tus ' + n + (n === 1 ? ' cambio sigue' : ' cambios siguen') + ' acá.</span>' +
+      '<button data-act="pendnada">' + (S.pendNada ? '¿Descartar todo?' : 'Descartar') + '</button>' +
+      '<button class="primario" data-act="pendguardar">Reintentar</button></div>';
+  }
+  return '<div class="pend-barra" role="status"><span class="pb-punto"></span><b>Guardando ' + n + (n === 1 ? ' cambio' : ' cambios') + '…</b>' +
+    (R && R.guardando ? '' : '<button data-act="pendnada" title="Descartar lo que acabás de cambiar, antes de que se guarde">' + (S.pendNada ? '¿Descartar todo?' : 'Descartar') + '</button>') + '</div>';
+}
 
-  var avisoDif = dif
-    ? '<div class="mcm-aviso"><span class="mcm-ico">' + ico('enlace') + '</span><div><p><b>' + dif +
-      (dif === 1 ? ' cambio no coincide' : ' cambios no coinciden') + ' con el contrato.</b></p>' +
-      '<p class="mcm-sub">Esos datos salen del contrato. Si el contrato está mal, conviene corregirlo allá; ' +
-      'si es un ajuste puntual de la carga, podés seguir.</p></div></div>' : '';
-
-  var cab = '<h3 id="mcm-t">Confirmar cambios</h3>' +
-    '<p class="mcm-donde">' + n + (n === 1 ? ' cambio' : ' cambios') + ' en ' + m + (m === 1 ? ' fila' : ' filas') +
-    '. Se escriben en Google Sheets, la planilla compartida: lo que guardes lo ve todo el equipo.</p>';
-  var cuerpo = '<div class="rev-lista">' + bloques + '</div>' + avisoDif +
-    (R.error ? '<div class="error" style="margin-top:12px;white-space:pre-line">' + esc(R.error) + '</div>' : '');
-  var pie = '<button data-act="pendseguir"' + (R.guardando ? ' disabled' : '') + '>Seguir editando</button>' +
-    '<button class="primario" data-act="pendguardar"' + (R.guardando ? ' disabled' : '') + '>' +
-      (R.guardando ? 'Guardando…' : 'Guardar ' + n + (n === 1 ? ' cambio' : ' cambios')) + '</button>';
-  return '<div class="modal-velo" data-act="pendseguir"></div>' +
-    '<div class="modal-caja"><div class="modal-cambio modal-rev" role="alertdialog" aria-modal="true" aria-labelledby="mcm-t">' +
-      cab + cuerpo + '<div class="mcm-acc">' + pie + '</div></div></div>';
+// Fuera de la tabla solo aparece si hubo un error: reintentar con un toque.
+function pendFlotaHtml() {
+  if (!nPend() || !(S.revision && S.revision.error)) return '';
+  if (S.vista === 'carga' && (S.modo === 'planilla' || S.modo === 'tabla') && !S.sel) return '';
+  return '<button class="pend-flota' + (S.sel ? ' con-panel' : '') + '" data-act="pendguardar"><span class="pb-punto"></span>No se guardó · Reintentar</button>';
 }
 
 /* Escribe TODO en un solo pedido a Google: o se guarda todo o no se guarda nada.
@@ -11657,6 +11641,7 @@ async function guardarPendientes() {
   R.guardando = true; R.error = null; S.guardando++; pintar();
   try {
     var lista = pendLista(), porFila = {}, porTab = {};
+    var noCoinciden = lista.filter(function (p) { var e0 = filaPorId(p.id); return e0 && avisoContratoPend(p, e0); }).length;
     lista.forEach(function (p) { (porFila[p.id] = porFila[p.id] || []).push(p); });
     Object.keys(porFila).forEach(function (id) {
       var emb = filaPorId(id);
@@ -11717,8 +11702,15 @@ async function guardarPendientes() {
       if (ubicadas[p.id] !== e._fila) corridas = true;
     });
     var n = lista.length;
-    S.pend = {}; S.revision = null; S.pendNada = false;
-    toast(n + (n === 1 ? ' cambio guardado' : ' cambios guardados') + ' en ' + filasN + (filasN === 1 ? ' fila' : ' filas'), 'ok');
+    // Se sacan solo los que se guardaron: lo que se tocó mientras tanto sigue pendiente.
+    lista.forEach(function (p) {
+      var k = clavePend(p.id, p.campo), cur = S.pend[k];
+      if (cur === p) delete S.pend[k];
+      else if (cur) { cur.antes = p.nuevo; if (mismoValor(cur.tipo, cur.antes, cur.nuevo)) delete S.pend[k]; }
+    });
+    S.revision = null; S.pendNada = false;
+    toast((n === 1 ? 'Cambio guardado' : n + ' cambios guardados') +
+      (noCoinciden ? ' · ' + (noCoinciden === 1 ? '1 no coincide' : noCoinciden + ' no coinciden') + ' con el contrato' : ''), 'ok', noCoinciden ? 6500 : 2600);
     if (corridas) await cargarTodo();
   } catch (e) {
     R.guardando = false;
@@ -11726,6 +11718,7 @@ async function guardarPendientes() {
     toast('No se pudieron guardar los cambios', 'error');
   } finally {
     S.guardando--; pintar();
+    if (S.guardarOtraVez || (nPend() && !R.error)) { S.guardarOtraVez = false; programarGuardado(); }
   }
 }
 
@@ -11985,7 +11978,7 @@ function vistaPanel(x) {
     '</div>' +
 
     '<div class="pe-etapa">' + pasosEtapa(ev.etapa) + '</div>' +
-    '<p class="pe-aviso">' + ico('check') + 'Tus cambios quedan pendientes: se guardan todos juntos con «Confirmar cambios».</p>';
+    '<p class="pe-aviso">' + ico('check') + 'Tus cambios se guardan solos en la planilla.</p>';
 
   // Pasar a "A facturar": la mudanza que hoy se hace a mano.
   if ((S.fuentesFact || []).length && !emb._aFacturar) {
@@ -12380,11 +12373,7 @@ function pintar() {
   aplicarCeldaActiva();
   acomodarMenuCfg();
   actualizarBotonCom();
-  // El cartel de confirmación toma el foco: Enter confirma, Esc cancela.
-  if (S.revision) {
-    var fr0 = document.querySelector('.modal-rev .primario');
-    if (fr0 && !fr0.disabled) fr0.focus();
-  } else if (S.moverCtr && S.moverCtr.plan && !S.moverCtr.entiendo) {
+  if (S.moverCtr && S.moverCtr.plan && !S.moverCtr.entiendo) {
     var fm0 = document.querySelector('.modal-cambio input[type="checkbox"]');
     if (fm0) fm0.focus();
   }
@@ -12496,7 +12485,7 @@ document.addEventListener('dblclick', function (ev) {
 });
 
 document.addEventListener('keydown', function (ev) {
-  if (S.editCel || S.revision || S.moverCtr || S.menuCol || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  if (S.editCel || S.moverCtr || S.menuCol || ev.ctrlKey || ev.metaKey || ev.altKey) return;
   var t = ev.target;
   if (t && (/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(t.tagName) || t.isContentEditable)) return;
   var td = tdActiva();
@@ -12969,17 +12958,10 @@ document.addEventListener('click', function (ev) {
     if (!S.moverCtr || !S.moverCtr.entiendo || S.moverCtr.moviendo) return;
     return ejecutarMoverContrato(S.moverCtr.contrato);
   }
-  if (act === 'pendrevisar') { S.revision = { guardando: false, error: null }; return pintar(); }
-  if (act === 'pendseguir') { if (S.revision && S.revision.guardando) return; S.revision = null; return pintar(); }
-  if (act === 'pendquitar') {
-    delete S.pend[el.getAttribute('data-k')];
-    if (!nPend()) S.revision = null;
-    return pintar();
-  }
-  if (act === 'pendguardar') { if (S.revision) return guardarPendientes(); return; }
+  if (act === 'pendrevisar' || act === 'pendguardar') { return guardarYa(); }
   if (act === 'pendnada') {
     // Descartar todo es irreversible: pide un segundo clic.
-    if (S.pendNada) { clearTimeout(S.tPendNada); S.pend = {}; S.pendNada = false; S.revision = null; return pintar(); }
+    if (S.pendNada) { clearTimeout(S.tPendNada); clearTimeout(S.tAuto); S.pend = {}; S.pendNada = false; S.revision = null; return pintar(); }
     S.pendNada = true;
     clearTimeout(S.tPendNada);
     // Si en esos 3 segundos ya estás editando una celda, no se redibuja (cortaba lo que tecleabas).
@@ -13733,7 +13715,6 @@ document.addEventListener('keydown', function (e) {
     e.preventDefault();
     return comentar(e.target.getAttribute('data-com'), e.target.value);
   }
-  if (e.key === 'Escape' && S.revision && !S.revision.guardando) { S.revision = null; return pintar(); }
   if (e.key === 'Escape' && S.moverCtr && !S.moverCtr.moviendo) { S.moverCtr = null; return pintar(); }
   if (e.key === 'Escape' && S.menuPintar) { S.menuPintar = false; return pintar(); }
   if (e.key === 'Escape' && S.menuCfg) { S.menuCfg = false; return pintar(); }
@@ -13854,6 +13835,8 @@ function ocultasPorDefectoTabla() {
   return o;
 }
 
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden' && nPend()) guardarYa(); });
+window.addEventListener('pagehide', function () { if (nPend()) guardarYa(); });
 window.addEventListener('beforeunload', function (e) {
   if (typeof nPend === 'function' && nPend()) { e.preventDefault(); e.returnValue = ''; }
 });
@@ -13915,7 +13898,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.20-a';
+var APP_VERSION = '2026.10.21-b';
 
 function arrancar() {
   cargarPrefsPlanilla();
