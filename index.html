@@ -5011,7 +5011,8 @@ function abrirGenerador(nombre) {
 
   var hoy = new Date();
   var anio = hoy.getFullYear();
-  var incoterm = String(dato('incoterm') || '').trim().toUpperCase();
+  var incRaw = String(dato('incoterm') || '').trim(), incP = partirIncoterm(incRaw);
+  var incoterm = incP.cod ? unirIncoterm(incP.cod, incP.lugar) : incRaw;   // el término en mayúsculas; el puerto como está escrito
 
   // Una línea por producto: justamente las filas del contrato.
   var productos = (filas.length ? filas : [null]).map(function (fr) {
@@ -5276,8 +5277,11 @@ function panelGenerador() {
     return out.sort(function (a, b) { return a.localeCompare(b, 'es'); });
   })();
 
+  var OBLIG_GEN = { 'buyer.direccion': 1, 'seller.direccion': 1, 'packing': 1, 'embarque': 1, 'origen': 1, 'incLug': 1 };
   var inp = function (ruta, label, val, ph, tipo) {
-    return '<div class="campo"><label for="g-' + ruta + '">' + label + '</label>' +
+    var falta = OBLIG_GEN[ruta] && !String(val == null ? '' : val).trim();
+    return '<div class="campo' + (falta ? ' falta' : '') + '"><label for="g-' + ruta + '">' + label +
+      (falta ? ' <span style="color:var(--pend)">· falta</span>' : '') + '</label>' +
       '<input id="g-' + ruta + '" data-gen="' + ruta + '" type="' + (tipo || 'text') + '" ' +
       'value="' + esc(val == null ? '' : val) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
   };
@@ -5347,6 +5351,8 @@ function panelGenerador() {
       (G.linkDrive ? ' <a href="' + esc(G.linkDrive) + '" target="_blank" rel="noopener">Abrir en Drive</a>' : '') +
       '</div>' : '') +
 
+    (G.nuevo ? '<div class="ok-aviso gen-nuevo"><b>Contrato ' + esc(G.contrato) + ' cargado.</b> Ya tomé todo lo que cargaste y lo que sale de las bases de datos. ' +
+      (faltan.length ? 'Para el documento todavía falta: <b>' + esc(faltan.join(', ')) + '</b>. Está marcado abajo en rojo.' : 'No falta nada: revisá y generá el documento.') + '</div>' : '') +
     (S.fichasDB.size ? '<p class="ayuda" style="margin:12px 0 0">Los datos de cada empresa se toman de <b>' +
       esc((S.diagMails || []).filter(function (d) { return d.conFicha; }).map(function (d) { return d.hoja; }).join(' y ') || 'la base de datos') +
       '</b> (' + S.fichasDB.size + ' empresas con ficha). Si falta algo, completalo acá: se guarda en «Empresas» y queda para la próxima.</p>' : '') +
@@ -12850,6 +12856,9 @@ async function guardarAlta() {
         ? ' en ' + hechas.length + ' filas, una por producto (' + hechas.join(', ') + ').'
         : ' en la fila ' + hechas[0] + '.');
     await cargarTodo();
+    // El paso siguiente es el documento: se abre ya con todo lo que se acaba de cargar (y lo que sale de las bases).
+    var nomNuevo = String(a.contrato).trim();
+    if (S.ctrEditables && S.ctrEditables.get(nomNuevo)) { abrirGenerador(nomNuevo); S.gen.nuevo = true; }
   } catch (e) {
     S.altaError = e.message + (hechas && hechas.length
       ? ' Ojo: ya se cargaron ' + hechas.length + ' fila(s) (' + hechas.join(', ') +
@@ -14534,7 +14543,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.22-g';
+var APP_VERSION = '2026.10.22-h';
 
 function arrancar() {
   cargarPrefsPlanilla();
