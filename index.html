@@ -2276,6 +2276,7 @@ var S = {
   tFiltro: null,
   tBusca: null,
   empresas: new Map(),
+  fichasDB: new Map(),   // datos de cada empresa leídos de Database_old (clientes) y Database suppliers (proveedores)
   hayHojaEmpresas: false,
   gen: null,
   confirmCerrar: false,
@@ -4900,10 +4901,35 @@ async function guardarEmpresa(e) {
   await cargarEmpresas();
 }
 
+// La ficha de la base de datos (Database_old para clientes, Database suppliers para proveedores). Si el nombre no es
+// idéntico, se acepta una coincidencia única que lo contenga (p. ej. «Alrisha SAGL» y «Alrisha SAGL (Suiza)»).
+function fichaDB(nombre) {
+  var k = clave(nombre);
+  if (!k || !S.fichasDB) return null;
+  var f = S.fichasDB.get(k);
+  if (f) return f;
+  if (k.length < 5) return null;
+  var cand = [];
+  S.fichasDB.forEach(function (v, kk) { if (kk.indexOf(k) === 0 || k.indexOf(kk) === 0) cand.push(v); });
+  return cand.length === 1 ? cand[0] : null;
+}
 function datosEmpresa(nombre) {
-  var e = S.empresas && S.empresas.get(clave(nombre));
-  return e ? Object.assign({}, e)
-           : { nombre: nombre || '', direccion: '', vat: '', contacto: '', email: '', pais: '' };
+  var man = S.empresas && S.empresas.get(clave(nombre));
+  var db = fichaDB(nombre);
+  var out = { nombre: nombre || '', direccion: '', vat: '', contacto: '', email: '', pais: '' };
+  if (!man && !db) return out;
+  ['direccion', 'vat', 'contacto', 'email', 'pais'].forEach(function (c) {
+    out[c] = (man && man[c]) || (db && db[c]) || '';
+  });
+  out.nombre = (man && man.nombre) || nombre || (db && db.nombre) || '';
+  if (man && man.fila) out.fila = man.fila;
+  return out;
+}
+// De dónde salen los datos de una empresa, para mostrarlo.
+function origenEmpresa(nombre) {
+  var man = S.empresas && S.empresas.get(clave(nombre)), db = fichaDB(nombre);
+  if (db && man) return db.origen + ' + lo que completaste';
+  return db ? db.origen : (man ? 'la base «Empresas»' : '');
 }
 
 /* --- Generador del contrato -------------------------------------------------
@@ -5066,8 +5092,8 @@ async function guardarEmpresasDelGenerador() {
   for (var i = 0; i < lista.length; i++) {
     var e = lista[i];
     if (!e.nombre) continue;
-    var ya = S.empresas.get(clave(e.nombre));
-    var cambio = !ya || ['direccion', 'vat', 'contacto', 'email', 'pais'].some(function (c) {
+    var ya = datosEmpresa(e.nombre);     // lo que ya dan Database_old / Database suppliers / «Empresas»
+    var cambio = ['direccion', 'vat', 'contacto', 'email', 'pais'].some(function (c) {
       return String(ya[c] || '') !== String(e[c] || '');
     });
     if (cambio && (e.direccion || e.vat || e.contacto || e.email)) { await guardarEmpresa(e); n++; }
@@ -5198,6 +5224,7 @@ function panelGenerador() {
   var nombresEmp = (function () {
     var out = [], vistos = {};
     S.empresas.forEach(function (e) { vistos[clave(e.nombre)] = 1; out.push(e.nombre); });
+    S.fichasDB.forEach(function (e, k) { if (!vistos[k]) { vistos[k] = 1; out.push(e.nombre); } });
     var L = S.listas || {};
     (L.importadores || []).concat(L.exportadores || []).forEach(function (n) {
       if (!vistos[clave(n)]) { vistos[clave(n)] = 1; out.push(n); }
@@ -5214,11 +5241,11 @@ function panelGenerador() {
   // Tarjeta de una empresa. Si no está en la base, lo dice: lo que se escriba
   // se guarda para la próxima.
   var empresa = function (clave2, titulo, e, conVat) {
-    var enBase = S.empresas.has(clave(e.nombre));
+    var origen = origenEmpresa(e.nombre), enBase = !!origen;
     return '<div class="gen-emp">' +
       '<div class="ge-cab"><h4>' + titulo + '</h4>' +
         (e.nombre
-          ? (enBase ? '<span class="pill ok"><span class="pt"></span>En la base</span>'
+          ? (enBase ? '<span class="pill ok" title="Los datos salen de ahí; lo que cambies acá se guarda en la pestaña «Empresas»"><span class="pt"></span>' + esc(origen) + '</span>'
                     : '<span class="pill nar"><span class="pt"></span>Nueva: se guarda al generar</span>')
           : '') + '</div>' +
       comboGen('ge-' + clave2, clave2 + '.nombre', 'Empresa', nombresEmp, e.nombre, true, 'gen', true) +
@@ -5274,7 +5301,10 @@ function panelGenerador() {
       (G.linkDrive ? ' <a href="' + esc(G.linkDrive) + '" target="_blank" rel="noopener">Abrir en Drive</a>' : '') +
       '</div>' : '') +
 
-    (!S.hayHojaEmpresas
+    (S.fichasDB.size ? '<p class="ayuda" style="margin:12px 0 0">Los datos de cada empresa se toman de <b>' +
+      esc((S.diagMails || []).filter(function (d) { return d.conFicha; }).map(function (d) { return d.hoja; }).join(' y ') || 'la base de datos') +
+      '</b> (' + S.fichasDB.size + ' empresas con ficha). Si falta algo, completalo acá: se guarda en «Empresas» y queda para la próxima.</p>' : '') +
+    (!S.hayHojaEmpresas && !S.fichasDB.size
       ? '<div class="aviso">Todavía no hay una base de empresas. ' +
         '<button data-act="crearempresas" style="margin-left:6px"' + (G.creandoBase ? ' disabled' : '') + '>' +
         (G.creandoBase ? 'Creando…' : 'Crear la pestaña «Empresas»') + '</button>' +
@@ -5571,6 +5601,7 @@ async function cargarPaisesEmpresas() {
   S.mailsDoc = new Map();
   S.mailsRaros = [];
   S.sinPais = { clientes: [], proveedores: [] };
+  S.fichasDB = new Map();
   S.diagPaises = null;
   if (!S.cfg.paisSheetId) return;
 
@@ -5674,10 +5705,38 @@ async function cargarPaisesEmpresas() {
           }
           if (cNom < 0) cNom = 0;   // sin columna de nombre clara, la primera
 
-          var con = 0, conMail = 0, ejemplos = [];
+          // La ficha de cada empresa para el contrato: dirección, VAT, contacto y mail. Se buscan por el nombre de
+          // la columna; lo que no se encuentra queda vacío (se completa a mano en el generador).
+          var encF = filas[iEnc] || [], cDir = -1, cVat = -1, cCon = -1, cEma = -1, prEma = 99;
+          for (var cj = 0; cj < encF.length; cj++) {
+            var kk = clave(encF[cj]);
+            if (!kk || cj === cNom || cj === cPais || cj === cMails) continue;
+            var esMailCol = kk.indexOf('mail') >= 0 || kk.indexOf('correo') >= 0;
+            if (esMailCol) {
+              if (esMails(kk) || kk.indexOf('cc') === 0 || kk.indexOf(' cc') >= 0 || kk.indexOf('document') >= 0) continue;
+              var pe = (kk === 'email' || kk === 'e-mail' || kk === 'mail' || kk === 'correo') ? 0 : 1;
+              if (pe < prEma) { cEma = cj; prEma = pe; }
+              continue;
+            }
+            if (cDir < 0 && (kk.indexOf('address') >= 0 || kk.indexOf('adress') >= 0 || kk.indexOf('direccion') >= 0 || kk.indexOf('domicilio') >= 0)) { cDir = cj; continue; }
+            if (cVat < 0 && (kk.indexOf('vat') >= 0 || kk.indexOf('tax') >= 0 || kk.indexOf('cuit') >= 0 || kk === 'ruc' || kk === 'rut' || kk === 'nit' || kk.indexOf('fiscal') >= 0)) { cVat = cj; continue; }
+            if (cCon < 0 && kk.indexOf('contact') >= 0 && kk.indexOf('phone') < 0 && kk.indexOf('tel') < 0) { cCon = cj; continue; }
+          }
+          var celF = function (fila, c) { return c >= 0 && fila[c] != null ? String(fila[c]).replace(/\s+/g, ' ').trim() : ''; };
+
+          var con = 0, conMail = 0, conFicha = 0, ejemplos = [];
           filas.slice(iEnc + 1).forEach(function (f2) {
             var nom = f2 && f2[cNom] ? String(f2[cNom]).trim() : '';
             if (!nom) return;
+            if (cDir >= 0 || cVat >= 0 || cCon >= 0 || cEma >= 0) {
+              var dirF = celF(f2, cDir), paisTxt = celF(f2, cPais);
+              if (dirF && paisTxt && clave(dirF).indexOf(clave(paisTxt)) < 0) dirF += ', ' + paisTxt;
+              var fi = { nombre: nom, direccion: dirF, vat: celF(f2, cVat), contacto: celF(f2, cCon), email: celF(f2, cEma), pais: paisTxt, origen: hoja };
+              var fv = S.fichasDB.get(clave(nom));
+              if (fv) ['direccion', 'vat', 'contacto', 'email', 'pais'].forEach(function (c2) { if (!fi[c2]) fi[c2] = fv[c2]; });
+              S.fichasDB.set(clave(nom), fi);
+              conFicha++;
+            }
             if (cPais >= 0) {
               var cod = codigoPais(f2[cPais]);
               if (cod) { S.paises.set(clave(nom), cod); con++; }
@@ -5703,6 +5762,9 @@ async function cargarPaisesEmpresas() {
             nombre: letra(cNom) + (cNom >= 0 ? ' «' + (enc0[cNom] || '') + '»' : ''),
             pais: letra(cPais) + (cPais >= 0 ? ' «' + (enc0[cPais] || '') + '»' : ''),
             mails: letra(cMails) + (cMails >= 0 ? ' «' + (enc0[cMails] || '') + '»' : ''),
+            ficha: ['direccion ' + letra(cDir) + (cDir >= 0 ? ' «' + (enc0[cDir] || '') + '»' : ''), 'VAT ' + letra(cVat) + (cVat >= 0 ? ' «' + (enc0[cVat] || '') + '»' : ''),
+                    'contacto ' + letra(cCon) + (cCon >= 0 ? ' «' + (enc0[cCon] || '') + '»' : ''), 'mail ' + letra(cEma) + (cEma >= 0 ? ' «' + (enc0[cEma] || '') + '»' : '')].join(' · '),
+            conFicha: conFicha,
             conPais: con, conMail: conMail, ejemplos: ejemplos,
             columnas: enc0.length
           });
@@ -10692,6 +10754,7 @@ function listaDeCampo(campo) {
     if (/\.nombre$/.test(campo)) {
       var ns = [], vs = {};
       S.empresas.forEach(function (e) { vs[clave(e.nombre)] = 1; ns.push(e.nombre); });
+      S.fichasDB.forEach(function (e, k) { if (!vs[k]) { vs[k] = 1; ns.push(e.nombre); } });
       (L.importadores || []).concat(L.exportadores || []).forEach(function (n) {
         if (!vs[clave(n)]) { vs[clave(n)] = 1; ns.push(n); }
       });
@@ -14381,7 +14444,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.22-d';
+var APP_VERSION = '2026.10.22-e';
 
 function arrancar() {
   cargarPrefsPlanilla();
