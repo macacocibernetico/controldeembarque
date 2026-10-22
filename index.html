@@ -2179,6 +2179,16 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
   .barra-modos .hist-btns{align-self:flex-end}
   .barra-modos .modos{width:100%;min-width:0}
 }
+
+/* A facturar en Tabla/Planilla */
+.recorte-fact{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px;padding:8px 12px;border-radius:10px;background:#e8f0fe;color:#174ea6;font-size:13px}
+.recorte-fact button{min-height:30px;padding:0 12px;border-radius:999px;font-size:12.5px}
+
+.modo-fact .tbl-hoja .nrofila{min-width:104px}
+
+.btn-pasar{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 14px;border-radius:999px;background:#1a73e8;border:1px solid #1a73e8;color:#fff;font-weight:600;font-size:13px}
+.btn-pasar:hover{background:#1765cc}
+.btn-pasar .ico{width:14px;height:14px}
 </style>
 </head>
 <body>
@@ -2249,6 +2259,7 @@ var S = {
   memVista: {},           // lo que cada pestaña (Cargas, Control, Contratos) tenía abierto al irte
   ordenCtr: 'recientes',
   fuentesFact: [],
+  datosFact: { filas: [] }, fuentesFactT: [], slotsVista: {}, irAlFinal: false, topeFactT: 150, recFact: null,
   guardadoOk: false,
   altaError: null,
   avisoOk: null,
@@ -2297,7 +2308,7 @@ var S = {
   celdaAct: null,        // celda marcada con un clic: { id, c }
   pend: {},              // cambios escritos en la tabla que todavía no se guardaron
   revision: null,        // estado del guardado automático ({ guardando, error })
-  autoMs: 1200,          // espera antes de guardar solo (para juntar varios cambios seguidos en un solo pedido)
+  autoMs: 500,          // espera antes de guardar solo (para juntar varios cambios seguidos en un solo pedido)
   pendNada: false,
   fCol: {},
   ordenCol: null,
@@ -2339,7 +2350,7 @@ var S = {
   adviceTo: null,
   adviceFilas: {},
   marcados: {},
-  filasSel: {}, filasSelAncla: null, soloSel: false, loteFact: null, elim: null, hist: [], rehacer: [], histOcupado: false,
+  filasSel: {}, filasSelAncla: null, soloSel: false, loteFact: null, loteDev: null, elim: null, hist: [], rehacer: [], histOcupado: false,
   advices: new Map(),
   advicesViejos: 0,
   paises: new Map(),
@@ -4382,6 +4393,32 @@ function ubicarFila(h, mapa, esp, nro) {
     : 'Esa carga ya no está donde estaba: alguien la movió o la cambió. Actualizá y probá de nuevo.');
 }
 
+// ¿Sigue estando esta carga (contrato, BL, cliente y toneladas) en esa fila? Una sola lectura de esa fila.
+async function ubicarFilaRapido(tab, mapa, esp, fila) {
+  try {
+    var rango = "'" + tab.replace(/'/g, "''") + "'!A" + fila + ':' + letraCol(MAX_COLS - 1) + fila;
+    var d = await api(BASE + S.cfg.sheetId + '/values/' + encodeURIComponent(rango) + '?valueRenderOption=UNFORMATTED_VALUE');
+    var row = (d && d.values && d.values[0]) || [];
+    var val = function (c) { return mapa[c] === undefined || row[mapa[c]] == null ? '' : row[mapa[c]]; };
+    return clave(val('contract')) === clave(esp.contract) && clave(val('bl')) === clave(esp.bl) &&
+           clave(val('importer')) === clave(esp.importer) && Math.abs((normNum(val('tns')) || 0) - (normNum(esp.tns) || 0)) < 0.0001;
+  } catch (e) { return false; }
+}
+// El origen de una mudanza: si la fila está donde la app cree (y nada la tocó), se usa lo ya leído; si no, se lee la hoja.
+async function origenRapido(emb) {
+  if (!emb._sucio && emb._celdas && await ubicarFilaRapido(emb._tab, fuenteDe(emb).mapa, emb, emb._fila)) {
+    return { tab: emb._tab, sheetId: emb._sheetId, mapa: fuenteDe(emb).mapa, fila: emb._fila, celdas: emb._celdas, colores: emb._colores, filaVerificada: true };
+  }
+  var h = await leerHoja(S.cfg.sheetId, emb._tab);
+  var mp = detectar(h.encabezados, CAMPOS).mapa;
+  var fresca = ubicarFila(h, mp, emb, emb._fila);
+  return { tab: emb._tab, sheetId: h.sheetId, mapa: mp, fila: fresca.fila, celdas: fresca.celdas, colores: fresca.colores };
+}
+// De arriba para abajo no se corren las filas de las que faltan: se procesan de la última a la primera.
+function porFilaDesc(embs) {
+  return embs.slice().sort(function (a, b) { return a._tab === b._tab ? b._fila - a._fila : (a._tab < b._tab ? -1 : 1); });
+}
+
 /* Mueve una fila de una pestaña a otra, EN TRES TIEMPOS y sin riesgo de perderla:
      1) se inserta el hueco en el destino (arriba del TOTAL) y se copian los campos, colores y el total;
      2) se VUELVE A LEER el destino y se comprueba que la carga está ahí, en esa fila;
@@ -4389,8 +4426,9 @@ function ubicarFila(h, mapa, esp, nro) {
    Si la comprobación del paso 2 falla, NO se toca el origen: se deshace el hueco y se avisa.
    (Antes todo iba en un solo pedido, con el borrado al final: si la copia no quedaba en el destino,
    la fila se perdía igual — hubo que rescatarla del historial de versiones.) */
-async function moverFila(origen, destinoTab) {
-  var hd = await leerHoja(S.cfg.sheetId, destinoTab);
+async function moverFila(origen, destinoTab, ctx) {
+  var hd = (ctx && ctx.hd) || await leerHoja(S.cfg.sheetId, destinoTab);
+  if (ctx) ctx.hd = hd;
   var mapaD = detectar(hd.encabezados, CAMPOS).mapa;
 
   var filaTotal = await filaTotalDe(destinoTab);
@@ -4488,12 +4526,17 @@ async function moverFila(origen, destinoTab) {
 
   // Tiempo 3: ahora sí, sacar la de origen (releída, por si cambió algo en el medio).
   try {
-    var ho = await leerHoja(S.cfg.sheetId, origen.tab);
-    var mo = detectar(ho.encabezados, CAMPOS).mapa;
-    var filaO = ubicarFila(ho, mo, ident, origen.fila);
+    var filaO, sheetO;
+    if (origen.filaVerificada && await ubicarFilaRapido(origen.tab, origen.mapa, ident, origen.fila)) {
+      filaO = { fila: origen.fila }; sheetO = origen.sheetId;
+    } else {
+      var ho = await leerHoja(S.cfg.sheetId, origen.tab);
+      var mo = detectar(ho.encabezados, CAMPOS).mapa;
+      filaO = ubicarFila(ho, mo, ident, origen.fila); sheetO = ho.sheetId;
+    }
     await api(BASE + S.cfg.sheetId + ':batchUpdate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: ho.sheetId, dimension: 'ROWS',
+      body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: sheetO, dimension: 'ROWS',
         startIndex: filaO.fila - 1, endIndex: filaO.fila } } }] })
     });
   } catch (e) {
@@ -4529,13 +4572,7 @@ async function pasarAFacturar(id, avisar, enviar) {
   try {
     var res = resumenMudanza(emb);
     // La fila se relee justo antes de tocar nada.
-    var h = await leerHoja(S.cfg.sheetId, emb._tab);
-    var mp = detectar(h.encabezados, CAMPOS).mapa;
-    var fresca = ubicarFila(h, mp, emb, emb._fila);
-    var movida = await moverFila({
-      tab: emb._tab, sheetId: h.sheetId, mapa: mp,
-      fila: fresca.fila, celdas: fresca.celdas, colores: fresca.colores
-    }, destino.tab);
+    var movida = await moverFila(await origenRapido(emb), destino.tab);
 
     var aviso = '';
     if (avisar) {
@@ -4547,7 +4584,7 @@ async function pasarAFacturar(id, avisar, enviar) {
     S.ultimoMov = { desde: res.desde, quien: res.quien, contrato: res.contrato, bl: res.bl };
     histRegistrar({ tipo: 'facturar', desde: res.desde, hacia: destino.tab, items: [{ ident: identidadDe(emb), quien: res.quien }] });
     S.sel = null; S.pasar = null;
-    await cargarTodo();
+    await cargarTodo(true);
     toast('Enviada a «' + destino.tab + '», fila ' + movida.fila + ': ' + (res.contrato || res.quien), 'ok', 8000, { texto: 'Deshacer', fn: function () { deshacer(); } });
   } catch (e) {
     S.factError = 'No se pudo pasar: ' + e.message;
@@ -4579,7 +4616,7 @@ async function devolverDeFacturar(nroFila, destinoTab) {
 
     S.avisoOk = 'Devuelta a "' + destinoTab + '".';
     S.ultimoMov = null;
-    await cargarTodo();
+    await cargarTodo(true);
     toast('Devuelta a «' + destinoTab + '»', 'ok');
   } catch (e) {
     S.factError = 'No se pudo devolver: ' + e.message;
@@ -6192,13 +6229,13 @@ function mejorCandidata(ancla, lista) {
 // Para cuando se escribe: cuál es el lugar de esta carga entre las que son iguales a ella.
 function ordinalDe(emb) {
   var h = huellaDe(emb), tope = puntajeHuella(h, h);
-  var iguales = (S.datos.filas || []).filter(function (x) { return puntajeHuella(h, huellaDe(x)) === tope; });
+  var iguales = todasFilas().filter(function (x) { return puntajeHuella(h, huellaDe(x)) === tope; });
   iguales.sort(function (a, b) { return a._fila - b._fila; });
   return Math.max(0, iguales.indexOf(emb));
 }
 
 function candidatasCargas() {
-  return ((S.datos && S.datos.filas) || []).map(function (e) {
+  return todasFilas().map(function (e) {
     return { ref: e, hu: huellaDe(e), orden: e._fila };
   });
 }
@@ -6287,7 +6324,10 @@ function resolverHilos() {
     }
     if (propios.length) {
       h.embs = propios;
-      propios.forEach(function (e) { (S.hilosPorCarga[e._id] = S.hilosPorCarga[e._id] || []).push(h); });
+      propios.forEach(function (e) {
+        (S.hilosPorCarga[e._id] = S.hilosPorCarga[e._id] || []).push(h);
+        if (e._esFact) { h.facts = [e._fila]; (S.hilosPorFactura[e._fila] = S.hilosPorFactura[e._fila] || []).push(h); }
+      });
       return;
     }
     // Ya no está entre las cargas en curso: puede haber pasado a «A facturar».
@@ -6757,10 +6797,65 @@ function actualizarBotonCom() {
 
 /* --- Carga de datos -------------------------------------------------------- */
 
-async function cargarTodo() {
+// Una fila cruda de la hoja → el objeto «carga» que usa toda la app (también para las filas de «A facturar»).
+function armarFilaEmb(f, tab, sheetId, det) {
+        // Se conserva la fila cruda: hace falta para poder devolverla exacta,
+      // con sus colores, si alguien la pasa a facturar por error.
+      var o = { _fila: f.fila, _tab: tab, _sheetId: sheetId, _id: tab + ':' + f.fila,
+                _celdas: f.celdas, _colores: f.colores };
+      Object.keys(det.mapa).forEach(function (campo) {
+        var idx = det.mapa[campo];
+        o[campo] = CAMPOS[campo].tipo === 'semaforo'
+          ? colorASem(f.colores[idx])
+          : convertir(f.celdas[idx], CAMPOS[campo].tipo);
+      });
+      // Si la ETA vino sin año y quedó antes del ETD, es del año siguiente.
+      if (o.eta && o.eta.anioAsumido && esFecha(o.etd) && esFecha(o.eta) && o.eta < o.etd) {
+        var ajust = new Date(Date.UTC(o.eta.getUTCFullYear() + 1,
+                                      o.eta.getUTCMonth(), o.eta.getUTCDate()));
+        ajust.anioAsumido = true; ajust.crudo = o.eta.crudo;
+        o.eta = ajust;
+      }
+
+      // En las columnas semáforo el color es el estado y el texto es otra cosa:
+      // en Docs. son anotaciones operativas ("recibir factura y enviar gas
+      // free"), en T.R. la modalidad. Se guardan aparte para no perderlas.
+      o._bg = f.colores;      // el color de fondo de cada celda: lo que se pinta en Sheets se ve acá
+      o._notas = {};
+      SEMAFOROS.forEach(function (c) {
+        var ic = det.mapa[c];
+        if (ic === undefined) return;
+        var tx = f.celdas[ic];
+        o._notas[c] = tx == null ? '' : String(tx).trim();
+        o[c + '_nota'] = o._notas[c];
+      });
+
+      // En T.R. el texto es la MODALIDAD de liberación (BL Original / telex),
+      // no el estado. El estado es el color. Se guardan por separado.
+      // Ojo: la columna mezcla modalidad ("BL Original", "telex") con
+      // palabras de estado ("solicitada"), que ya vienen en el color. Solo
+      // tomamos las que son realmente modalidad.
+      if (det.mapa.tr !== undefined) {
+        o.trModo = modoTr(f.celdas[det.mapa.tr]);
+      }
+
+      // Naranja en "Pago estimado" = falta que manden el comprobante.
+      var ip = det.mapa[COL_COMPROBANTE];
+      o._faltaComprobante = ip !== undefined && esNaranja(f.colores[ip]);
+      return o;
+}
+
+async function cargarTodo(rapido) {
+  // rapido: después de mover/borrar/guardar cargas solo se vuelven a leer las pestañas de cargas y «A facturar»
+  // (los contratos, listas, empresas y avisos no cambian con eso), y todas a la vez.
   S.cargando = true; S.error = null; pintar();
   var avisos = [];
   var huboSesion = false;   // si la causa es la sesión caída, el aviso grande ya lo explica
+  var leerP = function (tab) { return leerHoja(S.cfg.sheetId, tab).catch(function (e) { return { __err: e }; }); };
+  var esperar = function (res) { if (res && res.__err) throw res.__err; return res; };
+  var lecturasE = S.cfg.tabsEmb.map(leerP);
+  var lecturasF = (S.cfg.tabsFact || []).map(leerP);
+  var lecturasC = rapido ? [] : (S.cfg.tabsCtr || []).map(leerP);
   try {
     // Cada pestaña se lee y se mapea por separado: los encabezados de las
     // terrestres no son los mismos que los de las marítimas.
@@ -6769,7 +6864,7 @@ async function cargarTodo() {
       var tab = S.cfg.tabsEmb[i];
       var h;
       try {
-        h = await leerHoja(S.cfg.sheetId, tab);
+        h = esperar(await lecturasE[i]);
       } catch (e) {
         if (e.sesion) huboSesion = true;
         avisos.push('No se pudo leer "' + tab + '": ' + e.message);
@@ -6777,52 +6872,7 @@ async function cargarTodo() {
       }
       var det = detectar(h.encabezados, CAMPOS);
 
-      var filas = h.filas.map(function (f) {
-        // Se conserva la fila cruda: hace falta para poder devolverla exacta,
-        // con sus colores, si alguien la pasa a facturar por error.
-        var o = { _fila: f.fila, _tab: tab, _sheetId: h.sheetId, _id: tab + ':' + f.fila,
-                  _celdas: f.celdas, _colores: f.colores };
-        Object.keys(det.mapa).forEach(function (campo) {
-          var idx = det.mapa[campo];
-          o[campo] = CAMPOS[campo].tipo === 'semaforo'
-            ? colorASem(f.colores[idx])
-            : convertir(f.celdas[idx], CAMPOS[campo].tipo);
-        });
-        // Si la ETA vino sin año y quedó antes del ETD, es del año siguiente.
-        if (o.eta && o.eta.anioAsumido && esFecha(o.etd) && esFecha(o.eta) && o.eta < o.etd) {
-          var ajust = new Date(Date.UTC(o.eta.getUTCFullYear() + 1,
-                                        o.eta.getUTCMonth(), o.eta.getUTCDate()));
-          ajust.anioAsumido = true; ajust.crudo = o.eta.crudo;
-          o.eta = ajust;
-        }
-
-        // En las columnas semáforo el color es el estado y el texto es otra cosa:
-        // en Docs. son anotaciones operativas ("recibir factura y enviar gas
-        // free"), en T.R. la modalidad. Se guardan aparte para no perderlas.
-        o._bg = f.colores;      // el color de fondo de cada celda: lo que se pinta en Sheets se ve acá
-        o._notas = {};
-        SEMAFOROS.forEach(function (c) {
-          var ic = det.mapa[c];
-          if (ic === undefined) return;
-          var tx = f.celdas[ic];
-          o._notas[c] = tx == null ? '' : String(tx).trim();
-          o[c + '_nota'] = o._notas[c];
-        });
-
-        // En T.R. el texto es la MODALIDAD de liberación (BL Original / telex),
-        // no el estado. El estado es el color. Se guardan por separado.
-        // Ojo: la columna mezcla modalidad ("BL Original", "telex") con
-        // palabras de estado ("solicitada"), que ya vienen en el color. Solo
-        // tomamos las que son realmente modalidad.
-        if (det.mapa.tr !== undefined) {
-          o.trModo = modoTr(f.celdas[det.mapa.tr]);
-        }
-
-        // Naranja en "Pago estimado" = falta que manden el comprobante.
-        var ip = det.mapa[COL_COMPROBANTE];
-        o._faltaComprobante = ip !== undefined && esNaranja(f.colores[ip]);
-        return o;
-      });
+      var filas = h.filas.map(function (f) { return armarFilaEmb(f, tab, h.sheetId, det); });
 
       // Una columna vacía en TODAS las filas de esta pestaña no aplica a este
       // tipo de carga: en camión no hay BL ni contenedores. No la exigimos.
@@ -6848,13 +6898,14 @@ async function cargarTodo() {
     S.fuentes = fuentes;
     S.datos = { filas: todas };
 
+    if (!rapido) {
     // Contratos: se juntan todas las pestañas elegidas. Un embarque puede estar
     // en curso con el contrato ya cerrado, así que cerrados también cuentan.
     S.contratos = new Map();
     for (var j = 0; j < (S.cfg.tabsCtr || []).length; j++) {
       var tc = S.cfg.tabsCtr[j], hc;
       try {
-        hc = await leerHoja(S.cfg.sheetId, tc);
+        hc = esperar(await lecturasC[j]);
       } catch (e2) {
         if (e2.sesion) huboSesion = true;
         avisos.push('No se pudo leer "' + tc + '": ' + e2.message);
@@ -6928,15 +6979,18 @@ async function cargarTodo() {
       });
     }
 
+    }
+
     // "A facturar": un embarque llega ahí cuando el cliente ya le pagó al
     // exportador. Estar en esa pestaña ES la prueba de cobro que falta en la
     // columna Inv Commission.
     S.facturar = new Map();
     S.fuentesFact = [];
+    S.datosFact = { filas: [] }; S.fuentesFactT = [];
     for (var k = 0; k < (S.cfg.tabsFact || []).length; k++) {
       var tf = S.cfg.tabsFact[k], hf;
       try {
-        hf = await leerHoja(S.cfg.sheetId, tf);
+        hf = esperar(await lecturasF[k]);
       } catch (e3) {
         if (e3.sesion) huboSesion = true;
         avisos.push('No se pudo leer "' + tf + '": ' + e3.message);
@@ -6947,6 +7001,28 @@ async function cargarTodo() {
       // facturar necesita el id de hoja y el mapa de columnas.
       S.fuentesFact.push({ tab: tf, sheetId: hf.sheetId, mapa: df.mapa,
                            noAplica: df.noAplica, filas: hf.filas });
+      // Las mismas filas, armadas como cargas, para verlas en Tabla/Planilla con todo lo de las otras vistas.
+      var filasT = [];
+      hf.filas.forEach(function (f) {
+        var primera = String(f.celdas[0] == null ? '' : f.celdas[0]).trim().toUpperCase();
+        if (primera.indexOf('TOTAL') === 0) return;
+        var o = armarFilaEmb(f, tf, hf.sheetId, df);
+        if (!(String(o.exporter || '').trim() || String(o.importer || '').trim() || String(o.contract || '').trim())) return;
+        o._esFact = true; o._aFacturar = true;
+        filasT.push(o);
+      });
+      var noAplT = {};
+      Object.keys(df.mapa).forEach(function (campo) {
+        var alguna = filasT.some(function (o) {
+          var v = o[campo];
+          if (SEMAFOROS.indexOf(campo) >= 0) return v && v !== 'vacio';
+          return v !== null && v !== undefined && v !== '';
+        });
+        if (!alguna) noAplT[campo] = 1;
+      });
+      S.fuentesFactT.push({ tab: tf, sheetId: hf.sheetId, mapa: df.mapa, extras: df.extras, encabezados: hf.encabezados,
+                            noAplica: noAplT, filas: filasT, esFact: true });
+      S.datosFact.filas = S.datosFact.filas.concat(filasT);
       if (df.mapa.contract === undefined) {
         avisos.push('En "' + tf + '" no encontré la columna de contrato (leí la fila ' + hf.filaEncabezado + ': ' +
           (hf.encabezados.filter(Boolean).slice(0, 12).join(' | ') || 'vacía') + ').');
@@ -7005,16 +7081,18 @@ async function cargarTodo() {
       if (it) { it.usado = true; o._aFacturar = true; }
     });
 
+    if (!rapido) {
     // ALL CONTRATOS suele ser un IMPORTRANGE: sirve para leer pero no se puede
     // escribir. Para editar hay que ir a la pestaña real donde vive la fila.
     S.ctrEditables = new Map();
     S.formasPago = [];
     var frecuencia = {};
-    var tabsEd = await tabsEditablesEfectivas();
+    var tabsEd = rapido ? [] : await tabsEditablesEfectivas();
+    var lecturasEd = tabsEd.map(leerP);
     for (var m = 0; m < tabsEd.length; m++) {
       var te = tabsEd[m], he;
       try {
-        he = await leerHoja(S.cfg.sheetId, te);
+        he = esperar(await lecturasEd[m]);
       } catch (e4) {
         if (e4.sesion) huboSesion = true;
         avisos.push('No se pudo leer "' + te + '": ' + e4.message);
@@ -7092,12 +7170,17 @@ async function cargarTodo() {
       return { texto: mejor, usos: v.n };
     }).sort(function (a, b) { return b.usos - a.usos; });
 
-    await cargarListas();
-    await cargarPaisesEmpresas();
-    await cargarEmpresas();
-    await cargarComentarios();
-    iniciarSondeoComentarios();
-    await cargarAdvices();
+    }
+
+    if (rapido) {
+      if (S.hilos && S.hilos.length) resolverHilos();        // las cargas cambiaron de lugar: los comentarios se vuelven a atar sin leer nada
+    } else {
+      await Promise.all([
+        (async function () { await cargarListas(); await cargarPaisesEmpresas(); await cargarEmpresas(); })(),
+        cargarComentarios(), cargarAdvices()
+      ]);
+      iniciarSondeoComentarios();
+    }
 
     S.avisos = avisos;
     reanclarPendientes();
@@ -7113,12 +7196,23 @@ function fuenteDe(emb) {
   for (var i = 0; i < S.fuentes.length; i++) {
     if (S.fuentes[i].tab === emb._tab) return S.fuentes[i];
   }
+  for (var j = 0; j < (S.fuentesFactT || []).length; j++) {
+    if (S.fuentesFactT[j].tab === emb._tab) return S.fuentesFactT[j];
+  }
   return S.fuentes[0];
 }
 
-function filaPorId(id) {
-  return S.datos.filas.filter(function (x) { return x._id === id; })[0];
+// Las cargas en curso y las de «A facturar» (para todo lo que busca una carga por id o por identidad).
+function todasFilas() {
+  return ((S.datos && S.datos.filas) || []).concat((S.datosFact && S.datosFact.filas) || []);
 }
+function filaPorId(id) {
+  var a = S.datos.filas.filter(function (x) { return x._id === id; })[0];
+  if (a) return a;
+  return ((S.datosFact && S.datosFact.filas) || []).filter(function (x) { return x._id === id; })[0];
+}
+// Fuentes de la vista actual (Cargas o «A facturar»).
+function fuentesVista() { return S.verFact ? (S.fuentesFactT || []) : (S.fuentes || []); }
 
 /* --- Aviso flotante ("toast") -----------------------------------------------
    Vive fuera de #root: así ningún redibujo lo borra a mitad de camino. */
@@ -7660,6 +7754,31 @@ function evaluarTodo() {
   });
 }
 
+function evaluarFactT() {
+  var hoy = ahoraComoUTC();
+  return ((S.datosFact && S.datosFact.filas) || []).map(function (emb) {
+    var ctr = S.contratos.get(String(emb.contract || '').trim()) || null;
+    var src = fuenteDe(emb);
+    var ev = evaluar(emb, ctr, hoy, src.mapa, src.noAplica);
+    S.ultimaEval[emb._id] = ev;
+    return { emb: emb, contrato: ctr, src: src, ev: ev };
+  });
+}
+
+// Pasar de ver Cargas a ver «A facturar» (y volver): cada una recuerda su búsqueda, sus filtros y su orden.
+function setVerFact(v) {
+  v = !!v;
+  if (!!S.verFact === v) return;
+  S.slotsVista = S.slotsVista || {};
+  S.slotsVista[S.verFact ? 'fact' : 'emb'] = { fCol: S.fCol, ordenCol: S.ordenCol, busca: S.busca };
+  var n = S.slotsVista[v ? 'fact' : 'emb'];
+  S.fCol = n ? n.fCol : {}; S.ordenCol = n ? n.ordenCol : null; S.busca = n ? n.busca : '';
+  S.filasSel = {}; S.filasSelAncla = null; S.soloSel = false; S.celdaAct = null;
+  S.menuCol = null; S.menuPintar = false; S.comPop = null; S.comCtx = null; S.panelFiltros = false;
+  S.verFact = v;
+  if (v) { S.irAlFinal = true; S.topeFactT = 150; }
+}
+
 function vistaApp() {
   if (!S.datos) {
     return barraMobile() + '<div class="marco-app v-' + colorDeVista(S.vista) + '">' + navLateral([]) +
@@ -7682,20 +7801,22 @@ function vistaApp() {
   var segmentado = S.vista === 'contratos' ? ''
     : S.verFact && S.vista === 'carga' ? segmentoPestanas(todosEvs)      // «A facturar»: el filtro por producto no aplica
     : segmentoPestanas(todosEvs) + segmentoTipos(todosEvs);
+  var modoFactT = S.verFact && S.vista === 'carga' && (S.modo === 'tabla' || S.modo === 'planilla');
+  var evsFact = modoFactT ? evaluarFactT() : [];
   var cuerpo = S.vista === 'control' ? vistaControl(evs, cuenta)
              : S.vista === 'contratos' ? vistaContratos()
-             : S.verFact ? vistaFacturadas()
+             : S.verFact ? (modoFactT ? vistaGrillaFact(evsFact) : vistaFacturadas())
              : vistaGrilla(evs);
   var panel = '';
   if (S.gen) panel = panelGenerador();
   else if (S.editCtr) panel = panelContrato();
   else if (S.sel !== null) {
-    var item = todosEvs.filter(function (x) { return x.emb._id === S.sel; })[0];
+    var item = todosEvs.concat(evsFact).filter(function (x) { return x.emb._id === S.sel; })[0];
     if (item) panel = vistaPanel(item);
   }
 
   return '<a class="saltar" href="#principal" data-act="saltar">Saltar al contenido</a>' + barraMobile() +
-    '<div class="marco-app v-' + colorDeVista(S.vista) + (S.vista === 'carga' && !S.verFact && (S.modo === 'tabla' || S.modo === 'planilla') ? ' modo-hoja' : '') + '">' + navLateral(todosEvs) +
+    '<div class="marco-app v-' + colorDeVista(S.vista) + (S.vista === 'carga' && !S.verFact && (S.modo === 'tabla' || S.modo === 'planilla') ? ' modo-hoja' : '') + (S.vista === 'carga' && S.verFact ? ' modo-fact' : '') + '">' + navLateral(todosEvs) +
     '<main class="app" id="principal" tabindex="-1">' + avisoSesion() +
       (S.error ? '<div class="error">' + esc(S.error) + '</div>' : '') +
       (S.avisoOk ? '<div class="ok-aviso">' + esc(S.avisoOk) +
@@ -7706,7 +7827,7 @@ function vistaApp() {
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     ((S.modo === 'planilla' || S.modo === 'tabla') && S.vista === 'carga' ? menuColumna() : '') +
-    modalMoverCtr() + modalLoteFact() + modalElim() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
+    modalMoverCtr() + modalLoteFact() + modalLoteDev() + modalElim() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -8271,14 +8392,14 @@ function vistaFacturadas() {
   var tope = S.topeFact || 25;
   var vis = filas.slice(0, tope);
 
-  var modoT = S.modoFact === 'tabla';
+  var modoT = false;
   var h = '<div class="filtros">' +
     '<input id="busca-fact" placeholder="Buscar cliente, contrato, BL, factura" value="' +
       esc(S.buscaFact || '') + '" aria-label="Buscar en A facturar">' +
-    '<span class="modos" style="margin-left:auto">' +
-      [['tarjetas', 'Tarjetas'], ['tabla', 'Tabla']].map(function (m) {
-        return '<button data-act="modofact" data-m="' + m[0] + '" aria-pressed="' + ((m[0] === 'tabla') === modoT) + '">' + m[1] + '</button>';
-      }).join('') + '</span>' +
+    '<span class="barra-modos">' + botonesHistHtml() + '<span class="modos">' +
+      [['tarjetas', 'Tarjetas'], ['planilla', 'Planilla']].map(function (m) {
+        return '<button data-act="modo" data-m="' + m[0] + '" aria-pressed="' + (S.modo === m[0] || (m[0] === 'tarjetas' && S.modo === 'exportadores') || (m[0] === 'planilla' && S.modo === 'tabla')) + '">' + m[1] + '</button>';
+      }).join('') + '</span></span>' +
     '</div>' +
     '<p class="conteo">' + total + (total === 1 ? ' fila' : ' filas') + ' en «' +
       esc(fact.tab) + '»' + (q ? ' que coinciden' : ', de la más reciente a la más vieja') +
@@ -9093,6 +9214,7 @@ var ORDENES = {
   eta_desc: { label: 'ETA más lejana',       campo: 'eta', dir: -1 },
   etd_desc: { label: 'ETD más reciente',     campo: 'etd', dir: -1 },
   etd_asc:  { label: 'ETD más antiguo',      campo: 'etd', dir: 1 },
+  hoja:     { label: 'Orden de la hoja',     campo: null },
   urgencia: { label: 'Urgencia',             campo: null },
   cliente:  { label: 'Cliente (A-Z)',        campo: null }
 };
@@ -9113,6 +9235,7 @@ function ordenar(filas, clave) {
 
   var o = ORDENES[clave] || ORDENES.eta_asc;
   var copia = filas.slice();
+  if (clave === 'hoja') return copia.sort(function (a, b) { return a.emb._fila - b.emb._fila; });
 
   if (clave === 'urgencia') {
     var pr = { critico: 3, alto: 2, medio: 1 };
@@ -9201,7 +9324,7 @@ function valoresColumna(c) {
   var guarda = S.fCol[c];
   delete S.fCol[c];
   var filas;
-  try { filas = filasVisiblesPlanilla(); } finally { if (guarda) S.fCol[c] = guarda; }
+  try { filas = filasVisiblesPlanilla(true); } finally { if (guarda) S.fCol[c] = guarda; }
   var cuenta = {};
   filas.forEach(function (x) {
     var v = x.src.mapa[c] === undefined ? '' : valorFiltro(x.emb, c);
@@ -9225,7 +9348,7 @@ function aplicarFiltros(evs) {
       if (emb._notas) SEMAFOROS.forEach(function (c) { campos.push(emb._notas[c]); });
       if (!campos.some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; })) return false;
     }
-    if (S.filtroTab && emb._tab !== S.filtroTab) return false;
+    if (S.filtroTab && !emb._esFact && emb._tab !== S.filtroTab) return false;
 
     // Estado de cada semáforo. "na" = la pestaña no lo usa.
     for (var i = 0; i < SEMAFOROS.length; i++) {
@@ -9262,7 +9385,7 @@ function filtrosActivos() {
   if (S.f.cbte) n++;
   if (S.f.fact) n++;
   if (S.f.falta) n++;
-  if (S.filtroTab) n++;
+  if (S.filtroTab && !S.verFact) n++;
   Object.keys(S.fCol).forEach(function (k) { if (filtroColActivo(S.fCol[k])) n++; });
   return n;
 }
@@ -9306,7 +9429,7 @@ function vistaGrilla(evs) {
       (nf ? ' · ' + nf : '') + '</button>' +
     '<span class="barra-modos">' + botonesHistHtml() +
     '<span class="modos">' +
-      [['tarjetas', 'Tarjetas'], ['tabla', 'Tabla'], ['planilla', 'Planilla'],
+      [['tarjetas', 'Tarjetas'], ['planilla', 'Planilla'],
        ['exportadores', 'Por exportador']]
         .map(function (m) {
           return '<button data-act="modo" data-m="' + m[0] + '" aria-pressed="' +
@@ -9341,9 +9464,48 @@ function vistaGrilla(evs) {
     '</div>' + masAbajo;
 }
 
+/* «A facturar» en Tabla/Planilla: el mismo motor que las cargas (filtros, orden, anchos, comentarios, marcar,
+   pintar, deshacer…). Va en el orden de la hoja: las últimas que pasaste, abajo de todo. */
+function recortarFact(filas) {
+  S.recFact = null;
+  var tope = S.topeFactT || 150;
+  if (filas.length <= tope) return filas;
+  var desdeArriba = !!S.ordenCol;                  // si ordenó por una columna, se muestran las primeras de ese orden
+  S.recFact = { total: filas.length, mostradas: tope, desdeArriba: desdeArriba };
+  return desdeArriba ? filas.slice(0, tope) : filas.slice(filas.length - tope);
+}
+function recorteFactHtml() {
+  var R = S.recFact;
+  if (!R) return '';
+  return '<div class="recorte-fact" role="status">Mostrando ' + (R.desdeArriba ? 'las primeras ' : 'las últimas ') + R.mostradas + ' de ' + R.total + ' filas. ' +
+    '<button data-act="factmas">Ver ' + Math.min(300, R.total - R.mostradas) + ' más</button>' +
+    '<button data-act="factodas">Ver todas</button></div>';
+}
+function vistaGrillaFact(evs) {
+  var todas = ordenar(aplicarFiltros(evs), 'hoja');
+  var nf = filtrosActivos();
+  var h = '<div class="filtros">' +
+    '<input id="busca-cargas" placeholder="Buscar cliente, contrato, BL, factura…" value="' + esc(S.busca) + '" aria-label="Buscar en A facturar">' +
+    '<button data-act="pfiltros" aria-pressed="' + S.panelFiltros + '">Filtros' + (nf ? ' · ' + nf : '') + '</button>' +
+    '<span class="barra-modos">' + botonesHistHtml() +
+    '<span class="modos">' + [['tarjetas', 'Tarjetas'], ['planilla', 'Planilla']].map(function (m) {
+      return '<button data-act="modo" data-m="' + m[0] + '" aria-pressed="' + (S.modo === m[0] || (m[0] === 'planilla' && S.modo === 'tabla')) + '">' + m[1] + '</button>';
+    }).join('') + '</span></span></div>';
+  if (S.panelFiltros) h += panelFiltros(evs);
+  h += '<p class="conteo">' + todas.length + (todas.length === 1 ? ' fila' : ' filas') +
+    (todas.length !== evs.length ? ' de ' + evs.length : '') + ' en «' + esc((S.fuentesFactT[0] || {}).tab || 'A facturar') + '» · ' +
+    (S.ordenCol ? 'ordenadas por columna' : 'en el orden de la hoja: las últimas, abajo de todo') + '</p>';
+  var filas = recortarFact(todas);
+  if (S.factError) h += '<div class="error">' + esc(S.factError) + '</div>';
+  if (!filas.length) {
+    return h + '<p class="centro">Nada coincide con el filtro.' + (nf ? ' <button data-act="limpiar">Limpiar filtros</button>' : '') + '</p>';
+  }
+  return h + recorteFactHtml() + vistaPlanilla(filas);
+}
+
 function panelFiltros(evs) {
   var hay = function (c) {
-    return S.fuentes.some(function (f) { return f.mapa[c] !== undefined && !f.noAplica[c]; });
+    return fuentesVista().some(function (f) { return f.mapa[c] !== undefined && !f.noAplica[c]; });
   };
 
   function selEstado(campo) {
@@ -10878,10 +11040,10 @@ var COLS_PLANILLA = ['exporter', 'importer', 'contract', 'product', 'tipo', 'pri
 
 function poolColumnas(modo) {
   var base = COLS_PLANILLA.filter(function (c) {
-    return S.fuentes.some(function (f) { return f.mapa[c] !== undefined; });
+    return fuentesVista().some(function (f) { return f.mapa[c] !== undefined; });
   });
   // La etapa no es una columna de la planilla: se calcula. Sólo la Tabla la ofrece.
-  if (modo === 'tabla') { var k = base.indexOf('docs'); base.splice(k < 0 ? base.length : k, 0, '_etapa'); }
+  if (modo === 'tabla' || modo === 'planilla') { var k = base.indexOf('docs'); base.splice(k < 0 ? base.length : k, 0, '_etapa'); }
   return base;
 }
 function columnasDisponibles() { return poolColumnas(S.modo); }
@@ -10901,7 +11063,8 @@ var ANCHO_DEF = {
   containers: 150, bl: 150, booking: 140, invoice: 130, docs: 130, pics: 130, tr: 130,
   tracking: 160, pagoEstimado: 130, commission: 100, guia: 120, incoterm: 100, status: 130, _etapa: 130
 };
-var ANCHO_MIN = 48, ANCHO_MAX = 900, ANCHO_NRO = 84, ANCHO_SEL = 34;
+var ANCHO_MIN = 48, ANCHO_MAX = 900, ANCHO_NRO_BASE = 84, ANCHO_SEL = 34;
+function anchoNro() { return S.verFact ? 104 : ANCHO_NRO_BASE; }
 function anchoDeCol(c) {
   if (S.anchos[c]) return S.anchos[c];
   // Lo que necesita el nombre (con el embudo y la ×) y, si no, el ancho pensado para el contenido.
@@ -10913,8 +11076,8 @@ function anchoDeCol(c) {
 }
 
 function htmlTablaPlanilla(filas, cols, enc, cuerpo) {
-  var tot = ANCHO_NRO + ANCHO_SEL;
-  var grupo = '<colgroup><col style="width:' + ANCHO_NRO + 'px"><col style="width:' + ANCHO_SEL + 'px">' +
+  var tot = anchoNro() + ANCHO_SEL;
+  var grupo = '<colgroup><col style="width:' + anchoNro() + 'px"><col style="width:' + ANCHO_SEL + 'px">' +
     cols.map(function (c) {
       var w = anchoDeCol(c); tot += w;
       return '<col data-c="' + c + '" style="width:' + w + 'px">';
@@ -11119,7 +11282,11 @@ function menuColumna() {
     '</div></div>';
 }
 
-function filasVisiblesPlanilla() {
+function filasVisiblesPlanilla(sinRecorte) {
+  if (S.verFact) {
+    var ff = ordenar(aplicarFiltros(evaluarFactT()), 'hoja');
+    return sinRecorte ? ff : recortarFact(ff);
+  }
   var evs = evaluarTodo().filter(function (x) {
     if (S.filtroTab && x.emb._tab !== S.filtroTab) return false;
     if (S.filtroTipo && clave(x.emb.tipo) !== S.filtroTipo) return false;
@@ -11134,11 +11301,18 @@ function filasVisiblesPlanilla() {
 function nSelFilas() { return Object.keys(S.filasSel).filter(function (k) { return S.filasSel[k] && filaPorId(k); }).length; }
 function selInfoHtml() {
   var n = nSelFilas();
-  if (!n) return '';
+  if (!n) {
+    // Sin filas marcadas el botón está igual, a la vista: al tocarlo explica cómo elegir.
+    if (S.verFact) return (S.fuentesFact || []).length ? '<button class="btn-pasar" data-act="lotedev" title="Devolver cargas de A facturar a su pestaña">' + ico('volver') + 'Devolver a su pestaña</button>' : '';
+    var d0 = (S.fuentesFact || [])[0];
+    return d0 ? '<button class="btn-pasar" data-act="lotefact" title="Pasar cargas a ' + esc(d0.tab) + '">' + ico('mover') + 'Pasar a ' + esc(d0.tab) + '</button>' : '';
+  }
   var nFact = idsParaFacturar().length, dest = (S.fuentesFact || [])[0];
   return '<span class="sel-info" role="status"><b>' + n + (n === 1 ? ' marcada' : ' marcadas') + '</b>' +
     (dest && nFact ? '<button class="primario sel-fact" data-act="lotefact">' + ico('mover') + 'Pasar a ' + esc(dest.tab) +
       (nFact > 1 ? ' (' + nFact + ')' : '') + '</button>' : '') +
+    (idsParaDevolver().length ? '<button class="primario sel-fact" data-act="lotedev">' + ico('volver') + 'Devolver a su pestaña' +
+      (idsParaDevolver().length > 1 ? ' (' + idsParaDevolver().length + ')' : '') + '</button>' : '') +
     '<button class="btn-elim" data-act="elimsel" title="Eliminar las filas marcadas de la planilla">' + ico('papelera') + 'Eliminar' + (n > 1 ? ' (' + n + ')' : '') + '</button>' +
     '<button data-act="selsolo" aria-pressed="' + !!S.soloSel + '">' + (S.soloSel ? 'Ver todas' : 'Solo marcadas') + '</button>' +
     '<button data-act="selquitar" title="Quitar todas las marcas (Esc)">Quitar</button></span>';
@@ -11146,7 +11320,13 @@ function selInfoHtml() {
 function idsParaFacturar() {
   return Object.keys(S.filasSel).filter(function (k) {
     var e = S.filasSel[k] && filaPorId(k);
-    return e && !e._aFacturar;
+    return e && !e._aFacturar && !e._esFact;
+  });
+}
+function idsParaDevolver() {
+  return Object.keys(S.filasSel).filter(function (k) {
+    var e = S.filasSel[k] && filaPorId(k);
+    return e && e._esFact;
   });
 }
 
@@ -11166,11 +11346,12 @@ function histDesc(e) {
     return 'cambio' + (e.items.length === 1 ? '' : 's') + ' en ' + (e.items.length === 1 ? etqCol(e.items[0].campo).toLowerCase() : nf + (nf === 1 ? ' fila' : ' filas'));
   }
   if (e.tipo === 'eliminar') return 'eliminar ' + (e.filas.length === 1 ? e.filas[0].quien : e.filas.length + ' cargas');
+  if (e.tipo === 'facturar' && e.inverso) return 'devolver ' + (e.items.length === 1 ? e.items[0].quien : e.items.length + ' cargas') + ' a su pestaña';
   if (e.tipo === 'facturar') return 'pasar a ' + e.hacia + (e.items.length === 1 ? ' ' + e.items[0].quien : ' (' + e.items.length + ' cargas)');
   return 'acción';
 }
 function cargaPorIdent(tab, id) {
-  var c = (S.datos ? S.datos.filas : []).filter(function (e) {
+  var c = todasFilas().filter(function (e) {
     return e._tab === tab && clave(e.contract) === clave(id.contract) && clave(e.bl) === clave(id.bl) &&
       clave(e.importer) === clave(id.importer) && Math.abs((normNum(e.tns) || 0) - (normNum(id.tns) || 0)) < 0.0001;
   });
@@ -11237,18 +11418,19 @@ async function aplicarHist(e, atras) {
     } else {
       for (var j = 0; j < e.filas.length; j++) await borrarPorIdent(e.filas[j]);
     }
-    await cargarTodo();
+    await cargarTodo(true);
     return;
   }
   if (e.tipo === 'facturar') {
     var fact = (S.fuentesFact || [])[0];
     if (!fact) throw new Error('no hay pestaña de A facturar.');
     var lista = atras ? e.items.slice().reverse() : e.items;
+    var haciaFactAhora = e.inverso ? atras : !atras;
     for (var q = 0; q < lista.length; q++) {
-      if (atras) await moverPorIdent(e.hacia, lista[q].tab, lista[q].ident);
-      else await moverPorIdent(lista[q].tab, e.hacia, lista[q].ident);
+      if (haciaFactAhora) await moverPorIdent(lista[q].tab, e.hacia, lista[q].ident);
+      else await moverPorIdent(e.hacia, lista[q].tab, lista[q].ident);
     }
-    await cargarTodo();
+    await cargarTodo(true);
     return;
   }
 }
@@ -11272,7 +11454,7 @@ async function histAplicar(atras) {
   } catch (err) {
     pila.push(e);
     toast('No se pudo ' + (atras ? 'deshacer' : 'rehacer') + ': ' + err.message, 'error', 9000);
-    try { await cargarTodo(); } catch (e2) { /* el aviso ya está */ }
+    try { await cargarTodo(true); } catch (e2) { /* el aviso ya está */ }
   } finally {
     S.histOcupado = false; pintar();
   }
@@ -11328,7 +11510,7 @@ function modalElim() {
 async function eliminarCargas() {
   var E = S.elim;
   if (!E || E.moviendo) return;
-  var embs = E.ids.map(filaPorId).filter(Boolean);
+  var embs = porFilaDesc(E.ids.map(filaPorId).filter(Boolean));
   var conPend = embs.filter(function (e) { return pendDeFila(e._id); });
   if (conPend.length) {
     E.moviendo = true; pintar();
@@ -11344,9 +11526,13 @@ async function eliminarCargas() {
   try {
     for (var i = 0; i < embs.length; i++) {
       var emb = embs[i];
-      var h = await leerHoja(S.cfg.sheetId, emb._tab);
-      var mp = detectar(h.encabezados, CAMPOS).mapa;
-      var fresca = ubicarFila(h, mp, emb, emb._fila);
+      var h, fresca;
+      if (await ubicarFilaRapido(emb._tab, fuenteDe(emb).mapa, emb, emb._fila)) { h = { sheetId: emb._sheetId }; fresca = { fila: emb._fila }; }
+      else {
+        h = await leerHoja(S.cfg.sheetId, emb._tab);
+        var mp = detectar(h.encabezados, CAMPOS).mapa;
+        fresca = ubicarFila(h, mp, emb, emb._fila);
+      }
       // Copia exacta de la fila (valores, fórmulas y formato) para poder deshacer. Sin copia no se borra.
       var copia;
       try { copia = await filaCruda(h.sheetId, emb._tab, fresca.fila); }
@@ -11364,7 +11550,7 @@ async function eliminarCargas() {
     S.elim = null;
     hechas.forEach(function (id) { delete S.filasSel[id]; });
     if (S.sel && hechas.indexOf(S.sel) >= 0) { S.sel = null; S.pasar = null; }
-    await cargarTodo();
+    await cargarTodo(true);
     toast(S.avisoOk, 'ok', 8000, { texto: 'Deshacer', fn: function () { deshacer(); } });
   } catch (e) {
     E.moviendo = false;
@@ -11372,7 +11558,73 @@ async function eliminarCargas() {
     E.error = (hechas.length ? 'Se eliminaron ' + hechas.length + ' de ' + embs.length + '; se frenó en la siguiente: ' : 'No se eliminó nada: ') + e.message;
     hechas.forEach(function (id) { delete S.filasSel[id]; });
     E.ids = E.ids.filter(function (id) { return hechas.indexOf(id) < 0; });
-    try { await cargarTodo(); } catch (e3) { /* se ve el error de arriba */ }
+    try { await cargarTodo(true); } catch (e3) { /* se ve el error de arriba */ }
+  } finally {
+    pintar();
+  }
+}
+
+function modalLoteDev() {
+  var L = S.loteDev, fact = (S.fuentesFact || [])[0];
+  if (!L || !fact) return '';
+  var embs = L.ids.map(filaPorId).filter(Boolean), n = embs.length;
+  var lista = embs.map(function (emb) {
+    var q = resumenMudanza(emb);
+    return '<li><b>' + esc(q.quien) + '</b> · ' + esc(q.contrato || 'sin contrato') + (q.bl ? ' · BL ' + esc(q.bl) : '') +
+      (q.tns ? ' · ' + fmtNum(q.tns) + ' tn' : '') + ' <span class="ayuda">→ vuelve a «' + esc(nombreCorto(tabProbable(emb))) + '»</span></li>';
+  }).join('');
+  return '<div class="modal-velo" data-act="lotedevno"></div>' +
+    '<div class="modal-caja"><div class="modal-cambio" role="alertdialog" aria-modal="true" aria-labelledby="ld-t">' +
+      '<h3 id="ld-t">¿Devolver ' + (n === 1 ? 'esta carga' : 'estas ' + n + ' cargas') + ' a su pestaña?</h3>' +
+      '<ul class="mover-ctr-lista">' + lista + '</ul>' +
+      '<ul class="mover-que"><li>Cada fila se copia a su pestaña (la de marítimos si tiene BL o contenedores; si no, terrestres) arriba del TOTAL, ' +
+        'con sus datos y colores, se comprueba que quedó bien y recién entonces se borra de «' + esc(fact.tab) + '».</li>' +
+        '<li>Se puede deshacer con Ctrl+Z.</li></ul>' +
+      (L.error ? '<div class="error" style="margin-top:12px">' + esc(L.error) + '</div>' : '') +
+      '<label class="chk entiendo"><input type="checkbox" data-lotedeventiendo="1"' + (L.entiendo ? ' checked' : '') + '>' +
+        '<span>Entiendo que se borran de «' + esc(fact.tab) + '»</span></label>' +
+      '<div class="mcm-acc"><button data-act="lotedevno"' + (L.moviendo ? ' disabled' : '') + '>Cancelar</button>' +
+        '<button class="primario" data-act="lotedevok"' + (!L.entiendo || L.moviendo ? ' disabled' : '') + '>' +
+          (L.moviendo ? 'Devolviendo… ' + (L.hechas || 0) + ' de ' + n : 'Devolver ' + (n === 1 ? 'la carga' : n + ' cargas')) + '</button></div>' +
+    '</div></div>';
+}
+async function devolverLote() {
+  var L = S.loteDev, fact = (S.fuentesFact || [])[0];
+  if (!L || !fact || L.moviendo) return;
+  var embs = porFilaDesc(L.ids.map(filaPorId).filter(Boolean));
+  var ctxMov = {};
+  if (embs.some(function (e) { return pendDeFila(e._id); })) {
+    L.moviendo = true; pintar();
+    var okD = await asegurarGuardado();
+    L.moviendo = false;
+    if (!okD || embs.some(function (e) { return pendDeFila(e._id); })) {
+      L.error = 'No se pudieron guardar los cambios pendientes de esas cargas, así que no devolví nada. Probá de nuevo.';
+      return pintar();
+    }
+  }
+  L.moviendo = true; L.hechas = 0; L.error = null; pintar();
+  var hechas = [], movidas = [];
+  try {
+    for (var i = 0; i < embs.length; i++) {
+      var emb = embs[i], dest = tabProbable(emb);
+      await moverFila(await origenRapido(emb), dest, ctxMov);
+      hechas.push(emb._id); L.hechas = hechas.length;
+      movidas.push({ tab: dest, ident: identidadDe(emb), quien: resumenMudanza(emb).quien });
+      pintar();
+    }
+    histRegistrar({ tipo: 'facturar', hacia: fact.tab, inverso: true, items: movidas });
+    S.loteDev = null;
+    hechas.forEach(function (id) { delete S.filasSel[id]; });
+    S.avisoOk = hechas.length === 1 ? 'Carga devuelta a su pestaña.' : hechas.length + ' cargas devueltas a su pestaña.';
+    await cargarTodo(true);
+    toast(S.avisoOk, 'ok', 8000, { texto: 'Deshacer', fn: function () { deshacer(); } });
+  } catch (e) {
+    L.moviendo = false;
+    if (movidas.length) histRegistrar({ tipo: 'facturar', hacia: fact.tab, inverso: true, items: movidas });
+    L.error = (hechas.length ? 'Se devolvieron ' + hechas.length + ' de ' + embs.length + '; se frenó en la siguiente: ' : 'No se devolvió nada: ') + e.message;
+    hechas.forEach(function (id) { delete S.filasSel[id]; });
+    L.ids = L.ids.filter(function (id) { return hechas.indexOf(id) < 0; });
+    try { await cargarTodo(true); } catch (e3) { /* se ve el error de arriba */ }
   } finally {
     pintar();
   }
@@ -11412,7 +11664,8 @@ function modalLoteFact() {
 async function pasarLoteAFacturar() {
   var L = S.loteFact, destino = (S.fuentesFact || [])[0];
   if (!L || !destino || L.moviendo) return;
-  var embs = L.ids.map(filaPorId).filter(Boolean);
+  var embs = porFilaDesc(L.ids.map(filaPorId).filter(Boolean));
+  var ctxMov = {};
   var conPend = embs.filter(function (e) { return pendDeFila(e._id); });
   if (conPend.length) {
     L.moviendo = true; pintar();
@@ -11428,10 +11681,7 @@ async function pasarLoteAFacturar() {
   try {
     for (var i = 0; i < embs.length; i++) {
       var emb = embs[i], res = resumenMudanza(emb);
-      var h = await leerHoja(S.cfg.sheetId, emb._tab);
-      var mp = detectar(h.encabezados, CAMPOS).mapa;
-      var fresca = ubicarFila(h, mp, emb, emb._fila);
-      await moverFila({ tab: emb._tab, sheetId: h.sheetId, mapa: mp, fila: fresca.fila, celdas: fresca.celdas, colores: fresca.colores }, destino.tab);
+      await moverFila(await origenRapido(emb), destino.tab, ctxMov);
       hechas.push(emb._id); L.hechas = hechas.length;
       movidas.push({ tab: emb._tab, ident: identidadDe(emb), quien: res.quien });
       if (S.avisarPia !== false) {
@@ -11443,7 +11693,7 @@ async function pasarLoteAFacturar() {
     S.loteFact = null;
     hechas.forEach(function (id) { delete S.filasSel[id]; });
     histRegistrar({ tipo: 'facturar', hacia: destino.tab, items: movidas });
-    await cargarTodo();
+    await cargarTodo(true);
     toast(hechas.length === 1 ? 'Enviada a «' + destino.tab + '»' : hechas.length + ' cargas enviadas a «' + destino.tab + '»', 'ok', 8000, { texto: 'Deshacer', fn: function () { deshacer(); } });
   } catch (e) {
     L.moviendo = false;
@@ -11451,7 +11701,7 @@ async function pasarLoteAFacturar() {
     L.error = (hechas.length ? 'Se pasaron ' + hechas.length + ' de ' + embs.length + '; se frenó en la siguiente: ' : 'No se pasó nada: ') + e.message;
     hechas.forEach(function (id) { delete S.filasSel[id]; });
     L.ids = L.ids.filter(function (id) { return hechas.indexOf(id) < 0; });
-    try { await cargarTodo(); } catch (e3) { /* se ve el error de arriba */ }
+    try { await cargarTodo(true); } catch (e3) { /* se ve el error de arriba */ }
   } finally {
     pintar();
   }
@@ -11635,7 +11885,7 @@ function filasHtmlPlanilla(filas, cols) {
         '<label class="col-check" title="' + esc(noCombina || (marcado
           ? 'Quitar del shipment advice' : 'Elegir para el shipment advice')) + '">' +
           '<input type="checkbox" data-marcar="' + esc(emb._id) + '"' +
-            (marcado ? ' checked' : '') + (noCombina ? ' disabled' : '') + '>' +
+            (marcado ? ' checked' : '') + (noCombina || emb._esFact ? ' disabled' : '') + '>' +
           '<span class="cbx">' + ico('check') + '</span></label></td>' +
       cols.map(function (c, i) {
         var td = celdaPlanilla(emb, src, c);
@@ -11759,7 +12009,7 @@ function reanclarPendientes() {
     };
     var emb = filaPorId(p.id);
     if (!(emb && coincide(emb))) {
-      var c = S.datos.filas.filter(coincide);
+      var c = todasFilas().filter(coincide);
       emb = c.length === 1 ? c[0] : null;
     }
     if (!emb) { perdidas++; return; }
@@ -11841,11 +12091,17 @@ async function guardarPendientes() {
 
     var reqs = [], ubicadas = {}, tabs = Object.keys(porTab);
     for (var t = 0; t < tabs.length; t++) {
-      var h = await leerHoja(S.cfg.sheetId, tabs[t]);
-      var mp = detectar(h.encabezados, CAMPOS).mapa;
+      var idsT = porTab[tabs[t]], e0 = filaPorId(idsT[0]), nomT = tabs[t];
+      var oks = await Promise.all(idsT.map(function (i2) {
+        var e2 = filaPorId(i2);
+        return ubicarFilaRapido(nomT, fuenteDe(e2).mapa, porFila[i2][0].ident, e2._fila);
+      }));
+      var rapidoT = oks.every(Boolean);
+      var h = rapidoT ? { sheetId: e0._sheetId } : await leerHoja(S.cfg.sheetId, tabs[t]);
+      var mp = rapidoT ? fuenteDe(e0).mapa : detectar(h.encabezados, CAMPOS).mapa;
       for (var q = 0; q < porTab[tabs[t]].length; q++) {
         var id = porTab[tabs[t]][q], emb = filaPorId(id), cambios = porFila[id];
-        var fresca = ubicarFila(h, mp, cambios[0].ident, emb._fila);
+        var fresca = rapidoT ? { fila: emb._fila } : ubicarFila(h, mp, cambios[0].ident, emb._fila);
         var valores = {}, colores = {}, tocaTotal = false;
         cambios.forEach(function (p) {
           var esBgP = p.tipo === 'color';
@@ -11880,7 +12136,7 @@ async function guardarPendientes() {
         if (ib !== undefined) { e._bg = (e._bg || []).slice(); e._bg[ib] = esBlanco(p.nuevo) ? { red: 1, green: 1, blue: 1 } : p.nuevo; }
         return;
       }
-      e[p.campo] = p.nuevo;
+      e[p.campo] = p.nuevo; e._sucio = true;
       if (baseSem(p.campo) !== p.campo) {            // texto de Docs/Fotos/T.R.
         e._notas = e._notas || {}; e._notas[baseSem(p.campo)] = p.nuevo;
         if (baseSem(p.campo) === 'tr') e.trModo = modoTr(p.nuevo);
@@ -11907,7 +12163,7 @@ async function guardarPendientes() {
     toast((n === 1 ? 'Cambio guardado' : n + ' cambios guardados') +
       (noCoinciden ? ' · ' + (noCoinciden === 1 ? '1 no coincide' : noCoinciden + ' no coinciden') + ' con el contrato' : ''), 'ok', noCoinciden ? 6500 : 4500,
       itemsHist.length ? { texto: 'Deshacer', fn: function () { deshacer(); } } : null);
-    if (corridas) await cargarTodo();
+    if (corridas) await cargarTodo(true);
   } catch (e) {
     R.guardando = false;
     R.error = e.message + (e.sesion ? '' : '\nNo se guardó nada: tus cambios siguen acá.');
@@ -12177,7 +12433,7 @@ function vistaPanel(x) {
     '<p class="pe-aviso">' + ico('check') + 'Tus cambios se guardan solos en la planilla.</p>';
 
   // Pasar a "A facturar": la mudanza que hoy se hace a mano.
-  if ((S.fuentesFact || []).length && !emb._aFacturar) {
+  if ((S.fuentesFact || []).length && !emb._aFacturar && !emb._esFact) {
     var destinoNom = S.fuentesFact[0].tab;
     h += '<div class="bloque"><h3 class="gt">Pasar a ' + esc(destinoNom) + '</h3>';
 
@@ -12588,6 +12844,10 @@ function pintar() {
     if (el) { el.scrollTop = scrolls[sel].top; el.scrollLeft = scrolls[sel].left; }
   });
   if (scrollPag) window.scrollTo(0, scrollPag);
+  if (S.irAlFinal && S.verFact) {                 // «A facturar»: las últimas pasadas están abajo de todo, y es ahí donde se mira
+    var hj = document.querySelector('.hoja');
+    if (hj) { hj.scrollTop = hj.scrollHeight; S.irAlFinal = false; }
+  }
   acomodarFlotantes();
 
   if (id) {
@@ -13051,7 +13311,11 @@ document.addEventListener('click', function (ev) {
     return pintar();
   }
   if (act === 'modo') {
-    S.planillaFull = false; S.modo = el.getAttribute('data-m'); return pintar(); }
+    S.planillaFull = false; S.modo = el.getAttribute('data-m');
+    if (S.verFact && (S.modo === 'tabla' || S.modo === 'planilla')) S.irAlFinal = true;
+    return pintar(); }
+  if (act === 'factmas') { S.topeFactT = (S.topeFactT || 150) + 300; S.irAlFinal = false; return pintar(); }
+  if (act === 'factodas') { S.topeFactT = 1e9; S.irAlFinal = false; return pintar(); }
   if (act === 'menucfg') { S.menuCfg = !S.menuCfg; S.menuCol = null; S.menuPintar = false; return pintar(); }
   if (act === 'saltar') {
     ev.preventDefault();
@@ -13097,7 +13361,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'ftab') {
     S.filtroTab = el.getAttribute('data-t') || '';
     S.filtroTipo = '';   // los tipos cambian según la pestaña
-    S.verFact = false;
+    setVerFact(false);
     return pintar();
   }
   if (act === 'ftipo') { S.filtroTipo = el.getAttribute('data-t') || ''; return pintar(); }
@@ -13221,9 +13485,19 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'elimno') { if (S.elim && !S.elim.moviendo) { S.elim = null; pintar(); } return; }
   if (act === 'elimok') { return eliminarCargas(); }
+  if (act === 'lotedev') {
+    var idsV = idsParaDevolver();
+    if (!idsV.length && S.celdaAct) { var ev0 = filaPorId(S.celdaAct.id); if (ev0 && ev0._esFact) idsV = [ev0._id]; }
+    if (!idsV.length) { toast('Marcá una o más filas (clic en su número, a la izquierda) y volvé a tocar «Devolver a su pestaña»', 'ok', 6000); return; }
+    S.loteDev = { ids: idsV, entiendo: false, moviendo: false, error: null };
+    return pintar();
+  }
+  if (act === 'lotedevno') { if (S.loteDev && !S.loteDev.moviendo) { S.loteDev = null; pintar(); } return; }
+  if (act === 'lotedevok') { return devolverLote(); }
   if (act === 'lotefact') {
     var idsF = idsParaFacturar();
-    if (!idsF.length) return;
+    if (!idsF.length && S.celdaAct) { var ev1 = filaPorId(S.celdaAct.id); if (ev1 && !ev1._aFacturar && !ev1._esFact) idsF = [ev1._id]; }
+    if (!idsF.length) { toast('Marcá una o más filas (clic en su número, a la izquierda) y volvé a tocar «Pasar a A facturar»', 'ok', 6000); return; }
     S.loteFact = { ids: idsF, entiendo: false, moviendo: false, error: null };
     return pintar();
   }
@@ -13261,13 +13535,14 @@ document.addEventListener('click', function (ev) {
   if (act === 'movok') { S.ultimoMov = null; return pintar(); }
   if (act === 'irdevolver') {
     var mv = S.ultimoMov || {};
-    S.verFact = true; S.vista = 'carga'; S.sel = null;
+    setVerFact(true); S.vista = 'carga'; S.sel = null;
     S.buscaFact = mv.bl || mv.contrato || '';
     S.topeFact = 25; S.ultimoMov = null; S.factError = null;
     return pintar();
   }
   if (act === 'vfact') {
-    S.verFact = true; S.vista = 'carga'; S.sel = null; S.devolver = null;
+    setVerFact(true); S.vista = 'carga'; S.sel = null; S.devolver = null;
+    if (S.modo === 'exportadores' || S.modo === 'tabla') S.modo = 'planilla';
     S.factError = null; S.topeFact = 25;
     return pintar();
   }
@@ -13735,6 +14010,12 @@ document.addEventListener('change', function (e) {
     S.topeContratos = 40;
     return pintar();
   }
+  if (e.target.getAttribute && e.target.getAttribute('data-lotedeventiendo') && S.loteDev) {
+    S.loteDev.entiendo = e.target.checked;
+    var bLd = document.querySelector('.modal-cambio [data-act="lotedevok"]');
+    if (bLd) bLd.disabled = !e.target.checked || !!S.loteDev.moviendo;
+    return;
+  }
   if (e.target.getAttribute && e.target.getAttribute('data-elimentiendo') && S.elim) {
     S.elim.entiendo = e.target.checked;
     var bEl = document.querySelector('.modal-cambio [data-act="elimok"]');
@@ -13993,7 +14274,7 @@ async function buscarPlanilla() {
 var LS_PLAN = 'embarques:planilla';
 function guardarVistaActual() {
   if (!S.modoGrid) return;
-  S.prefsVista[S.modoGrid] = { ocultas: S.colsOcultas, cong: S.planCong | 0, anchos: S.anchos };
+  S.prefsVista[S.modoGrid] = { ocultas: S.colsOcultas, cong: S.planCong | 0, anchos: S.anchos, migEtapa: true };
 }
 function guardarPrefsPlanilla() {
   guardarVistaActual();
@@ -14014,13 +14295,17 @@ function cargarPrefsPlanilla() {
 /* Si cambió la vista (Tabla ↔ Planilla), se guardan las preferencias de la que
    se deja y se cargan las de la que se abre. */
 function asegurarVistaGrid() {
-  if (S.modoGrid === S.modo) return;
+  var clavePref = S.modo + (S.verFact ? '-fact' : '');
+  if (S.modoGrid === clavePref) return;
   if (S.modoGrid) guardarVistaActual();
-  var pv = S.prefsVista[S.modo] || {};
-  S.colsOcultas = pv.ocultas || (S.modo === 'tabla' ? ocultasPorDefectoTabla() : {});
+  var pv = S.prefsVista[clavePref] || {};
+  S.colsOcultas = pv.ocultas || (S.modo === 'tabla' && !S.verFact ? ocultasPorDefectoTabla() : (S.modo === 'planilla' ? { _etapa: true } : {}));
+  // Quien ya tenía la Planilla guardada: la Etapa (que antes solo tenía la Tabla) arranca oculta; se muestra desde Configuración.
+  if (pv.ocultas && S.modo === 'planilla' && !pv.migEtapa) { S.colsOcultas._etapa = true; pv.migEtapa = true; }
+  S.migEtapa = !!pv.migEtapa || S.modo !== 'planilla';
   S.planCong = +pv.cong || 0;
   S.anchos = pv.anchos || {};
-  S.modoGrid = S.modo;
+  S.modoGrid = clavePref;
 }
 
 // La Tabla arranca con lo que mostraba la tabla compacta de antes.
@@ -14096,7 +14381,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.21-c';
+var APP_VERSION = '2026.10.22-d';
 
 function arrancar() {
   cargarPrefsPlanilla();
