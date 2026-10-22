@@ -2189,6 +2189,10 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 .btn-pasar{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 14px;border-radius:999px;background:#1a73e8;border:1px solid #1a73e8;color:#fff;font-weight:600;font-size:13px}
 .btn-pasar:hover{background:#1765cc}
 .btn-pasar .ico{width:14px;height:14px}
+
+.gen-docacc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 4px}
+.gen-docacc button{min-height:32px;padding:0 12px;border-radius:999px;font-size:12.5px}
+.gen-docs-extra textarea,#g-docsextra{width:100%;min-height:72px;padding:10px 12px;border:1px solid var(--linea2);border-radius:10px;font:inherit;resize:vertical}
 </style>
 </head>
 <body>
@@ -5004,6 +5008,7 @@ function abrirGenerador(nombre) {
     origen: PAIS_EN[codOrigen] || (codOrigen && PAISES[codOrigen]
       ? PAISES[codOrigen].split(' ').slice(1).join(' ') : 'Argentina'),
     docs: DOCS_ESTANDAR.map(function (t) { return { t: t, on: true }; }),
+    docsExtra: '',
     guardarBase: true,
     estado: null, error: null
   };
@@ -5023,6 +5028,8 @@ function datosDelGenerador(G) {
   var cant = lineas.reduce(function (a, p) { return a + (parseFloat(p.tns) || 0); }, 0);
   var docs = G.docs.filter(function (x) { return x.on && String(x.t).trim(); })
                    .map(function (x) { return String(x.t).trim(); });
+  // Los documentos específicos de esta carga, escritos libres (uno por renglón).
+  String(G.docsExtra || '').split(/\r?\n/).forEach(function (l) { l = l.replace(/\s+/g, ' ').trim(); if (l) docs.push(l); });
   var mitad = Math.ceil(docs.length / 2);
   var cons = G.consModo === 'buyer' ? G.buyer : G.cons;
   var notif = G.notifModo === 'buyer' ? G.buyer : (G.notifModo === 'cons' ? cons : G.notif);
@@ -5250,6 +5257,8 @@ function panelGenerador() {
           : '') + '</div>' +
       comboGen('ge-' + clave2, clave2 + '.nombre', 'Empresa', nombresEmp, e.nombre, true, 'gen', true) +
       inp(clave2 + '.direccion', 'Dirección', e.direccion) +
+      (fichaDB(e.nombre) && fichaDB(e.nombre).dirDeInfo && e.direccion === fichaDB(e.nombre).direccion
+        ? '<p class="ayuda" style="margin:-4px 0 8px">Tomada de «Info para el contrato» de Database suppliers: revisá que sea solo la dirección.</p>' : '') +
       '<div class="ge-grid">' +
         (conVat ? inp(clave2 + '.vat', 'VAT / Tax ID', e.vat) : '') +
         inp(clave2 + '.contacto', 'Contacto', e.contacto) +
@@ -5359,8 +5368,13 @@ function panelGenerador() {
           '<span class="cbx">' + ico('check') + '</span>' +
           '<span class="nom" title="' + esc(d.t) + '">' + esc(d.t) + '</span></label>';
       }).join('') + '</div>' +
-      '<div class="gen-docmas"><input id="g-docnuevo" aria-label="Agregar otro documento" placeholder="Otro documento…">' +
+      '<div class="gen-docacc"><button data-act="gendocstodos" data-v="1">Marcar todos</button>' +
+        '<button data-act="gendocstodos" data-v="0">Desmarcar todos</button>' +
+        '<span class="ayuda">' + G.docs.filter(function (d) { return d.on; }).length + ' de ' + G.docs.length + ' marcados</span></div>' +
+      '<div class="gen-docmas"><input id="g-docnuevo" aria-label="Agregar otro documento a la lista" placeholder="Agregar a la lista…">' +
         '<button data-act="gendocmas">' + ico('plus') + 'Agregar</button></div>' +
+      '<div class="campo" style="margin-top:12px"><label for="g-docsextra">Documentos específicos de esta carga</label>' +
+        '<textarea id="g-docsextra" data-genextra="1" rows="3" placeholder="Si esta carga pide un documento especial, escribilo acá (uno por renglón). Sale al final de la lista del contrato.">' + esc(G.docsExtra || '') + '</textarea></div>' +
     '</div>' +
 
     '<div class="gen-pie">' +
@@ -5707,21 +5721,37 @@ async function cargarPaisesEmpresas() {
 
           // La ficha de cada empresa para el contrato: dirección, VAT, contacto y mail. Se buscan por el nombre de
           // la columna; lo que no se encuentra queda vacío (se completa a mano en el generador).
-          var encF = filas[iEnc] || [], cDir = -1, cVat = -1, cCon = -1, cEma = -1, prEma = 99;
+          var encF = filas[iEnc] || [], cDir = -1, cVat = -1, cCon = -1, cEma = -1, cInfo = -1;
+          var prDir = 99, prEma = 99, prCon = 99;
           for (var cj = 0; cj < encF.length; cj++) {
             var kk = clave(encF[cj]);
             if (!kk || cj === cNom || cj === cPais || cj === cMails) continue;
             var esMailCol = kk.indexOf('mail') >= 0 || kk.indexOf('correo') >= 0;
             if (esMailCol) {
-              if (esMails(kk) || kk.indexOf('cc') === 0 || kk.indexOf(' cc') >= 0 || kk.indexOf('document') >= 0) continue;
-              var pe = (kk === 'email' || kk === 'e-mail' || kk === 'mail' || kk === 'correo') ? 0 : 1;
+              // Los «mails para envío documental / documentación» son otra cosa; el mail del contrato o el de contacto sí.
+              if (esMails(kk) || kk.indexOf('document') >= 0 || kk.indexOf('cc') === 0 || kk.indexOf(' cc') >= 0) continue;
+              var pe = kk.indexOf('contrato') >= 0 ? 0 : (kk.indexOf('email') === 0 || kk === 'mail' || kk === 'correo' ? 1 : 2);
               if (pe < prEma) { cEma = cj; prEma = pe; }
               continue;
             }
-            if (cDir < 0 && (kk.indexOf('address') >= 0 || kk.indexOf('adress') >= 0 || kk.indexOf('direccion') >= 0 || kk.indexOf('domicilio') >= 0)) { cDir = cj; continue; }
+            // Dirección: la «Contract Address» manda; la «Dirección envío docs» es adonde se mandan los papeles físicos, no la del contrato.
+            if (kk.indexOf('address') >= 0 || kk.indexOf('adress') >= 0 || kk.indexOf('direccion') >= 0 || kk.indexOf('domicilio') >= 0) {
+              var pd = kk.indexOf('contract') >= 0 || kk.indexOf('contrato') >= 0 ? 0 : (kk.indexOf('envio') >= 0 || kk.indexOf('docs') >= 0 || kk.indexOf('shipping') >= 0 ? 90 : 1);
+              if (pd < 90 && pd < prDir) { cDir = cj; prDir = pd; }
+              continue;
+            }
+            if (kk.indexOf('info para el contrato') === 0 || kk.indexOf('info contrato') === 0) { if (cInfo < 0) cInfo = cj; continue; }
             if (cVat < 0 && (kk.indexOf('vat') >= 0 || kk.indexOf('tax') >= 0 || kk.indexOf('cuit') >= 0 || kk === 'ruc' || kk === 'rut' || kk === 'nit' || kk.indexOf('fiscal') >= 0)) { cVat = cj; continue; }
-            if (cCon < 0 && kk.indexOf('contact') >= 0 && kk.indexOf('phone') < 0 && kk.indexOf('tel') < 0) { cCon = cj; continue; }
+            if (kk.indexOf('contact') >= 0 && kk.indexOf('contactado') < 0 && kk.indexOf('phone') < 0 && kk.indexOf('tel') < 0 && kk.indexOf('web') < 0) {
+              // «Contact A» antes que «Contact B»
+              var pc = kk.slice(-2) === ' a' ? 0 : 1;
+              if (pc < prCon) { cCon = cj; prCon = pc; }
+              continue;
+            }
           }
+          // Sin columna de dirección (Database suppliers), «Info para el contrato» hace de dirección: se muestra para revisarla.
+          var dirDeInfo = cDir < 0 && cInfo >= 0;
+          if (dirDeInfo) cDir = cInfo;
           var celF = function (fila, c) { return c >= 0 && fila[c] != null ? String(fila[c]).replace(/\s+/g, ' ').trim() : ''; };
 
           var con = 0, conMail = 0, conFicha = 0, ejemplos = [];
@@ -5731,7 +5761,7 @@ async function cargarPaisesEmpresas() {
             if (cDir >= 0 || cVat >= 0 || cCon >= 0 || cEma >= 0) {
               var dirF = celF(f2, cDir), paisTxt = celF(f2, cPais);
               if (dirF && paisTxt && clave(dirF).indexOf(clave(paisTxt)) < 0) dirF += ', ' + paisTxt;
-              var fi = { nombre: nom, direccion: dirF, vat: celF(f2, cVat), contacto: celF(f2, cCon), email: celF(f2, cEma), pais: paisTxt, origen: hoja };
+              var fi = { nombre: nom, direccion: dirF, vat: celF(f2, cVat), contacto: celF(f2, cCon), email: celF(f2, cEma), pais: paisTxt, origen: hoja, dirDeInfo: dirDeInfo && !!dirF };
               var fv = S.fichasDB.get(clave(nom));
               if (fv) ['direccion', 'vat', 'contacto', 'email', 'pais'].forEach(function (c2) { if (!fi[c2]) fi[c2] = fv[c2]; });
               S.fichasDB.set(clave(nom), fi);
@@ -5762,7 +5792,7 @@ async function cargarPaisesEmpresas() {
             nombre: letra(cNom) + (cNom >= 0 ? ' «' + (enc0[cNom] || '') + '»' : ''),
             pais: letra(cPais) + (cPais >= 0 ? ' «' + (enc0[cPais] || '') + '»' : ''),
             mails: letra(cMails) + (cMails >= 0 ? ' «' + (enc0[cMails] || '') + '»' : ''),
-            ficha: ['direccion ' + letra(cDir) + (cDir >= 0 ? ' «' + (enc0[cDir] || '') + '»' : ''), 'VAT ' + letra(cVat) + (cVat >= 0 ? ' «' + (enc0[cVat] || '') + '»' : ''),
+            ficha: ['dirección ' + letra(cDir) + (cDir >= 0 ? ' «' + (enc0[cDir] || '') + '»' : ''), 'VAT ' + letra(cVat) + (cVat >= 0 ? ' «' + (enc0[cVat] || '') + '»' : ''),
                     'contacto ' + letra(cCon) + (cCon >= 0 ? ' «' + (enc0[cCon] || '') + '»' : ''), 'mail ' + letra(cEma) + (cEma >= 0 ? ' «' + (enc0[cEma] || '') + '»' : '')].join(' · '),
             conFicha: conFicha,
             conPais: con, conMail: conMail, ejemplos: ejemplos,
@@ -13700,6 +13730,11 @@ document.addEventListener('click', function (ev) {
     S.gen[el.getAttribute('data-c') + 'Modo'] = el.getAttribute('data-v');
     return pintar();
   }
+  if (act === 'gendocstodos') {
+    var vT = el.getAttribute('data-v') === '1';
+    S.gen.docs.forEach(function (d) { d.on = vT; });
+    return pintar();
+  }
   if (act === 'gendocmas') {
     var ti = document.getElementById('g-docnuevo');
     var tx = ti ? String(ti.value).trim() : '';
@@ -13945,6 +13980,7 @@ document.addEventListener('click', function (ev) {
 });
 
 document.addEventListener('input', function (e) {
+  if (e.target.getAttribute && e.target.getAttribute('data-genextra') && S.gen) { S.gen.docsExtra = e.target.value; return; }
   if (e.target.id === 'busca-fact') { S.buscaFact = e.target.value; S.topeFact = 25; pintar(); return; }
   if (e.target.id === 'busca-cargas' || e.target.id === 'busca-ctr') {
     S.busca = e.target.value;
@@ -14444,7 +14480,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.22-e';
+var APP_VERSION = '2026.10.22-f';
 
 function arrancar() {
   cargarPrefsPlanilla();
