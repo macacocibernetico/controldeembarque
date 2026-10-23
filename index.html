@@ -2193,6 +2193,49 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 .gen-docacc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 4px}
 .gen-docacc button{min-height:32px;padding:0 12px;border-radius:999px;font-size:12.5px}
 .gen-docs-extra textarea,#g-docsextra{width:100%;min-height:72px;padding:10px 12px;border:1px solid var(--linea2);border-radius:10px;font:inherit;resize:vertical}
+
+/* ===== Generador de contratos: ventana en el medio, en dos pasos (23/10/2026) ===== */
+.gen-velo{position:fixed;inset:0;z-index:85;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:20px;animation:gen-in .16s ease-out}
+@keyframes gen-in{from{opacity:0}to{opacity:1}}
+.gen-modal{background:var(--sup,#fff);border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.35);width:min(980px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden}
+.gen-cab{display:flex;align-items:center;gap:16px;padding:16px 22px;border-bottom:1px solid var(--linea2);flex-wrap:wrap}
+.gen-tit{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.gen-tit h2{margin:0;font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gen-tit h2 b{color:var(--acento)}
+.gen-pasos{display:inline-flex;gap:6px;background:rgba(0,0,0,.05);padding:3px;border-radius:12px}
+.gen-pasos button{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 16px;border-radius:9px;background:none;font-weight:600;font-size:14px;color:var(--tinta2)}
+.gen-pasos button[aria-selected=true]{background:var(--sup,#fff);color:var(--tinta);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.gen-pasos .n{width:22px;height:22px;border-radius:50%;background:var(--acento);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.gen-pasos .c{min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--acentobg);color:var(--acento);display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.gen-x{min-width:40px;min-height:40px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:none}
+.gen-cuerpo{overflow:auto;padding:20px 24px;flex:1;min-height:0}
+.gen-2col{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.gen-col .bloque{margin-top:0;margin-bottom:18px}
+.gen-pie2{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px calc(14px + var(--safe,0px));border-top:1px solid var(--linea2);flex-wrap:wrap;background:var(--sup,#fff)}
+.gen-pie-izq{display:flex;flex-direction:column;gap:6px;min-width:0}
+.gen-pie2 .gen-botones{display:flex;gap:10px;margin:0;flex-wrap:wrap}
+.gen-pie2 .gen-botones button{flex:none;min-width:150px;min-height:44px}
+.gen-docscab{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.gen-sub{margin:20px 0 8px;font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--tinta2)}
+.gen-sub .ayuda{text-transform:none;font-weight:400;letter-spacing:0}
+.gen-modal .gen-docs{grid-template-columns:1fr 1fr;gap:8px}
+.gen-modal .chk-caja{min-height:48px}
+.gen-propio{position:relative;display:flex;gap:6px;align-items:stretch}
+.gen-propio .chk-caja{flex:1}
+.gen-quitar{min-width:40px;padding:0;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:none;color:var(--tinta3)}
+.gen-quitar:hover{background:#fdecea;color:#b3261e}
+.gen-auto{margin-left:auto;flex:none}
+.gen-docmas input{min-height:44px}
+@media(max-width:760px){
+  .gen-velo{padding:0;align-items:stretch}
+  .gen-modal{border-radius:0;max-height:100vh;height:100%}
+  .gen-2col,.gen-modal .gen-docs{grid-template-columns:1fr}
+  .gen-cab{padding:12px 14px}.gen-cuerpo{padding:14px}.gen-pie2{padding:12px 14px}
+  .gen-pie2 .gen-botones{width:100%}.gen-pie2 .gen-botones button{flex:1;min-width:0}
+}
+
+.ok-aviso.gen-nuevo{display:block;line-height:1.5;margin:0 0 14px}
+.gen-modal .aviso{display:block;margin:0 0 14px}
 </style>
 </head>
 <body>
@@ -4990,6 +5033,19 @@ function ajustarSeguroGen() {
   G.docs.splice(despues >= 0 ? despues + 1 : G.docs.length, 0, { t: txt, on: true, auto: 'seguro' });
 }
 
+// Los que no todos piden: están en la lista, sin tildar, para tildarlos cuando esa carga los necesita.
+var DOCS_OPCIONALES = [
+  'Gas Free Certificate',
+  'Certificate of Non-GMO',
+  'Health Certificate',
+  'Certificate of Analysis (pesticide residues)',
+  'Radioactivity Certificate',
+  'Certificate of Free Sale',
+  'EUR.1 Movement Certificate',
+  'Halal Certificate',
+  'Kosher Certificate'
+];
+
 // El contrato dice el país del exportador; en el documento va en inglés.
 var PAIS_EN = { AR: 'Argentina', UY: 'Uruguay', PY: 'Paraguay', BR: 'Brazil',
                 BO: 'Bolivia', CL: 'Chile', US: 'United States', CN: 'China' };
@@ -5043,7 +5099,9 @@ function abrirGenerador(nombre) {
     embarque: String(dato('periodo') || '').trim(),
     origen: PAIS_EN[codOrigen] || (codOrigen && PAISES[codOrigen]
       ? PAISES[codOrigen].split(' ').slice(1).join(' ') : 'Argentina'),
-    docs: DOCS_ESTANDAR.map(function (t) { return { t: t, on: true }; }),
+    docs: DOCS_ESTANDAR.map(function (t) { return { t: t, on: true }; })
+      .concat(DOCS_OPCIONALES.map(function (t) { return { t: t, on: false, opc: true }; })),
+    paso: 1,
     docsExtra: '',
     incCod: partirIncoterm(incoterm).cod, incLug: partirIncoterm(incoterm).lugar,
     guardarBase: true,
@@ -5330,30 +5388,15 @@ function panelGenerador() {
   var total = G.productos.reduce(function (a, p) { return a + totalLinea(p); }, 0);
   var faltan = faltantesGenerador(G);
 
-  return '<div class="velo' + an + '" data-act="gencerrar"></div>' +
-    '<aside class="panel panel-edit panel-gen' + an + '" role="dialog" aria-label="Generar contrato">' +
-
-    '<header class="pe-top">' +
-      '<div class="pe-tit"><span class="pe-chip">' + ico('doc') + 'Documento</span>' +
-        '<span class="pe-donde">' + esc(G.contrato) + '</span></div>' +
-      '<div class="pe-acc">' +
-        '<button data-act="gencerrar">' + ico('x') + 'Cerrar</button>' +
-      '</div>' +
-    '</header>' +
-
-    '<div class="pe-quien"><h2>Sales contract</h2>' +
-      '<p class="pe-desde">Casi todo sale del contrato. Revisá y completá lo que falte.</p></div>' +
-
-    (G.error ? '<div class="error" style="margin-top:14px">' + esc(G.error) +
+  var AVISOS = (G.error ? '<div class="error" style="margin-top:14px">' + esc(G.error) +
       (S.faltaDrive ? '<br><button data-act="permiso-gmail" style="margin-top:8px">Autorizar Drive</button>' : '') +
       '</div>' : '') +
     (G.hecho ? '<div class="ok-aviso">' + esc(G.hecho) +
       (G.linkDrive ? ' <a href="' + esc(G.linkDrive) + '" target="_blank" rel="noopener">Abrir en Drive</a>' : '') +
-      '</div>' : '') +
-
-    (G.nuevo ? '<div class="ok-aviso gen-nuevo"><b>Contrato ' + esc(G.contrato) + ' cargado.</b> Ya tomé todo lo que cargaste y lo que sale de las bases de datos. ' +
-      (faltan.length ? 'Para el documento todavía falta: <b>' + esc(faltan.join(', ')) + '</b>. Está marcado abajo en rojo.' : 'No falta nada: revisá y generá el documento.') + '</div>' : '') +
-    (S.fichasDB.size ? '<p class="ayuda" style="margin:12px 0 0">Los datos de cada empresa se toman de <b>' +
+      '</div>' : '');
+  var nuevoBanner = (G.nuevo ? '<div class="ok-aviso gen-nuevo"><b>Contrato ' + esc(G.contrato) + ' cargado.</b> Ya tomé todo lo que cargaste y lo que sale de las bases de datos. ' +
+      (faltan.length ? 'Para el documento todavía falta: <b>' + esc(faltan.join(', ')) + '</b>. Está marcado abajo en rojo.' : 'No falta nada: revisá y generá el documento.') + '</div>' : '');
+  var baseNota = (S.fichasDB.size ? '<p class="ayuda" style="margin:12px 0 0">Los datos de cada empresa se toman de <b>' +
       esc((S.diagMails || []).filter(function (d) { return d.conFicha; }).map(function (d) { return d.hoja; }).join(' y ') || 'la base de datos') +
       '</b> (' + S.fichasDB.size + ' empresas con ficha). Si falta algo, completalo acá: se guarda en «Empresas» y queda para la próxima.</p>' : '') +
     (!S.hayHojaEmpresas && !S.fichasDB.size
@@ -5362,20 +5405,17 @@ function panelGenerador() {
         (G.creandoBase ? 'Creando…' : 'Crear la pestaña «Empresas»') + '</button>' +
         '<br><span class="ayuda">Se arma con los nombres que ya están en la base de datos: ' +
         'solo falta completar dirección, VAT y contacto. Lo que completes acá se guarda solo.</span></div>'
-      : '') +
-
-    '<div class="bloque"><h3 class="gt">Contrato</h3>' +
+      : '');
+  var SEC_CONTRATO = '<div class="bloque"><h3 class="gt">Contrato</h3>' +
       '<div class="ge-grid">' +
         inp('contrato', 'Número', G.contrato) +
         campoFecha('g-fecha', 'data-gen', 'fecha', 'Fecha', G.fecha) +
-      '</div></div>' +
-
-    '<div class="bloque"><h3 class="gt">Partes</h3>' +
+      '</div></div>';
+  var SEC_PARTES = '<div class="bloque"><h3 class="gt">Partes</h3>' +
       empresa('buyer', 'Buyer', G.buyer, true) +
       empresa('seller', 'Seller', G.seller, true) +
-    '</div>' +
-
-    '<div class="bloque"><h3 class="gt">Mercadería</h3>' +
+    '</div>';
+  var SEC_MERC = '<div class="bloque"><h3 class="gt">Mercadería</h3>' +
       G.productos.map(function (p, i) {
         return '<div class="ap-fila">' +
           (G.productos.length > 1 ? '<span class="ap-num">' + (i + 1) + '</span>' : '') +
@@ -5388,9 +5428,8 @@ function panelGenerador() {
         '</div>';
       }).join('') +
       '<p class="alta-total gen-total">Total del contrato: <b>USD ' + miles(total) + '</b></p>' +
-    '</div>' +
-
-    '<div class="bloque"><h3 class="gt">Condiciones</h3>' +
+    '</div>';
+  var SEC_COND = '<div class="bloque"><h3 class="gt">Condiciones</h3>' +
       '<div class="ge-grid">' +
         '<div class="campo"><label for="g-inccod">Incoterm</label><select id="g-inccod" data-gencod="1">' +
           '<option value="">—</option>' + INCOTERMS.map(function (c) {
@@ -5404,41 +5443,85 @@ function panelGenerador() {
         inp('embarque', 'Shipment', G.embarque, 'Prompt') +
       '</div>' +
       '<p class="ayuda gen-incnota" style="margin:8px 0 0">Saldrá como <b>' + esc(G.incoterm || '—') + '</b>' +
-        (notaIncoterm(G.incCod) ? ' · ' + esc(notaIncoterm(G.incCod)) : '') + '</p></div>' +
-
-    '<div class="bloque"><h3 class="gt">Consignee y notify</h3>' +
+        (notaIncoterm(G.incCod) ? ' · ' + esc(notaIncoterm(G.incCod)) : '') + '</p></div>';
+  var SEC_CONS = '<div class="bloque"><h3 class="gt">Consignee y notify</h3>' +
       modo('cons', 'Consignee') + modo('notif', 'Notify') +
-    '</div>' +
+    '</div>';
+  var paso = G.paso === 2 ? 2 : 1;
+  var nSel = G.docs.filter(function (d) { return d.on; }).length;
+  var itemDoc = function (d, i) {
+    return '<label class="chk-caja' + (d.on ? ' on' : '') + '">' +
+      '<input type="checkbox" data-gendoc="' + i + '"' + (d.on ? ' checked' : '') + '>' +
+      '<span class="cbx">' + ico('check') + '</span>' +
+      '<span class="nom" title="' + esc(d.t) + '">' + esc(d.t) + '</span>' +
+      (d.auto === 'seguro' ? '<span class="pill nar gen-auto" title="Se agregó solo porque el incoterm incluye seguro">por ' + esc(G.incCod) + '</span>' : '') +
+      '</label>';
+  };
+  var grupo = function (filtro) {
+    return G.docs.map(function (d, i) { return filtro(d) ? itemDoc(d, i) : ''; }).join('');
+  };
+  var propios = G.docs.map(function (d, i) {
+    return d.custom
+      ? '<div class="gen-propio">' + itemDoc(d, i) + '<button class="gen-quitar" data-act="gendocquitar" data-i="' + i + '" aria-label="Quitar de la lista" title="Quitar de la lista">' + ico('x') + '</button></div>'
+      : '';
+  }).join('');
+  var pasoDocs =
+    '<div class="gen-docsbox">' +
+      '<div class="gen-docscab"><div><h3 class="gt" style="margin:0">Documentos requeridos</h3>' +
+        '<p class="ayuda gen-docacc-n" style="margin:2px 0 0">Los estándar ya vienen tildados. Tildá los opcionales que pida esta carga o agregá otros.</p></div>' +
+        '<div class="gen-docacc"><button data-act="gendocstodos" data-v="1">Marcar todos</button>' +
+          '<button data-act="gendocstodos" data-v="0">Desmarcar todos</button>' +
+          '<span class="ayuda">' + nSel + ' de ' + G.docs.length + ' marcados</span></div></div>' +
+      '<h4 class="gen-sub">Estándar</h4>' +
+      '<div class="gen-docs">' + grupo(function (d) { return !d.opc && !d.custom; }) + '</div>' +
+      '<h4 class="gen-sub">Opcionales <span class="ayuda">· no todos los clientes los piden</span></h4>' +
+      '<div class="gen-docs">' + grupo(function (d) { return d.opc && !d.custom; }) + '</div>' +
+      (propios ? '<h4 class="gen-sub">Agregados por vos</h4><div class="gen-docs gen-propios">' + propios + '</div>' : '') +
+      '<h4 class="gen-sub">Agregar otro documento</h4>' +
+      '<div class="gen-docmas"><input id="g-docnuevo" aria-label="Agregar otro documento a la lista" placeholder="Por ejemplo: Fumigation Certificate (Methyl Bromide)">' +
+        '<button class="primario" data-act="gendocmas">' + ico('plus') + 'Agregar</button></div>' +
+      '<div class="campo" style="margin-top:14px"><label for="g-docsextra">Varios a la vez (uno por renglón)</label>' +
+        '<textarea id="g-docsextra" data-genextra="1" rows="3" placeholder="Si esta carga pide documentos especiales, escribilos acá, uno por renglón. Salen al final de la lista del contrato.">' + esc(G.docsExtra || '') + '</textarea></div>' +
+    '</div>';
 
-    '<div class="bloque"><h3 class="gt">Documentos requeridos</h3>' +
-      '<div class="gen-docs">' + G.docs.map(function (d, i) {
-        return '<label class="chk-caja' + (d.on ? ' on' : '') + '">' +
-          '<input type="checkbox" data-gendoc="' + i + '"' + (d.on ? ' checked' : '') + '>' +
-          '<span class="cbx">' + ico('check') + '</span>' +
-          '<span class="nom" title="' + esc(d.t) + '">' + esc(d.t) + '</span></label>';
-      }).join('') + '</div>' +
-      '<div class="gen-docacc"><button data-act="gendocstodos" data-v="1">Marcar todos</button>' +
-        '<button data-act="gendocstodos" data-v="0">Desmarcar todos</button>' +
-        '<span class="ayuda">' + G.docs.filter(function (d) { return d.on; }).length + ' de ' + G.docs.length + ' marcados</span></div>' +
-      '<div class="gen-docmas"><input id="g-docnuevo" aria-label="Agregar otro documento a la lista" placeholder="Agregar a la lista…">' +
-        '<button data-act="gendocmas">' + ico('plus') + 'Agregar</button></div>' +
-      '<div class="campo" style="margin-top:12px"><label for="g-docsextra">Documentos específicos de esta carga</label>' +
-        '<textarea id="g-docsextra" data-genextra="1" rows="3" placeholder="Si esta carga pide un documento especial, escribilo acá (uno por renglón). Sale al final de la lista del contrato.">' + esc(G.docsExtra || '') + '</textarea></div>' +
-    '</div>' +
+  var pasoDatos =
+    (G.nuevo ? nuevoBanner : '') + baseNota +
+    '<div class="gen-2col">' +
+      '<div class="gen-col">' + SEC_PARTES + '</div>' +
+      '<div class="gen-col">' + SEC_CONTRATO + SEC_MERC + SEC_COND + SEC_CONS + '</div>' +
+    '</div>';
 
-    '<div class="gen-pie">' +
-      (faltan.length
-        ? '<p class="gen-falta">Falta: ' + esc(faltan.join(', ')) + '</p>' : '') +
-      '<label class="chk"><input type="checkbox" data-genbase="1"' + (G.guardarBase ? ' checked' : '') + '>' +
-        '<span>Guardar en la base los datos de empresas que completé</span></label>' +
-      '<div class="gen-botones">' +
-        '<button data-act="genword"' + (G.estado || faltan.length ? ' disabled' : '') + '>' +
-          ico('down') + 'Descargar Word</button>' +
-        '<button class="primario" data-act="genpdf"' + (G.estado || faltan.length ? ' disabled' : '') + '>' +
-          (G.estado ? esc(G.estado) : ico('down') + 'Descargar PDF') + '</button>' +
-      '</div></div>' +
-
-    '</aside>';
+  return '<div class="gen-velo' + an + '">' +
+    '<div class="gen-modal" role="dialog" aria-modal="true" aria-labelledby="gen-t">' +
+      '<header class="gen-cab">' +
+        '<div class="gen-tit"><span class="pe-chip">' + ico('doc') + 'Documento</span>' +
+          '<h2 id="gen-t">Sales contract <b>' + esc(G.contrato) + '</b></h2></div>' +
+        '<div class="gen-pasos" role="tablist" aria-label="Pasos">' +
+          '<button role="tab" data-act="genpaso" data-v="1" aria-selected="' + (paso === 1) + '"><span class="n">1</span>Datos</button>' +
+          '<button role="tab" data-act="genpaso" data-v="2" aria-selected="' + (paso === 2) + '"><span class="n">2</span>Documentos<span class="c">' + nSel + '</span></button>' +
+        '</div>' +
+        '<button class="gen-x" data-act="gencerrar" aria-label="Cerrar">' + ico('x') + '</button>' +
+      '</header>' +
+      '<div class="gen-cuerpo">' +
+        AVISOS +
+        (paso === 1 ? pasoDatos : pasoDocs) +
+      '</div>' +
+      '<footer class="gen-pie2">' +
+        '<div class="gen-pie-izq">' +
+          (faltan.length ? '<p class="gen-falta">Falta: ' + esc(faltan.join(', ')) + (paso === 2 ? ' · <a href="#" data-act="genpaso" data-v="1">volver a los datos</a>' : '') + '</p>' : '') +
+          '<label class="chk"><input type="checkbox" data-genbase="1"' + (G.guardarBase ? ' checked' : '') + '>' +
+            '<span>Guardar en la base los datos de empresas que completé</span></label>' +
+        '</div>' +
+        '<div class="gen-botones">' +
+          (paso === 1
+            ? '<button class="primario" data-act="genpaso" data-v="2">Siguiente: documentos →</button>'
+            : '<button data-act="genpaso" data-v="1">← Datos</button>' +
+              '<button data-act="genword"' + (G.estado || faltan.length ? ' disabled' : '') + '>' + ico('down') + 'Descargar Word</button>' +
+              '<button class="primario" data-act="genpdf"' + (G.estado || faltan.length ? ' disabled' : '') + '>' +
+                (G.estado ? esc(G.estado) : ico('down') + 'Descargar PDF') + '</button>') +
+        '</div>' +
+      '</footer>' +
+    '</div></div>';
 }
 
 /* --- Campo de fecha --------------------------------------------------------
@@ -12948,7 +13031,7 @@ function pintar() {
   // pantalla salta al principio.
   var scrollPag = window.scrollY || window.pageYOffset || 0;
   var scrolls = {};
-  ['.hoja', '.panel', '.marco'].forEach(function (sel) {
+  ['.hoja', '.panel', '.marco', '.gen-cuerpo'].forEach(function (sel) {
     var el = document.querySelector(sel);
     if (el) scrolls[sel] = { top: el.scrollTop, left: el.scrollLeft };
   });
@@ -13782,6 +13865,15 @@ document.addEventListener('click', function (ev) {
     S.gen[el.getAttribute('data-c') + 'Modo'] = el.getAttribute('data-v');
     return pintar();
   }
+  if (act === 'genpaso') {
+    ev.preventDefault();
+    S.gen.paso = el.getAttribute('data-v') === '2' ? 2 : 1;
+    return pintar();
+  }
+  if (act === 'gendocquitar') {
+    S.gen.docs.splice(+el.getAttribute('data-i'), 1);
+    return pintar();
+  }
   if (act === 'gendocstodos') {
     var vT = el.getAttribute('data-v') === '1';
     S.gen.docs.forEach(function (d) { d.on = vT; });
@@ -13790,7 +13882,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'gendocmas') {
     var ti = document.getElementById('g-docnuevo');
     var tx = ti ? String(ti.value).trim() : '';
-    if (tx) S.gen.docs.push({ t: tx, on: true });
+    if (tx) S.gen.docs.push({ t: tx, on: true, custom: true });
     return pintar();
   }
   if (act === 'genword') return generarWord();
@@ -14031,6 +14123,13 @@ document.addEventListener('click', function (ev) {
   }
 });
 
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && e.target && e.target.id === 'g-docnuevo' && S.gen) {
+    e.preventDefault();
+    var tx2 = String(e.target.value).trim();
+    if (tx2) { S.gen.docs.push({ t: tx2, on: true, custom: true }); pintar(); var nuevoIn = document.getElementById('g-docnuevo'); if (nuevoIn) nuevoIn.focus(); }
+  }
+});
 document.addEventListener('input', function (e) {
   if (e.target.getAttribute && e.target.getAttribute('data-genextra') && S.gen) { S.gen.docsExtra = e.target.value; return; }
   if (e.target.id === 'busca-fact') { S.buscaFact = e.target.value; S.topeFact = 25; pintar(); return; }
@@ -14543,7 +14642,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.22-h';
+var APP_VERSION = '2026.10.23-i';
 
 function arrancar() {
   cargarPrefsPlanilla();
