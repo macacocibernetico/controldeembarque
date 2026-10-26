@@ -13222,6 +13222,32 @@ function marcarCeldaActiva(td) {
   S.celdaAct = { id: td.closest('tr').getAttribute('data-f'), c: td.getAttribute('data-c') };
   actualizarBotonCom();
 }
+// La celda de al lado (dx) o de abajo/arriba (dy). Con `envolver`, al llegar al borde de la fila pasa a la siguiente (como Tab en Sheets).
+function celdaVecina(td, dx, dy, envolver) {
+  var tr = td.closest('tr'), c = td.getAttribute('data-c');
+  if (dy) {
+    var tr2 = dy < 0 ? tr.previousElementSibling : tr.nextElementSibling;
+    return tr2 ? tr2.querySelector('td[data-c="' + c + '"]') : null;
+  }
+  var sig = dx < 0 ? td.previousElementSibling : td.nextElementSibling;
+  while (sig && !sig.getAttribute('data-c')) sig = dx < 0 ? sig.previousElementSibling : sig.nextElementSibling;
+  if (sig || !envolver) return sig;
+  var trN = dx < 0 ? tr.previousElementSibling : tr.nextElementSibling;
+  while (trN && !trN.querySelector('td[data-c]')) trN = dx < 0 ? trN.previousElementSibling : trN.nextElementSibling;
+  if (!trN) return null;
+  var tds = trN.querySelectorAll('td[data-c]');
+  return dx < 0 ? tds[tds.length - 1] : tds[0];
+}
+function irACelda(td) {
+  if (!td) return;
+  marcarCeldaActiva(td);
+  td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+// ¿Hay algo encima de la tabla (ventana, panel, menú) que se queda con el teclado?
+function hayAlgoEncima() {
+  return !!(S.gen || S.elim || S.loteFact || S.loteDev || S.moverCtr || S.revision || S.menuCol || S.menuCfg || S.menuPintar ||
+    S.sel || S.comPop || S.comCtx || document.querySelector('.modal-velo, .gen-velo'));
+}
 function tdActiva() {
   if (!S.celdaAct) return null;
   var trs = document.querySelectorAll('.tbl-hoja tbody tr'), tr = null;
@@ -13296,8 +13322,14 @@ document.addEventListener('dblclick', function (ev) {
 document.addEventListener('keydown', function (ev) {
   if (S.editCel || S.moverCtr || S.menuCol || ev.ctrlKey || ev.metaKey || ev.altKey) return;
   var t = ev.target;
-  if (t && (/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(t.tagName) || t.isContentEditable)) return;
+  if (t && (/^(INPUT|SELECT|TEXTAREA|BUTTON|A)$/.test(t.tagName) || t.isContentEditable)) return;
   var td = tdActiva();
+  if (ev.key === 'Tab' && td && !ev.ctrlKey && !hayAlgoEncima()) {
+    // Como en Sheets: Tab va a la celda de la derecha, Mayús+Tab a la de la izquierda, y al final de la fila pasa a la siguiente.
+    // Esc suelta la celda y el Tab vuelve a recorrer la página.
+    var vec = celdaVecina(td, ev.shiftKey ? -1 : 1, 0, true);
+    if (vec) { ev.preventDefault(); irACelda(vec); return; }
+  }
   if (ev.key === 'Escape' && nSelFilas()) { if (td) td.classList.remove('cel-act'); S.celdaAct = null; return limpiarSelFilas(); }
   if (!td) return;
   if (ev.key === 'Enter' || ev.key === 'F2') { ev.preventDefault(); return editarCelda(td); }
@@ -13382,7 +13414,19 @@ document.addEventListener('keydown', function (ev) {
   if (ev.key === 'Tab' && ev.target.hasAttribute('data-sem') && !ev.shiftKey && S.editCel.td.querySelector('[data-txtsem]')) {
     ev.preventDefault(); ev.stopPropagation(); S.editCel.td.querySelector('[data-txtsem]').focus(); return;   // del color al texto
   }
-  if (ev.key === 'Enter' || ev.key === 'Tab') { ev.preventDefault(); ev.stopPropagation(); cerrarEdicionCelda(true); }
+  if (ev.key === 'Enter' || ev.key === 'Tab') {
+    ev.preventDefault(); ev.stopPropagation();
+    var Eed = S.editCel, idEd = Eed.id, cEd = Eed.c;
+    cerrarEdicionCelda(true);
+    if (!S.editCel) {                           // se guardó (si la fecha o el número estaban mal, sigue editando y no se mueve)
+      var trEd = document.querySelector('.tbl-hoja tbody tr[data-f="' + idEd + '"]');
+      var tdEd = trEd && trEd.querySelector('td[data-c="' + cEd + '"]');
+      if (tdEd) {
+        var vecEd = ev.key === 'Enter' ? celdaVecina(tdEd, 0, ev.shiftKey ? -1 : 1, false) : celdaVecina(tdEd, ev.shiftKey ? -1 : 1, 0, true);
+        irACelda(vecEd || tdEd);
+      }
+    }
+  }
   else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); cerrarEdicionCelda(false); }
 }, true);
 
@@ -14778,7 +14822,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.26-k';
+var APP_VERSION = '2026.10.26-l';
 
 function arrancar() {
   cargarPrefsPlanilla();
