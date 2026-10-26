@@ -1757,6 +1757,14 @@ body.redimensionando,body.redimensionando *{cursor:col-resize !important;-webkit
 .pb-sub{font-size:12.5px;color:#9a5b00}
 .pb-punto{width:9px;height:9px;border-radius:50%;background:#f59e0b;flex:none;display:inline-block;margin-right:2px}
 .pend-barra button{min-height:34px;font-size:13px}
+.ver-nueva{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:10px;
+  max-width:calc(100% - 32px);padding:8px 8px 8px 18px;border-radius:980px;background:#1d1d1f;color:#fff;font-weight:600;font-size:14px;
+  box-shadow:0 8px 28px rgba(0,0,0,.3)}
+.ver-nueva button{min-height:36px;border:0;border-radius:980px;font:inherit;cursor:pointer}
+.ver-nueva .vn-ok{padding:0 16px;background:#fff;color:#1d1d1f}
+.ver-nueva .vn-x{width:36px;background:transparent;color:#d2d2d7;font-size:20px;line-height:1}
+.ver-nueva span{white-space:nowrap}
+@media(max-width:900px){.ver-nueva{bottom:84px}}   /* en el celular, arriba de la barra de pestañas */
 .pend-flota.con-panel{right:calc(min(520px,100%) + 18px)}   /* con el panel de detalle abierto, a su izquierda: no tapa «Cerrar» */
 .pend-flota{position:fixed;top:14px;right:22px;z-index:70;display:inline-flex;align-items:center;gap:8px;
   min-height:38px;padding:0 16px;border-radius:980px;background:#fff4d6;color:#6b3f00;font-weight:600;
@@ -4490,11 +4498,12 @@ function ubicarFila(h, mapa, esp, nro) {
 }
 
 // ¿Sigue estando esta carga (contrato, BL, cliente y toneladas) en esa fila? Una sola lectura de esa fila.
-async function ubicarFilaRapido(tab, mapa, esp, fila) {
+async function ubicarFilaRapido(tab, mapa, esp, fila, salida) {
   try {
     var rango = "'" + tab.replace(/'/g, "''") + "'!A" + fila + ':' + letraCol(MAX_COLS - 1) + fila;
     var d = await api(BASE + S.cfg.sheetId + '/values/' + encodeURIComponent(rango) + '?valueRenderOption=UNFORMATTED_VALUE');
     var row = (d && d.values && d.values[0]) || [];
+    if (salida) salida.row = row;      // lo que hay AHORA en la planilla: sirve para detectar si otra persona cambió una celda
     var val = function (c) { return mapa[c] === undefined || row[mapa[c]] == null ? '' : row[mapa[c]]; };
     return clave(val('contract')) === clave(esp.contract) && clave(val('bl')) === clave(esp.bl) &&
            clave(val('importer')) === clave(esp.importer) && Math.abs((normNum(val('tns')) || 0) - (normNum(esp.tns) || 0)) < 0.0001;
@@ -7155,10 +7164,14 @@ function armarFilaEmb(f, tab, sheetId, det) {
       return o;
 }
 
-async function cargarTodo(rapido) {
+async function cargarTodo(rapido, silencioso) {
   // rapido: después de mover/borrar/guardar cargas solo se vuelven a leer las pestañas de cargas y «A facturar»
   // (los contratos, listas, empresas y avisos no cambian con eso), y todas a la vez.
-  S.cargando = true; S.error = null; pintar();
+  // silencioso = la actualización automática (ver refrescarSilencioso): no tapa la pantalla con «Cargando», no muestra
+  // errores y, si algo falla o la persona empezó a hacer algo mientras se leía, deja todo exactamente como estaba.
+  var foto = silencioso ? fotoDeDatos() : null, antes = silencioso ? huellasCargas() : null, memoria = silencioso ? recordarSeleccion() : null;
+  var abortado = false;
+  if (silencioso) S.refrescando = true; else { S.cargando = true; S.error = null; pintar(); }
   var avisos = [];
   var huboSesion = false;   // si la causa es la sesión caída, el aviso grande ya lo explica
   var leerP = function (tab) { return leerHoja(S.cfg.sheetId, tab).catch(function (e) { return { __err: e }; }); };
@@ -7167,6 +7180,10 @@ async function cargarTodo(rapido) {
   var lecturasF = (S.cfg.tabsFact || []).map(leerP);
   var lecturasC = rapido ? [] : (S.cfg.tabsCtr || []).map(leerP);
   try {
+    if (silencioso) {
+      var lect = await Promise.all(lecturasE.concat(lecturasF, lecturasC));
+      if (lect.some(function (x) { return x && x.__err; }) || !ociosoParaRefrescar(true)) { abortado = true; return; }
+    }
     // Cada pestaña se lee y se mapea por separado: los encabezados de las
     // terrestres no son los mismos que los de las marítimas.
     var fuentes = [];
@@ -7490,16 +7507,136 @@ async function cargarTodo(rapido) {
         cargarComentarios(), cargarAdvices()
       ]);
       iniciarSondeoComentarios();
+      iniciarSondeoDatos();
     }
 
-    S.avisos = avisos;
+    if (silencioso && avisos.length) abortado = true; else S.avisos = avisos;
     reanclarPendientes();
   } catch (e) {
     // Con la sesión caída no se apila un cuadro rojo con lo mismo por cada pestaña.
-    S.error = (e.sesion || huboSesion) ? null : e.message;
+    if (silencioso) abortado = true; else S.error = (e.sesion || huboSesion) ? null : e.message;
   } finally {
-    S.cargando = false; pintar();
+    if (!silencioso) { S.cargando = false; S.ultimoRefresco = Date.now(); pintar(); }
+    else {
+      S.refrescando = false;
+      if (abortado) restaurarFoto(foto); else cerrarRefresco(antes, memoria);
+    }
   }
+}
+
+/* ===========================================================================
+   Actualización automática: lo que cambia otra persona en la planilla aparece solo.
+   Cada tanto se vuelve a leer, en silencio, y SOLO si no estás haciendo nada (nada sin guardar, ninguna celda
+   en edición, ninguna ventana ni panel abierto, ningún cuadro con el cursor). Si nada cambió, no se redibuja;
+   si cambió algo, se redibuja conservando el scroll y la celda marcada, y un cartelito lo avisa.
+   =========================================================================== */
+function hashTxt(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return h; }
+function huellasCargas() {
+  var orden = [];
+  todasFilas().forEach(function (e) { orden.push(e._tab + '|' + hashTxt(JSON.stringify([e._celdas, e._colores]))); });
+  var ctr = '';
+  try { ctr = String(hashTxt(JSON.stringify(Array.from(S.contratos.values())))); } catch (e) { ctr = ''; }
+  return { orden: orden, ctr: ctr };
+}
+// Lo que se reasigna entero en cargarTodo: si la actualización falla a medias, se vuelve a esto.
+function fotoDeDatos() {
+  return { datos: S.datos, fuentes: S.fuentes, datosFact: S.datosFact, fuentesFact: S.fuentesFact, fuentesFactT: S.fuentesFactT,
+           facturar: S.facturar, contratos: S.contratos, ctrEditables: S.ctrEditables, formasPago: S.formasPago, avisos: S.avisos };
+}
+function restaurarFoto(f) { Object.keys(f).forEach(function (k) { S[k] = f[k]; }); }
+
+// La celda marcada y las filas tildadas se guardan por QUÉ carga son (no por el número de fila): si otra persona
+// agregó una fila arriba, siguen en su carga.
+function identCompleta(e) { var i = identidadDe(e); i.tab = e._tab; return i; }
+function idPorIdentidad(i) {
+  var c = todasFilas().filter(function (e) {
+    return e._tab === i.tab && clave(e.contract) === clave(i.contract) && clave(e.bl) === clave(i.bl) &&
+      clave(e.importer) === clave(i.importer) && Math.abs((normNum(e.tns) || 0) - (normNum(i.tns) || 0)) < 0.0001;
+  });
+  return c.length === 1 ? c[0]._id : null;
+}
+function recordarSeleccion() {
+  var m = { celda: null, filas: [] };
+  var e = S.celdaAct && filaPorId(S.celdaAct.id);
+  if (e) m.celda = { c: S.celdaAct.c, i: identCompleta(e) };
+  Object.keys(S.filasSel || {}).forEach(function (k) { var f = S.filasSel[k] && filaPorId(k); if (f) m.filas.push(identCompleta(f)); });
+  return m;
+}
+function restaurarSeleccion(m) {
+  if (m.celda) { var id = idPorIdentidad(m.celda.i); S.celdaAct = id ? { id: id, c: m.celda.c } : null; }
+  if (m.filas.length) {
+    var nuevas = {};
+    m.filas.forEach(function (i) { var id = idPorIdentidad(i); if (id) nuevas[id] = true; });
+    S.filasSel = nuevas; S.filasSelAncla = null;
+  }
+}
+function cerrarRefresco(antes, memoria) {
+  var ahora = huellasCargas();
+  var igual = antes.ctr === ahora.ctr && antes.orden.length === ahora.orden.length &&
+    antes.orden.every(function (h, i) { return h === ahora.orden[i]; });
+  if (igual) return;                       // nada cambió: no se redibuja
+  var viejas = {}, nuevasN = 0;
+  antes.orden.forEach(function (h) { viejas[h] = (viejas[h] || 0) + 1; });
+  ahora.orden.forEach(function (h) { if (viejas[h]) viejas[h]--; else nuevasN++; });
+  restaurarSeleccion(memoria);
+  pintar();
+  if (nuevasN) toast('Se actualizó: ' + (nuevasN === 1 ? 'cambió 1 carga' : 'cambiaron ' + nuevasN + ' cargas') + ' en la planilla', 'ok', 3500);
+  else if (antes.ctr !== ahora.ctr) toast('Se actualizaron los contratos', 'ok', 3500);
+}
+// ¿Es buen momento para actualizar sin molestar? (yaEnCurso: se vuelve a mirar después de leer, cuando ya se está actualizando)
+function ociosoParaRefrescar(yaEnCurso) {
+  if (typeof document === 'undefined' || window.__sinSondeoDatos) return false;
+  if (document.visibilityState !== 'visible' || S.pantalla !== 'app' || !S.token || S.sesionCaida || !S.datos) return false;
+  if (S.cargando || S.guardando || nPend() || S.revision || S.editCel || S.comEnviando) return false;
+  if (!yaEnCurso && S.refrescando) return false;
+  if (hayAlgoEncima() || S.pasar || S.devolver || S.alta || S.altaEmb || S.editCtr || S.elimCtr || S.confirmar) return false;
+  var a = document.activeElement;
+  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return false;
+  return true;
+}
+async function refrescarSilencioso(alVolver) {
+  if (Date.now() - (S.ultimoRefresco || 0) < (alVolver ? 15000 : 5000)) return;
+  if (!ociosoParaRefrescar()) return;
+  S.ultimoRefresco = Date.now();
+  S.nRefresco = (S.nRefresco || 0) + 1;
+  // Cada 5ª vez también se vuelven a leer los contratos y las listas; las otras, solo las cargas y «A facturar».
+  await cargarTodo(S.nRefresco % 5 !== 0, true);
+}
+
+/* Versión nueva de la app: la página se compara con la que está publicada y, si es más nueva, aparece un aviso para
+   actualizar (sin recargar sola: podrías estar escribiendo). */
+function esSitioPublicado() { return typeof location !== 'undefined' && /^https?:$/.test(location.protocol); }   // abierta desde el disco no hay nada publicado para comparar
+function versionDeTexto(txt) { var m = /var APP_VERSION = '([^']+)'/.exec(txt || ''); return m ? m[1] : null; }
+async function revisarVersion() {
+  if (S.verNueva) return;
+  S.ultimaRevVersion = Date.now();
+  try {
+    var resp = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store', headers: { Range: 'bytes=-12000' } });
+    if (!resp.ok) return;
+    var v = versionDeTexto(await resp.text());
+    if (v && v > APP_VERSION && v !== S.verIgnorada) { S.verNueva = v; pintar(); }
+  } catch (e) { /* sin conexión: se vuelve a mirar más tarde */ }
+}
+function avisoVersionHtml() {
+  if (!S.verNueva) return '';
+  return '<div class="ver-nueva" role="status"><span>Hay una versión nueva</span>' +
+    '<button type="button" class="vn-ok" data-act="actualizarapp">Actualizar</button>' +
+    '<button type="button" class="vn-x" data-act="versionluego" aria-label="Avisarme más tarde" title="Más tarde">&times;</button></div>';
+}
+var _sondeoDatos = null;
+function iniciarSondeoDatos() {
+  if (_sondeoDatos) return;
+  _sondeoDatos = setInterval(function () {
+    refrescarSilencioso(false);
+    if (esSitioPublicado() && Date.now() - (S.ultimaRevVersion || 0) > (S.verSondeoMs || 300000)) revisarVersion();
+  }, S.datosSondeoMs || 60000);
+  S.ultimaRevVersion = Date.now();
+  // Al volver a la pestaña después de un rato, se pone al día enseguida.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible' || S.pantalla !== 'app') return;
+    refrescarSilencioso(true);
+    if (esSitioPublicado() && Date.now() - (S.ultimaRevVersion || 0) > 60000) revisarVersion();
+  });
 }
 
 function fuenteDe(emb) {
@@ -8137,7 +8274,7 @@ function vistaApp() {
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     ((S.modo === 'planilla' || S.modo === 'tabla') && S.vista === 'carga' ? menuColumna() : '') +
-    modalMoverCtr() + modalLoteFact() + modalLoteDev() + modalElim() + modalElimCtr() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
+    modalMoverCtr() + modalLoteFact() + modalLoteDev() + modalElim() + modalElimCtr() + pendFlotaHtml() + avisoVersionHtml() + comPopHtml() + comCtxHtml();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -12574,6 +12711,27 @@ function pendFlotaHtml() {
    Antes de escribir se vuelve a leer la planilla y cada fila se busca por lo que
    es (contrato, BL, cliente, toneladas), no por el número que tenía: si alguien
    agregó o borró filas mientras se editaba, no se toca la fila equivocada. */
+// ¿Otra persona cambió esta celda en la planilla desde que la app la leyó? Se compara lo que hay AHORA con lo que la app
+// creía que había: si es distinto (y tampoco dice ya lo que se iba a escribir), NO se pisa.
+function choqueDe(p, mp, fila) {
+  if (p.tipo === 'color' || p.tipo === 'semaforo' || !fila) return null;
+  var idx = mp[baseSem(p.campo)];
+  if (idx === undefined) return null;
+  var hoy = convertir(fila[idx] == null ? null : fila[idx], p.tipo);
+  if (mismoValor(p.tipo, p.antes, hoy)) return null;       // nadie la tocó
+  if (mismoValor(p.tipo, p.nuevo, hoy)) return null;       // ya dice lo que se iba a escribir
+  // Una ETA sin año se completa sola con el año siguiente: mismo día y mes es la misma fecha.
+  if (p.tipo === 'fecha' && esFecha(p.antes) && esFecha(hoy) && p.antes.anioAsumido && hoy.anioAsumido &&
+      p.antes.getUTCMonth() === hoy.getUTCMonth() && p.antes.getUTCDate() === hoy.getUTCDate()) return null;
+  return { p: p, hoy: hoy };
+}
+function avisarChoques(ch) {
+  var partes = ch.slice(0, 3).map(function (c) {
+    return etqCol(c.p.campo) + ' de ' + c.donde + ': ahora dice «' + (c.txt || 'vacío') + '» (vos querías «' + (txtPend(c.p, c.p.nuevo) || 'vacío') + '»)';
+  });
+  toast('No pisé ' + (ch.length === 1 ? 'un dato' : ch.length + ' datos') + ' porque otra persona lo cambió antes · ' + partes.join(' · ') +
+    (ch.length > 3 ? ' · y ' + (ch.length - 3) + ' más' : '') + '. Ya ves lo que quedó; si preferís el tuyo, volvé a escribirlo.', 'error', 16000);
+}
 async function guardarPendientes() {
   var R = S.revision;
   if (!R || R.guardando || !nPend()) return;
@@ -12588,12 +12746,13 @@ async function guardarPendientes() {
       (porTab[emb._tab] = porTab[emb._tab] || []).push(id);
     });
 
-    var reqs = [], ubicadas = {}, tabs = Object.keys(porTab);
+    var reqs = [], ubicadas = {}, tabs = Object.keys(porTab), salidas = {}, choques = [];
     for (var t = 0; t < tabs.length; t++) {
       var idsT = porTab[tabs[t]], e0 = filaPorId(idsT[0]), nomT = tabs[t];
       var oks = await Promise.all(idsT.map(function (i2) {
         var e2 = filaPorId(i2);
-        return ubicarFilaRapido(nomT, fuenteDe(e2).mapa, porFila[i2][0].ident, e2._fila);
+        salidas[i2] = {};
+        return ubicarFilaRapido(nomT, fuenteDe(e2).mapa, porFila[i2][0].ident, e2._fila, salidas[i2]);
       }));
       var rapidoT = oks.every(Boolean);
       var h = rapidoT ? { sheetId: e0._sheetId } : await leerHoja(S.cfg.sheetId, tabs[t]);
@@ -12601,6 +12760,15 @@ async function guardarPendientes() {
       for (var q = 0; q < porTab[tabs[t]].length; q++) {
         var id = porTab[tabs[t]][q], emb = filaPorId(id), cambios = porFila[id];
         var fresca = rapidoT ? { fila: emb._fila } : ubicarFila(h, mp, cambios[0].ident, emb._fila);
+        // Lo que otra persona cambió mientras tanto no se pisa: esa celda se saltea y se avisa.
+        var filaHoy = rapidoT ? salidas[id].row : fresca.celdas, buenos = [];
+        cambios.forEach(function (pc) {
+          var ch = choqueDe(pc, mp, filaHoy);
+          if (ch) { ch.donde = String(emb.contract || emb.importer || 'la fila ' + fresca.fila).trim(); ch.txt = txtPend(pc, ch.hoy); choques.push(ch); }
+          else buenos.push(pc);
+        });
+        cambios = buenos;
+        if (!cambios.length) continue;
         var valores = {}, colores = {}, tocaTotal = false;
         cambios.forEach(function (p) {
           var esBgP = p.tipo === 'color';
@@ -12619,8 +12787,10 @@ async function guardarPendientes() {
         ubicadas[id] = fresca.fila;
       }
     }
-    if (!reqs.length) throw new Error('No hay nada para escribir.');
-    await api(BASE + S.cfg.sheetId + ':batchUpdate', {
+    if (!reqs.length && !choques.length) throw new Error('No hay nada para escribir.');
+    var choquesP = choques.map(function (c) { return c.p; });
+    lista = lista.filter(function (pl) { return choquesP.indexOf(pl) < 0; });
+    if (reqs.length) await api(BASE + S.cfg.sheetId + ':batchUpdate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ requests: reqs })
     });
@@ -12658,11 +12828,13 @@ async function guardarPendientes() {
       if (cur === p) delete S.pend[k];
       else if (cur) { cur.antes = p.nuevo; if (mismoValor(cur.tipo, cur.antes, cur.nuevo)) delete S.pend[k]; }
     });
+    choquesP.forEach(function (pc) { var kc = clavePend(pc.id, pc.campo); if (S.pend[kc] === pc) delete S.pend[kc]; });
     S.revision = null; S.pendNada = false;
-    toast((n === 1 ? 'Cambio guardado' : n + ' cambios guardados') +
+    if (n) toast((n === 1 ? 'Cambio guardado' : n + ' cambios guardados') +
       (noCoinciden ? ' · ' + (noCoinciden === 1 ? '1 no coincide' : noCoinciden + ' no coinciden') + ' con el contrato' : ''), 'ok', noCoinciden ? 6500 : 4500,
       itemsHist.length ? { texto: 'Deshacer', fn: function () { deshacer(); } } : null);
-    if (corridas) await cargarTodo(true);
+    if (corridas || choques.length) await cargarTodo(true);     // con choques, trae lo que dejó la otra persona
+    if (choques.length) avisarChoques(choques);
   } catch (e) {
     R.guardando = false;
     R.error = e.message + (e.sesion ? '' : '\nNo se guardó nada: tus cambios siguen acá.');
@@ -13984,6 +14156,8 @@ document.addEventListener('click', function (ev) {
     return ejecutarMoverContrato(S.moverCtr.contrato);
   }
   if (act === 'pendrevisar' || act === 'pendguardar') { return guardarYa(); }
+  if (act === 'actualizarapp') { asegurarGuardado().then(function () { location.reload(); }); return; }
+  if (act === 'versionluego') { S.verIgnorada = S.verNueva; S.verNueva = null; return pintar(); }
   if (act === 'pendnada') {
     // Descartar todo es irreversible: pide un segundo clic.
     if (S.pendNada) { clearTimeout(S.tPendNada); clearTimeout(S.tAuto); S.pend = {}; S.pendNada = false; S.revision = null; return pintar(); }
@@ -14996,7 +15170,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.26-n';
+var APP_VERSION = '2026.10.26-o';
 
 function arrancar() {
   cargarPrefsPlanilla();
