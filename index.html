@@ -2269,7 +2269,7 @@ button:disabled{cursor:not-allowed}
 .ctr-prods{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .ctr-ficha{display:inline-flex;align-items:stretch;border:1px solid #d1d5db;border-radius:9px;overflow:hidden;background:#fff;max-width:100%}
 .ctr-fcal{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:3px 11px;background:#f3f4f6;border-right:1px solid #d1d5db}
-.ctr-fcal small{font-size:8.5px;letter-spacing:.09em;color:#6b7280;font-weight:600;line-height:1.2}
+.ctr-fcal small{font-size:8.5px;letter-spacing:.09em;color:#4b5563;font-weight:600;line-height:1.2}
 .ctr-fcal strong{font-size:19px;line-height:1.1;color:var(--tinta,#111827);font-variant-numeric:tabular-nums;font-weight:700}
 .ctr-ftxt{display:flex;flex-direction:column;justify-content:center;padding:4px 12px;gap:1px;min-width:0}
 .ctr-fnom{font-size:15px;font-weight:700;color:var(--tinta,#111827);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2278,6 +2278,12 @@ button:disabled{cursor:not-allowed}
 .ctr-ftipo i{width:8px;height:8px;border-radius:50%;display:inline-block;background:#9ca3af}
 .ctr-ftipo i.tp-mani{background:#d97706}.ctr-ftipo i.tp-aceite{background:#84a913}.ctr-ftipo i.tp-expeller{background:#8b5a2b}
 @media(max-width:600px){.ctr-ficha{width:100%}.ctr-fnom{white-space:normal}}
+
+/* Eliminar contrato: al final del editor, en rojo y con el tachito */
+.ctr-peligro{margin:26px 0 6px;padding-top:18px;border-top:1px solid var(--linea2);display:flex;flex-direction:column;gap:8px}
+.ctr-elim{align-self:flex-start;min-height:40px;padding:0 16px;font-size:14px;font-weight:600;border-color:#d93025;color:#b3261e;background:#fff}
+.ctr-elim:hover{background:#d93025;color:#fff}
+.ctr-elim .ico{width:16px;height:16px}
 </style>
 </head>
 <body>
@@ -2440,7 +2446,7 @@ var S = {
   adviceTo: null,
   adviceFilas: {},
   marcados: {},
-  filasSel: {}, filasSelAncla: null, soloSel: false, loteFact: null, loteDev: null, elim: null, hist: [], rehacer: [], histOcupado: false,
+  filasSel: {}, filasSelAncla: null, soloSel: false, loteFact: null, loteDev: null, elim: null, elimCtr: null, hist: [], rehacer: [], histOcupado: false,
   advices: new Map(),
   advicesViejos: 0,
   paises: new Map(),
@@ -8131,7 +8137,7 @@ function vistaApp() {
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     ((S.modo === 'planilla' || S.modo === 'tabla') && S.vista === 'carga' ? menuColumna() : '') +
-    modalMoverCtr() + modalLoteFact() + modalLoteDev() + modalElim() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
+    modalMoverCtr() + modalLoteFact() + modalLoteDev() + modalElim() + modalElimCtr() + pendFlotaHtml() + comPopHtml() + comCtxHtml();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -10892,7 +10898,8 @@ function panelContrato() {
               ? ' de ' + esc([repeEd.exportador, repeEd.importador].filter(Boolean).join(' → '))
               : '') + '. Si no es a propósito, revisalo antes de guardar.</div>'
           : '') +
-        ''
+        '<div class="ctr-peligro"><button class="btn-elim ctr-elim" data-act="ctrelim" data-k="' + esc(e.contrato) + '">' + ico('papelera') + 'Eliminar contrato</button>' +
+        '<p class="ayuda">Borra la fila del contrato en la planilla. Te pide confirmar dos veces.</p></div>'
       : '') +
     '</aside>';
 }
@@ -11693,6 +11700,7 @@ function histDesc(e) {
     var nf = Object.keys(filasU).length;
     return 'cambio' + (e.items.length === 1 ? '' : 's') + ' en ' + (e.items.length === 1 ? etqCol(e.items[0].campo).toLowerCase() : nf + (nf === 1 ? ' fila' : ' filas'));
   }
+  if (e.tipo === 'contrato') return 'eliminar el contrato ' + e.nombre;
   if (e.tipo === 'eliminar') return 'eliminar ' + (e.filas.length === 1 ? e.filas[0].quien : e.filas.length + ' cargas');
   if (e.tipo === 'facturar' && e.inverso) return 'devolver ' + (e.items.length === 1 ? e.items[0].quien : e.items.length + ' cargas') + ' a su pestaña';
   if (e.tipo === 'facturar') return 'pasar a ' + e.hacia + (e.items.length === 1 ? ' ' + e.items[0].quien : ' (' + e.items.length + ' cargas)');
@@ -11715,6 +11723,34 @@ async function filaCruda(sheetId, tab, fila) {
   var vals = (rd && rd[0] && rd[0].values) || [];
   if (!vals.length) throw new Error('Google no devolvió el contenido de la fila.');
   return vals;
+}
+/* Al borrar la primera o la última fila de datos, el rango de las fórmulas de la fila TOTAL se achica; al volver a insertarla,
+   Sheets no lo vuelve a agrandar. Por eso, antes de borrar se guarda cómo estaba la fila TOTAL y, al deshacer, se le devuelven sus fórmulas
+   (solo si la hoja quedó con las filas en el mismo lugar). */
+async function capturarTotal(tab, sheetId) {
+  try {
+    var f = await filaTotalDe(tab);
+    if (!f) return null;
+    return { tab: tab, sheetId: sheetId, fila: f, valores: await filaCruda(sheetId, tab, f) };
+  } catch (e) { return null; }
+}
+async function restaurarTotales(totales) {
+  var avisos = [];
+  var tabs = Object.keys(totales || {});
+  for (var i = 0; i < tabs.length; i++) {
+    var t = totales[tabs[i]];
+    if (!t) continue;
+    var f = await filaTotalDe(t.tab);
+    if (f !== t.fila) { avisos.push(t.tab); continue; }
+    var reqs = [];
+    t.valores.forEach(function (cel, k) {
+      var uv = cel && cel.userEnteredValue;
+      if (uv && uv.formulaValue) reqs.push({ updateCells: { range: { sheetId: t.sheetId, startRowIndex: f - 1, endRowIndex: f, startColumnIndex: k, endColumnIndex: k + 1 },
+        rows: [{ values: [{ userEnteredValue: uv }] }], fields: 'userEnteredValue' } });
+    });
+    if (reqs.length) await api(BASE + S.cfg.sheetId + ':batchUpdate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: reqs }) });
+  }
+  return avisos;
 }
 async function reinsertarFila(f) {
   var reqs = [{ insertDimension: { range: { sheetId: f.sheetId, dimension: 'ROWS', startIndex: f.indice, endIndex: f.indice + 1 }, inheritFromBefore: false } }];
@@ -11760,9 +11796,28 @@ async function aplicarHist(e, atras) {
     }
     return;
   }
+  if (e.tipo === 'contrato') {
+    if (atras) {
+      for (var ic = e.filas.length - 1; ic >= 0; ic--) await reinsertarFilaCtr(e.filas[ic], e.nombre);
+      var sinTotalC = await restaurarTotales(e.totales);
+      if (sinTotalC.length) toast('Revisá la fila TOTAL de «' + sinTotalC.join('», «') + '»: la hoja cambió y no pude devolverle sus fórmulas.', 'error', 9000);
+    } else {
+      var frescas = await filasFrescasDeContrato(e.nombre);
+      if (!frescas.length) throw new Error('el contrato ya no está en la planilla.');
+      await api(BASE + S.cfg.sheetId + ':batchUpdate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: frescas.map(function (f) {
+          return { deleteDimension: { range: { sheetId: f.sheetId, dimension: 'ROWS', startIndex: f.fila - 1, endIndex: f.fila } } };
+        }) }) });
+      e.filas = frescas.map(function (f, k) { return { tab: f.tab, sheetId: f.sheetId, indice: f.fila - 1, valores: (e.filas[k] || e.filas[0]).valores }; });
+    }
+    await cargarTodo();
+    return;
+  }
   if (e.tipo === 'eliminar') {
     if (atras) {
       for (var i = e.filas.length - 1; i >= 0; i--) await reinsertarFila(e.filas[i]);
+      var sinTotal = await restaurarTotales(e.totales);
+      if (sinTotal.length) toast('Revisá la fila TOTAL de «' + sinTotal.join('», «') + '»: la hoja cambió y no pude devolverle sus fórmulas.', 'error', 9000);
     } else {
       for (var j = 0; j < e.filas.length; j++) await borrarPorIdent(e.filas[j]);
     }
@@ -11828,6 +11883,101 @@ document.addEventListener('keydown', function (ev) {
 });
 
 /* --- Eliminar cargas (cargadas por error o que al final no se confirmaron) --- */
+/* --- Eliminar un contrato (borra su fila —o sus filas, una por producto— de la planilla) --- */
+async function filasFrescasDeContrato(nombre) {
+  var ref = S.ctrEditables.get(nombre), tabs = {}, out = [];
+  filasDelContrato(ref).forEach(function (f) { tabs[f.tab] = 1; });
+  var nombres = Object.keys(tabs);
+  for (var i = 0; i < nombres.length; i++) {
+    var h = await leerHoja(S.cfg.sheetId, nombres[i]);
+    var m = detectar(h.encabezados, CAMPOS_CTR).mapa;
+    if (m.contrato === undefined) continue;
+    h.filas.forEach(function (f) {
+      if (clave(f.celdas[m.contrato]) === clave(nombre)) out.push({ tab: nombres[i], sheetId: h.sheetId, fila: f.fila });
+    });
+  }
+  out.sort(function (a, b) { return a.tab === b.tab ? b.fila - a.fila : (a.tab < b.tab ? -1 : 1); });   // de la última a la primera
+  return out;
+}
+function modalElimCtr() {
+  var E = S.elimCtr;
+  if (!E) return '';
+  var ref = S.ctrEditables.get(E.nombre), filas = filasDelContrato(ref), ctr = S.contratos.get(E.nombre) || {};
+  var embs = todasFilas().filter(function (x) { return clave(x.contract) === clave(E.nombre); });
+  var enCurso = embs.filter(function (x) { return !x._aFacturar && !x._esFact; }).length, aFact = embs.length - enCurso;
+  var prods = filas.map(function (fr) {
+    var i = fr.mapa.producto, j = fr.mapa.tns;
+    return '<li>' + esc(i === undefined || fr.celdas[i] == null ? 'sin producto' : String(fr.celdas[i])) +
+      (j !== undefined && normNum(fr.celdas[j]) ? ' · ' + fmtNum(normNum(fr.celdas[j])) + ' tn' : '') + '</li>';
+  }).join('');
+  var cab = '<h3 id="ec-t">' + (E.paso === 2 ? 'Última confirmación' : '¿Eliminar el contrato ' + esc(E.nombre) + '?') + '</h3>';
+  var cuerpo;
+  if (E.paso !== 2) {
+    cuerpo = '<p class="mcm-donde">' + esc([ctr.exportador, ctr.importador].filter(Boolean).join(' → ') || 'Sin partes') + '</p>' +
+      '<ul class="mover-ctr-lista">' + prods + '</ul>' +
+      '<ul class="mover-que"><li>Se borra' + (filas.length === 1 ? ' la fila' : 'n las ' + filas.length + ' filas') + ' de «' + esc(ref ? ref.tab : '') + '» en la planilla, y no queda ninguna fila vacía.</li></ul>' +
+      ((enCurso || aFact)
+        ? '<div class="mcm-aviso"><span class="mcm-ico">' + ico('enlace') + '</span><div><p><b>Ojo: este contrato tiene ' +
+          (enCurso ? enCurso + (enCurso === 1 ? ' embarque en curso' : ' embarques en curso') : '') + (enCurso && aFact ? ' y ' : '') +
+          (aFact ? aFact + ' ya en «A facturar»' : '') + '.</b></p><p class="mcm-sub">Eliminar el contrato no borra esos embarques, pero van a quedar sin contrato.</p></div></div>'
+        : '');
+  } else {
+    cuerpo = '<p>Vas a borrar <b>' + esc(E.nombre) + '</b> (' + filas.length + (filas.length === 1 ? ' fila' : ' filas') + ') de la planilla compartida: lo ve todo el equipo.</p>' +
+      '<p class="ayuda">Se puede deshacer con Ctrl+Z mientras no recargues la página; después solo desde el Historial de versiones de Sheets.</p>';
+  }
+  return '<div class="modal-velo" data-act="ctrelimno"></div>' +
+    '<div class="modal-caja"><div class="modal-cambio" role="alertdialog" aria-modal="true" aria-labelledby="ec-t">' + cab + cuerpo +
+      (E.error ? '<div class="error" role="alert" style="margin-top:12px">' + esc(E.error) + '</div>' : '') +
+      '<div class="mcm-acc">' +
+        (E.paso === 2 ? '<button data-act="ctrelimvolver"' + (E.moviendo ? ' disabled' : '') + '>Volver</button>'
+                      : '<button data-act="ctrelimno">Cancelar</button>') +
+        (E.paso === 2
+          ? '<button class="primario peligro" data-act="ctrelimok"' + (E.moviendo ? ' disabled' : '') + '>' + (E.moviendo ? 'Eliminando…' : ico('papelera') + 'Sí, eliminar el contrato') + '</button>'
+          : '<button class="primario peligro" data-act="ctrelimsig">Continuar</button>') +
+      '</div></div></div>';
+}
+async function eliminarContrato() {
+  var E = S.elimCtr;
+  if (!E || E.moviendo) return;
+  E.moviendo = true; E.error = null; pintar();
+  try {
+    var filas = await filasFrescasDeContrato(E.nombre);
+    if (!filas.length) throw new Error('No encontré ese contrato en la planilla (¿alguien lo borró o lo cambió?). No toqué nada.');
+    var copias = [], totales = {};
+    for (var it = 0; it < filas.length; it++) { if (!(filas[it].tab in totales)) totales[filas[it].tab] = await capturarTotal(filas[it].tab, filas[it].sheetId); }
+    for (var i = 0; i < filas.length; i++) {          // copia exacta de cada fila, para poder deshacer; sin copia no se borra
+      var v;
+      try { v = await filaCruda(filas[i].sheetId, filas[i].tab, filas[i].fila); }
+      catch (e0) { throw new Error('No pude guardar una copia de la fila para poder deshacer, así que no borré nada. ' + e0.message); }
+      copias.push({ tab: filas[i].tab, sheetId: filas[i].sheetId, indice: filas[i].fila - 1, valores: v });
+    }
+    await api(BASE + S.cfg.sheetId + ':batchUpdate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: filas.map(function (f) {
+        return { deleteDimension: { range: { sheetId: f.sheetId, dimension: 'ROWS', startIndex: f.fila - 1, endIndex: f.fila } } };
+      }) }) });
+    histRegistrar({ tipo: 'contrato', nombre: E.nombre, filas: copias, totales: totales });
+    S.elimCtr = null; S.editCtr = null; S.confirmCerrar = false;
+    await cargarTodo();
+    toast('Contrato ' + E.nombre + ' eliminado de la planilla', 'ok', 8000, { texto: 'Deshacer', fn: function () { deshacer(); } });
+  } catch (e) {
+    E.moviendo = false; E.error = e.message;
+  } finally {
+    pintar();
+  }
+}
+async function reinsertarFilaCtr(f, nombre) {
+  var reqs = [{ insertDimension: { range: { sheetId: f.sheetId, dimension: 'ROWS', startIndex: f.indice, endIndex: f.indice + 1 }, inheritFromBefore: false } }];
+  if (f.valores && f.valores.length) {
+    reqs.push({ updateCells: { range: { sheetId: f.sheetId, startRowIndex: f.indice, endRowIndex: f.indice + 1, startColumnIndex: 0, endColumnIndex: f.valores.length },
+      rows: [{ values: f.valores }], fields: 'userEnteredValue,userEnteredFormat' } });
+  }
+  await api(BASE + S.cfg.sheetId + ':batchUpdate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: reqs }) });
+  var h = await leerHoja(S.cfg.sheetId, f.tab), m = detectar(h.encabezados, CAMPOS_CTR).mapa;
+  if (!h.filas.some(function (x) { return x.fila === f.indice + 1 && clave(x.celdas[m.contrato]) === clave(nombre); })) {
+    throw new Error('La fila se reinsertó pero no pude comprobar que quedó bien: revisá «' + f.tab + '».');
+  }
+}
+
 function modalElim() {
   var E = S.elim;
   if (!E) return '';
@@ -11870,7 +12020,7 @@ async function eliminarCargas() {
     }
   }
   E.moviendo = true; E.hechas = 0; E.error = null; pintar();
-  var hechas = [], borradas = [];
+  var hechas = [], borradas = [], totales = {};
   try {
     for (var i = 0; i < embs.length; i++) {
       var emb = embs[i];
@@ -11881,6 +12031,7 @@ async function eliminarCargas() {
         var mp = detectar(h.encabezados, CAMPOS).mapa;
         fresca = ubicarFila(h, mp, emb, emb._fila);
       }
+      if (!(emb._tab in totales)) totales[emb._tab] = await capturarTotal(emb._tab, h.sheetId);
       // Copia exacta de la fila (valores, fórmulas y formato) para poder deshacer. Sin copia no se borra.
       var copia;
       try { copia = await filaCruda(h.sheetId, emb._tab, fresca.fila); }
@@ -11893,7 +12044,7 @@ async function eliminarCargas() {
       borradas.push({ tab: emb._tab, sheetId: h.sheetId, indice: fresca.fila - 1, valores: copia, ident: identidadDe(emb), quien: resumenMudanza(emb).quien });
       hechas.push(emb._id); E.hechas = hechas.length; pintar();
     }
-    histRegistrar({ tipo: 'eliminar', filas: borradas });
+    histRegistrar({ tipo: 'eliminar', filas: borradas, totales: totales });
     S.avisoOk = hechas.length === 1 ? 'Carga eliminada de la planilla.' : hechas.length + ' cargas eliminadas de la planilla.';
     S.elim = null;
     hechas.forEach(function (id) { delete S.filasSel[id]; });
@@ -11902,7 +12053,7 @@ async function eliminarCargas() {
     toast(S.avisoOk, 'ok', 8000, { texto: 'Deshacer', fn: function () { deshacer(); } });
   } catch (e) {
     E.moviendo = false;
-    if (borradas.length) histRegistrar({ tipo: 'eliminar', filas: borradas });
+    if (borradas.length) histRegistrar({ tipo: 'eliminar', filas: borradas, totales: totales });
     E.error = (hechas.length ? 'Se eliminaron ' + hechas.length + ' de ' + embs.length + '; se frenó en la siguiente: ' : 'No se eliminó nada: ') + e.message;
     hechas.forEach(function (id) { delete S.filasSel[id]; });
     E.ids = E.ids.filter(function (id) { return hechas.indexOf(id) < 0; });
@@ -13886,6 +14037,11 @@ document.addEventListener('click', function (ev) {
   }
   if (act === 'deshacer') { return deshacer(); }
   if (act === 'rehacer') { return rehacerHist(); }
+  if (act === 'ctrelim') { S.elimCtr = { nombre: el.getAttribute('data-k'), paso: 1, moviendo: false, error: null }; return pintar(); }
+  if (act === 'ctrelimsig') { if (S.elimCtr) { S.elimCtr.paso = 2; S.elimCtr.error = null; pintar(); } return; }
+  if (act === 'ctrelimvolver') { if (S.elimCtr && !S.elimCtr.moviendo) { S.elimCtr.paso = 1; pintar(); } return; }
+  if (act === 'ctrelimno') { if (S.elimCtr && !S.elimCtr.moviendo) { S.elimCtr = null; pintar(); } return; }
+  if (act === 'ctrelimok') { return eliminarContrato(); }
   if (act === 'elimsel') {
     var idsE = Object.keys(S.filasSel).filter(function (k) { return S.filasSel[k] && filaPorId(k); });
     if (!idsE.length) return;
@@ -14665,6 +14821,7 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && S.menuCol && e.target.id === 'mc-texto') {
     var bOk = document.querySelector('[data-act="mcok"]'); if (bOk) bOk.click(); return;
   }
+  if (e.key === 'Escape' && S.elimCtr && !S.elimCtr.moviendo) { S.elimCtr = null; return pintar(); }
   if (e.key === 'Escape' && S.gen) { if (S.gen.confirmaCierre) { S.gen.confirmaCierre = false; return pintar(); } return pedirCerrarGen(); }
   // Escape en el editor de contratos: misma pregunta que al cerrar.
   if (e.key === 'Escape' && S.editCtr) {
@@ -14839,7 +14996,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.26-m';
+var APP_VERSION = '2026.10.26-n';
 
 function arrancar() {
   cargarPrefsPlanilla();
