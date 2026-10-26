@@ -2265,12 +2265,19 @@ button:disabled{cursor:not-allowed}
   .gen-confirma .gen-botones{width:100%}.gen-confirma .gen-botones button{flex:1;min-width:0}
 }
 
-/* Producto y calibre en cada contrato */
-.ctr-prods{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 14px}
-.ctr-prod{display:inline-flex;align-items:center;gap:9px;padding:6px 12px 6px 8px;border-radius:10px;background:var(--sup2);max-width:100%;font-size:14.5px}
-.ctr-cal{background:var(--acento);color:#fff;border-radius:7px;padding:2px 9px;font-size:14px;font-weight:700;letter-spacing:.01em;font-variant-numeric:tabular-nums}
-.ctr-pn{font-weight:600;color:var(--tinta);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ctr-prod em{font-style:normal;color:var(--tinta3);font-size:13px;white-space:nowrap}
+/* Producto y calibre en cada contrato: ficha compacta, en gris (el color se reserva para el estado) */
+.ctr-prods{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.ctr-ficha{display:inline-flex;align-items:stretch;border:1px solid #d1d5db;border-radius:9px;overflow:hidden;background:#fff;max-width:100%}
+.ctr-fcal{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:3px 11px;background:#f3f4f6;border-right:1px solid #d1d5db}
+.ctr-fcal small{font-size:8.5px;letter-spacing:.09em;color:#6b7280;font-weight:600;line-height:1.2}
+.ctr-fcal strong{font-size:19px;line-height:1.1;color:var(--tinta,#111827);font-variant-numeric:tabular-nums;font-weight:700}
+.ctr-ftxt{display:flex;flex-direction:column;justify-content:center;padding:4px 12px;gap:1px;min-width:0}
+.ctr-fnom{font-size:15px;font-weight:700;color:var(--tinta,#111827);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctr-fsub{display:flex;gap:12px;font-size:12.5px;color:#4b5563;line-height:1.25}
+.ctr-ftipo{display:inline-flex;align-items:center;gap:6px}
+.ctr-ftipo i{width:8px;height:8px;border-radius:50%;display:inline-block;background:#9ca3af}
+.ctr-ftipo i.tp-mani{background:#d97706}.ctr-ftipo i.tp-aceite{background:#84a913}.ctr-ftipo i.tp-expeller{background:#8b5a2b}
+@media(max-width:600px){.ctr-ficha{width:100%}.ctr-fnom{white-space:normal}}
 </style>
 </head>
 <body>
@@ -11207,13 +11214,16 @@ function partirProducto(txt) {
 function productosDeContrato(r) {
   var ref = S.ctrEditables.get(r.contrato), out = [];
   filasDelContrato(ref).forEach(function (fr) {
-    var i = fr.mapa.producto, j = fr.mapa.tns;
+    var i = fr.mapa.producto, j = fr.mapa.tns, k = fr.mapa.tipo;
     var prod = i === undefined || fr.celdas[i] == null ? '' : String(fr.celdas[i]).trim();
     var tns = j === undefined ? null : normNum(fr.celdas[j]);
-    if (prod) out.push({ prod: prod, tns: tns });
+    var tipo = k === undefined || fr.celdas[k] == null ? '' : tipoCtr(fr.celdas[k]);
+    if (prod) out.push({ prod: prod, tns: tns, tipo: tipo && tipo !== 'otro' ? tipo : (r.tipos && r.tipos.length === 1 && r.tipos[0] !== 'otro' ? r.tipos[0] : '') });
   });
   if (!out.length && r.producto) {
-    String(r.producto).split(' + ').forEach(function (x) { if (String(x).trim()) out.push({ prod: String(x).trim(), tns: null }); });
+    String(r.producto).split(' + ').forEach(function (x) {
+      if (String(x).trim()) out.push({ prod: String(x).trim(), tns: null, tipo: r.tipos && r.tipos.length === 1 && r.tipos[0] !== 'otro' ? r.tipos[0] : '' });
+    });
   }
   return out;
 }
@@ -11304,23 +11314,30 @@ function filaContrato(r) {
   var origen = ref ? esc(ref.tab) + ' · fila ' + ref.fila
     : (r.origen ? esc(r.origen) + ' · solo lectura' : '');
 
-  return '<article class="ctr-fila ctr-card ctr-' + cls + (editable ? ' editable' : '') + '"' +
+  return '<article class="ctr-fila ctr-card ctr-' + cls + (editable ? ' editable' : '') + '" data-tipos="' + esc(r.tipos.join(' ')) + '"' +
     (editable ? ' data-act="ctrabrir" data-k="' + esc(r.contrato) + '" tabindex="0"' : '') + '>' +
 
     // Arriba: qué contrato es y en qué situación está, de un vistazo.
     '<header class="ctr-cab">' +
       '<div class="ctr-id"><h3 class="ctr-num" title="' + esc(r.contrato) + '">' + numHtml + '</h3>' +
         (esFecha(r.fecha) ? '<span class="ct-fecha">' + fmtFecha(r.fecha) + '</span>' : '') + '</div>' +
-      '<div class="ctr-chips">' + estPill + tipoPills + viaPill + partes + firmas + '</div>' +
+      '<div class="ctr-chips">' + estPill + (prods.length ? '' : tipoPills) + viaPill + partes + firmas + '</div>' +
     '</header>' +
 
     (prods.length
       ? '<div class="ctr-prods" aria-label="Producto y calibre">' + prods.map(function (x) {
           var pp = partirProducto(x.prod);
-          return '<span class="ctr-prod" title="' + esc(x.prod) + '">' +
-            (pp.calibre ? '<b class="ctr-cal">' + esc(pp.calibre) + '</b>' : '') +
-            '<span class="ctr-pn">' + esc(pp.resto || (pp.calibre ? '' : x.prod)) + '</span>' +
-            (x.tns ? '<em>' + tn(x.tns) + ' tn</em>' : '') + '</span>';
+          var nombre = pp.resto || (pp.calibre ? '' : x.prod);
+          var tTxt = x.tipo === 'mani' ? 'Maní' : x.tipo === 'aceite' ? 'Aceite' : x.tipo === 'expeller' ? 'Expeller' : '';
+          // El tipo no se repite si el producto ya lo dice (Expeller / Expeller).
+          if (tTxt && clave(nombre) === clave(tTxt)) tTxt = '';
+          return '<div class="ctr-ficha" title="' + esc(x.prod) + '">' +
+            (pp.calibre ? '<div class="ctr-fcal"><small>CALIBRE</small><strong>' + esc(pp.calibre) + '</strong></div>' : '') +
+            '<div class="ctr-ftxt"><div class="ctr-fnom">' + esc(nombre || x.prod) + '</div>' +
+              ((tTxt || x.tns) ? '<div class="ctr-fsub">' +
+                (tTxt ? '<span class="ctr-ftipo"><i class="tp-' + x.tipo + '"></i>' + tTxt + '</span>' : '') +
+                (x.tns ? '<span>' + tn(x.tns) + ' tn</span>' : '') + '</div>' : '') +
+            '</div></div>';
         }).join('') + '</div>'
       : '') +
 
@@ -14822,7 +14839,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.26-l';
+var APP_VERSION = '2026.10.26-m';
 
 function arrancar() {
   cargarPrefsPlanilla();
