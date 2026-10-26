@@ -2264,6 +2264,13 @@ button:disabled{cursor:not-allowed}
   .gen-confirma{padding:14px}
   .gen-confirma .gen-botones{width:100%}.gen-confirma .gen-botones button{flex:1;min-width:0}
 }
+
+/* Producto y calibre en cada contrato */
+.ctr-prods{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 14px}
+.ctr-prod{display:inline-flex;align-items:center;gap:9px;padding:6px 12px 6px 8px;border-radius:10px;background:var(--sup2);max-width:100%;font-size:14.5px}
+.ctr-cal{background:var(--acento);color:#fff;border-radius:7px;padding:2px 9px;font-size:14px;font-weight:700;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.ctr-pn{font-weight:600;color:var(--tinta);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctr-prod em{font-style:normal;color:var(--tinta3);font-size:13px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -11189,6 +11196,28 @@ function formAlta() {
     '</div></div>';
 }
 
+// Producto y calibre de un contrato, tal como están en la planilla. Si el contrato tiene varias filas (varios productos), una por cada una.
+function partirProducto(txt) {
+  var t = String(txt || '').replace(/\s+/g, ' ').trim();
+  var m = t.match(/\b(\d{2,3}\s*\/\s*\d{2,3})\b/);
+  if (!m) return { calibre: '', resto: t };
+  var resto = (t.slice(0, m.index) + ' ' + t.slice(m.index + m[0].length)).replace(/\s+/g, ' ').replace(/^[\s\-–,]+|[\s\-–,]+$/g, '').trim();
+  return { calibre: m[1].replace(/\s+/g, ''), resto: resto };
+}
+function productosDeContrato(r) {
+  var ref = S.ctrEditables.get(r.contrato), out = [];
+  filasDelContrato(ref).forEach(function (fr) {
+    var i = fr.mapa.producto, j = fr.mapa.tns;
+    var prod = i === undefined || fr.celdas[i] == null ? '' : String(fr.celdas[i]).trim();
+    var tns = j === undefined ? null : normNum(fr.celdas[j]);
+    if (prod) out.push({ prod: prod, tns: tns });
+  });
+  if (!out.length && r.producto) {
+    String(r.producto).split(' + ').forEach(function (x) { if (String(x).trim()) out.push({ prod: String(x).trim(), tns: null }); });
+  }
+  return out;
+}
+
 function filaContrato(r) {
   var pctTxt = r.pct !== null ? Math.round(r.pct * 100) + '%' : '';
   var estado, cls;
@@ -11270,6 +11299,7 @@ function filaContrato(r) {
       ' tn, más de lo que dice la columna de entregado', ' aviso']);
   }
 
+  var prods = productosDeContrato(r);
   var ref = S.ctrEditables.get(r.contrato);
   var origen = ref ? esc(ref.tab) + ' · fila ' + ref.fila
     : (r.origen ? esc(r.origen) + ' · solo lectura' : '');
@@ -11283,6 +11313,16 @@ function filaContrato(r) {
         (esFecha(r.fecha) ? '<span class="ct-fecha">' + fmtFecha(r.fecha) + '</span>' : '') + '</div>' +
       '<div class="ctr-chips">' + estPill + tipoPills + viaPill + partes + firmas + '</div>' +
     '</header>' +
+
+    (prods.length
+      ? '<div class="ctr-prods" aria-label="Producto y calibre">' + prods.map(function (x) {
+          var pp = partirProducto(x.prod);
+          return '<span class="ctr-prod" title="' + esc(x.prod) + '">' +
+            (pp.calibre ? '<b class="ctr-cal">' + esc(pp.calibre) + '</b>' : '') +
+            '<span class="ctr-pn">' + esc(pp.resto || (pp.calibre ? '' : x.prod)) + '</span>' +
+            (x.tns ? '<em>' + tn(x.tns) + ' tn</em>' : '') + '</span>';
+        }).join('') + '</div>'
+      : '') +
 
     '<div class="ctr-cuerpo' + (datos.length ? '' : ' sin-datos') + '">' +
       '<section class="ctr-zona ctr-partes" aria-label="Partes">' +
@@ -14738,7 +14778,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.23-j';
+var APP_VERSION = '2026.10.26-k';
 
 function arrancar() {
   cargarPrefsPlanilla();
