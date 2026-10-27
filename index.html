@@ -2292,6 +2292,43 @@ button:disabled{cursor:not-allowed}
 .ctr-elim{align-self:flex-start;min-height:40px;padding:0 16px;font-size:14px;font-weight:600;border-color:#d93025;color:#b3261e;background:#fff}
 .ctr-elim:hover{background:#d93025;color:#fff}
 .ctr-elim .ico{width:16px;height:16px}
+/* Período de embarque */
+.per-ctl .per-modos{margin:2px 0 10px;display:flex;flex-wrap:wrap;gap:4px}
+.segmento.sub.per-modos button{min-height:44px;font-size:14px;flex:1 1 auto}
+.per-fila{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:6px 0}
+.per-et{color:#4b5563;font-size:14px}
+.per-sel,.per-tn,.per-texto{min-height:44px;border:1px solid #c7c7cc;border-radius:10px;padding:0 10px;background:#fff;color:#1d1d1f;font:inherit;font-size:15px}
+.per-sel{min-width:0;max-width:100%}
+.per-mes{flex:1 1 150px;max-width:220px}
+.alta-grid .per-ctl{grid-column:1/-1}
+.per-anio{width:92px}
+.per-tn{width:112px}
+.per-texto{width:100%}
+.per-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#f3f4f6;color:#4b5563;font-size:13px;font-weight:600}
+.per-x{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;border-radius:10px;background:transparent;color:#6b7280;cursor:pointer}
+.per-x:hover{background:#f3f4f6;color:#b91c1c}
+.per-mas{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border:1px dashed #9ca3af;border-radius:10px;background:transparent;color:#1d1d1f;font:inherit;cursor:pointer}
+.per-ayuda{margin:6px 0 2px;color:#4b5563;font-size:13.5px}
+.per-msg p{margin:6px 0 0;font-size:13.5px}
+.per-resumen{color:#4b5563}
+.per-resumen b{color:#1d1d1f}
+.per-total{color:#374151}
+.per-total.difiere{color:#92400e}
+.per-aviso{color:#92400e;background:#fef3c7;border-radius:8px;padding:6px 10px}
+.per-error{color:#b91c1c;font-weight:600}
+.ctr-per{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:-4px 0 12px}
+.per-rot{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;font-weight:600;margin-right:2px}
+.per-chip{display:inline-flex;align-items:baseline;gap:6px;padding:3px 11px;border:1px solid #d1d5db;border-radius:980px;background:#fff;color:#111827;font-size:14px;max-width:100%}
+.per-chip b{font-weight:700}
+.per-chip small{color:#4b5563;font-size:12.5px}
+.per-chip.sel{border-color:#2563eb;background:#eff6ff}
+.per-mas-sig{color:#6b7280;font-weight:600}
+.per-rev{padding:2px 9px;border-radius:980px;background:#fef3c7;color:#92400e;font-size:12.5px;font-weight:600}
+.per-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:0 0 14px;padding:12px 16px;border:1px solid #fcd34d;border-radius:12px;background:#fffbeb;color:#1d1d1f}
+.per-banner .pb-txt{flex:1 1 320px;font-size:14px;line-height:1.45}
+.per-banner .pb-acc{display:flex;gap:8px}
+.per-banner .per-error{flex-basis:100%;margin:0}
+@media(max-width:900px){.per-anio{width:88px}.per-tn{width:100px}}
 </style>
 </head>
 <body>
@@ -2358,6 +2395,9 @@ var S = {
   fTipoCtr: '',
   fExpCtr: '',            // contratos: filtrar por exportador (el nombre elegido)
   fImpCtr: '',            // contratos: filtrar por importador
+  fMesCtr: '',            // contratos: «Embarca en» un mes ('AAAA*12+mes-1') o 'prompt'
+  mapaCtrEd: {},          // columnas de cada pestaña de contratos editable (para saber si faltan las del período)
+  perCols: null, perColsNo: false,   // alta de las columnas del período en la planilla
   ctrFiltrosAbierto: false,   // en el celular los filtros de contratos se pliegan
   memVista: {},           // lo que cada pestaña (Cargas, Control, Contratos) tenía abierto al irte
   ordenCtr: 'recientes',
@@ -2564,6 +2604,10 @@ var CAMPOS_CTR = {
   entregado:  {alias:['ent','entregado','delivered']},
   saldo:      {alias:['saldo','saldo del contrato','balance']},
   periodo:    {alias:['periodo de embarque','período de embarque','shipment period','periodo']},
+  perModo:    {alias:['modo embarque','modo de embarque','tipo de periodo']},
+  perDesde:   {alias:['embarque desde','periodo desde']},
+  perHasta:   {alias:['embarque hasta','periodo hasta']},
+  perPartidas:{alias:['partidas embarque','partidas de embarque']},
   fecha:      {alias:['fecha','date']}
 };
 
@@ -3642,6 +3686,210 @@ var VIA_TXT = { maritimo: 'Marítimo', terrestre: 'Terrestre' };
 
 /* Tipo de contrato: sale de la columna «Tipo» (Maní, Aceite, Expeller). Todo lo
    que no es una de esas tres —Birdfood, Cancelado, vacío— cae en «otros». */
+/* ===========================================================================
+   Período de embarque de un contrato.
+
+   Hasta ahora era un texto libre, y «Septiembre - Diciembre» servía para dos cosas distintas:
+     · VENTANA: la carga puede salir en cualquiera de esos meses (Sep, Oct, Nov o Dic).
+     · PARTIDAS: una parte sale en septiembre y otra en diciembre, y nada en el medio.
+   Ahora hay cuatro modos, y la planilla guarda cuál es:
+     ventana  → «Octubre 2026 - Diciembre 2026»                          (desde / hasta)
+     partidas → «Septiembre 2026 (500 tn) + Diciembre 2026 (500 tn)»     (cada mes con sus toneladas)
+     prompt   → «Prompt»
+     texto    → cualquier otra cosa escrita a mano («Antes del 30 de octubre 2026»)
+   La columna «Periodo de embarque» sigue llevando un texto legible (lo usan el contrato en Word y quien mire la planilla);
+   las columnas nuevas (Modo embarque / Embarque desde / Embarque hasta / Partidas embarque) guardan la estructura.
+   Si esas columnas no existen o están vacías, se interpreta el texto: también entiende lo escrito antes de este cambio.
+   =========================================================================== */
+var MESES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+var MES_NOMBRES = { enero: 1, ene: 1, january: 1, jan: 1, febrero: 2, feb: 2, february: 2, marzo: 3, mar: 3, march: 3,
+  abril: 4, abr: 4, april: 4, apr: 4, mayo: 5, may: 5, junio: 6, jun: 6, june: 6, julio: 7, jul: 7, july: 7,
+  agosto: 8, ago: 8, august: 8, aug: 8, septiembre: 9, setiembre: 9, sept: 9, sep: 9, september: 9,
+  octubre: 10, oct: 10, october: 10, noviembre: 11, nov: 11, november: 11, diciembre: 12, dic: 12, december: 12, dec: 12 };
+var RE_MES_TXT = '\\b(enero|ene|january|jan|febrero|feb|february|marzo|mar|march|abril|abr|april|apr|mayo|may|junio|jun|june|' +
+  'julio|jul|july|agosto|ago|august|aug|septiembre|setiembre|sept|sep|september|octubre|oct|october|' +
+  'noviembre|nov|november|diciembre|dic|december|dec)\\b\\.?';
+var PER_MODOS = { ventana: 'Ventana', partidas: 'Partidas', prompt: 'Prompt', texto: 'Otro' };
+var RE_CANT_TN = '(\\d+(?:[.,]\\d+)?)\\s*(?:tn|tns|ton|tons|toneladas|mt)\\b';
+
+function mesKey(o) { return o.y * 12 + (o.m - 1); }
+function mesDeKey(k) { return { y: Math.floor(k / 12), m: (k % 12) + 1 }; }
+function mesTxt(o) { return MESES_ES[o.m - 1] + ' ' + o.y; }
+function mesCorto(o) { return MESES_ES[o.m - 1].slice(0, 3); }
+// «Octubre 2026» (o un número de serie de fecha) -> {m, y}; null si no se entiende.
+function parseMesTxt(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number' || /^\d{5}$/.test(String(v).trim())) {
+    var n = Number(v);
+    if (!(n > 20000 && n < 80000)) return null;
+    var f = new Date(EPOCH + n * DIA);
+    return { m: f.getUTCMonth() + 1, y: f.getUTCFullYear() };
+  }
+  var t = clave(v), mm = new RegExp(RE_MES_TXT).exec(t), ya = /\b(20\d\d)\b/.exec(t);
+  return mm && ya ? { m: MES_NOMBRES[mm[1]], y: parseInt(ya[1], 10) } : null;
+}
+// Todos los meses entre dos (inclusive).
+function mesesEntre(a, b) {
+  var out = [], i;
+  for (i = mesKey(a); i <= mesKey(b); i++) out.push(i);
+  return out;
+}
+function leerMesesEnTexto(t) {
+  var out = [], re = new RegExp(RE_MES_TXT, 'g'), m;
+  while ((m = re.exec(t)) !== null) {
+    var fin = m.index + m[0].length;
+    var ya = /^[\s,.]*(?:de(?:l)?\s+)?(20\d\d)\b/.exec(t.slice(fin));
+    out.push({ m: MES_NOMBRES[m[1]], y: ya ? parseInt(ya[1], 10) : null, pos: m.index, fin: fin + (ya ? ya[0].length : 0) });
+  }
+  return out;
+}
+// El año que no está escrito: el del mes que sigue (si lo tiene) o, si no, el del contrato.
+function resolverAnios(it, ref) {
+  var i;
+  for (i = it.length - 2; i >= 0; i--) {
+    if (it[i].y == null && it[i + 1].y != null) it[i].y = it[i + 1].m >= it[i].m ? it[i + 1].y : it[i + 1].y - 1;
+  }
+  for (i = 0; i < it.length; i++) {
+    if (it[i].y != null) continue;
+    if (i === 0) it[i].y = ref.y + (it[0].m < ref.m - 6 ? 1 : 0);
+    else it[i].y = it[i - 1].y + (it[i].m < it[i - 1].m ? 1 : 0);
+  }
+}
+function tipoSeparador(seg) {
+  var s = seg.replace(new RegExp(RE_CANT_TN, 'g'), ' ').replace(/\d+\s*(?:fcl|contenedor(?:es)?|cont|containers?)\b/g, ' ')
+    .replace(/20\d\d/g, ' ').replace(/[()\[\]:·]/g, ' ').replace(/\b(de|del|en)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  if (s === '') return 'junto';
+  if (/^(-|–|—|a|al|hasta|to|until|thru)$/.test(s)) return 'rango';
+  if (/^(y|\+|&|and|e)$/.test(s)) return 'y';
+  if (/^(,|\/|o|or|u)$/.test(s)) return 'o';
+  return 'otro';
+}
+function periodoVacio(texto) {
+  return { modo: '', d: null, h: null, partidas: [], texto: texto, revisar: false, mesesTxt: [], meses: [], origen: 'texto' };
+}
+// Lo que se escribía a mano. Ante la duda entre ventana y partidas se elige VENTANA: cubre de más y no de menos,
+// que es lo que le importa a quien planifica (que no se le pase un contrato).
+// ref = {y, m} del contrato, para completar el año que falta.
+function interpretarPeriodoTexto(texto, ref) {
+  var crudo = String(texto == null ? '' : texto).trim(), out = periodoVacio(crudo);
+  if (!crudo) return out;
+  var uno = parseMesTxt(typeof texto === 'number' ? texto : (/^\d{5}$/.test(crudo) ? crudo : null));
+  if (uno) { out.modo = 'ventana'; out.d = uno; out.h = uno; out.texto = mesTxt(uno); return out; }
+  var t = clave(crudo), it = leerMesesEnTexto(t), i;
+  var hayPrompt = /\b(prompt|pronto|inmediat[oa]?|asap)\b/.test(t);
+  if (!it.length) { out.modo = hayPrompt ? 'prompt' : 'texto'; return out; }
+  resolverAnios(it, ref);
+  var seps = [];
+  for (i = 0; i < it.length - 1; i++) seps.push(tipoSeparador(t.slice(it[i].fin, it[i + 1].pos)));
+  it.forEach(function (x, j) {                         // toneladas escritas al lado de cada mes
+    var despues = t.slice(x.fin, j + 1 < it.length ? it[j + 1].pos : t.length);
+    var antes = t.slice(j ? it[j - 1].fin : 0, x.pos);
+    var mq = new RegExp('^[\\s(:·\\-]*' + RE_CANT_TN).exec(despues) || new RegExp(RE_CANT_TN + '\\s*(?:de\\s*)?$').exec(antes);
+    x.tn = mq ? normNum(mq[1]) : null;
+    x.cant = !!mq || /\b\d+\s*(?:fcl|contenedor(?:es)?|cont|containers?)\b/.test(antes + ' ' + despues);
+  });
+  var keys = [];                                       // todos los meses que el texto toca (ranges incluidos)
+  it.forEach(function (x, j) {
+    keys.push(mesKey(x));
+    if (j && seps[j - 1] === 'rango') { var k; for (k = mesKey(it[j - 1]) + 1; k < mesKey(x); k++) keys.push(k); }
+  });
+  out.mesesTxt = keys.filter(function (k, j) { return keys.indexOf(k) === j; }).sort(function (a, b) { return a - b; });
+  if (hayPrompt || /\b(antes|before|no later|a mas tardar)\b/.test(t)) {
+    out.modo = 'texto'; out.revisar = hayPrompt; return out;
+  }
+  var ventana = function (a, b) {
+    out.modo = 'ventana'; out.d = mesDeKey(Math.min(a, b)); out.h = mesDeKey(Math.max(a, b));
+    if (a > b) out.revisar = true;
+  };
+  var conCant = it.filter(function (x) { return x.cant; }).length;
+  var soloTipo = function (tp) { return seps.every(function (s) { return s === tp; }); };
+  if (it.length === 1) { ventana(mesKey(it[0]), mesKey(it[0])); return out; }
+  if (conCant >= 2) {                                   // «1 fcl Agosto - 1 fcl Diciembre»: son partidas, no un rango
+    out.modo = 'partidas';
+    it.forEach(function (x) { out.partidas.push({ m: x.m, y: x.y, tn: x.tn }); });
+    out.revisar = it.some(function (x) { return !x.tn; });   // contenedores sin toneladas: hay que completarlo
+    return out;
+  }
+  if (seps.every(function (s) { return s === 'rango' || s === 'junto'; })) { ventana(mesKey(it[0]), mesKey(it[it.length - 1])); return out; }
+  if (seps.every(function (s) { return s === 'o' || s === 'rango' || s === 'junto'; })) {
+    ventana(out.mesesTxt[0], out.mesesTxt[out.mesesTxt.length - 1]); return out;
+  }
+  if (soloTipo('y')) {
+    out.modo = 'partidas';
+    it.forEach(function (x) { out.partidas.push({ m: x.m, y: x.y, tn: x.tn }); });
+    return out;
+  }
+  out.modo = 'texto'; out.revisar = true;               // mezcla rara: se muestra tal cual y se pide revisar
+  return out;
+}
+// «Septiembre 2026: 500 | Diciembre 2026: 500»
+function parsePartidasCol(v) {
+  return String(v == null ? '' : v).split('|').map(function (s) {
+    var p = s.split(':'), mo = parseMesTxt(p[0]);
+    return mo ? { m: mo.m, y: mo.y, tn: p.length > 1 ? normNum(p.slice(1).join(':')) : null } : null;
+  }).filter(Boolean);
+}
+function mesesDe(p) {
+  var out = [];
+  if (p.modo === 'ventana' && p.d && p.h) out = mesesEntre(p.d, p.h);
+  else if (p.modo === 'partidas') out = p.partidas.map(mesKey);
+  else if (p.modo === 'texto') out = (p.mesesTxt || []).slice();
+  return out.filter(function (k, i) { return out.indexOf(k) === i; }).sort(function (a, b) { return a - b; });
+}
+// Las columnas de la planilla (si las hay) mandan; si no, se interpreta el texto.
+function periodoDeCampos(txt, modoCol, desdeCol, hastaCol, partCol, ref) {
+  var mc = clave(modoCol || '');
+  if (mc) {
+    var p = periodoVacio(String(txt == null ? '' : txt).trim());
+    p.origen = 'columnas';
+    if (mc === 'ventana') {
+      var d = parseMesTxt(desdeCol), h = parseMesTxt(hastaCol);
+      if (d && h && mesKey(d) <= mesKey(h)) { p.modo = 'ventana'; p.d = d; p.h = h; }
+    } else if (mc === 'partidas') {
+      var ps = parsePartidasCol(partCol);
+      if (ps.length) { p.modo = 'partidas'; p.partidas = ps; }
+    } else if (mc === 'prompt') p.modo = 'prompt';
+    else if (mc === 'otro') { p.modo = 'texto'; p.mesesTxt = interpretarPeriodoTexto(txt, ref).mesesTxt; }
+    if (p.modo) { p.meses = mesesDe(p); return p; }
+  }
+  var q = interpretarPeriodoTexto(txt, ref);
+  q.meses = mesesDe(q);
+  return q;
+}
+function refDeFecha(f) {
+  var d = esFecha(f) ? f : ahoraComoUTC();
+  return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 };
+}
+function periodoDeContrato(c) {
+  return periodoDeCampos(c.periodo, c.perModo, c.perDesde, c.perHasta, c.perPartidas, refDeFecha(c.fecha));
+}
+function fmtTnPer(n) { return Number(n).toLocaleString('es-AR', { maximumFractionDigits: 1 }); }
+// El texto legible que va en la columna «Periodo de embarque».
+function periodoATexto(p) {
+  if (p.modo === 'ventana' && p.d && p.h) return mesKey(p.d) === mesKey(p.h) ? mesTxt(p.d) : mesTxt(p.d) + ' - ' + mesTxt(p.h);
+  if (p.modo === 'partidas') {
+    return p.partidas.slice().sort(function (a, b) { return mesKey(a) - mesKey(b); }).map(function (x) {
+      return mesTxt(x) + (x.tn ? ' (' + fmtTnPer(x.tn) + ' tn)' : '');
+    }).join(' + ');
+  }
+  if (p.modo === 'prompt') return 'Prompt';
+  return p.texto || '';
+}
+// Lo que se escribe en cada columna de la planilla.
+function periodoAColumnas(p) {
+  var texto = periodoATexto(p);
+  var c = { periodo: texto, perModo: '', perDesde: '', perHasta: '', perPartidas: '' };
+  if (!texto || !p.modo) return { periodo: '', perModo: '', perDesde: '', perHasta: '', perPartidas: '' };
+  c.perModo = PER_MODOS[p.modo] || '';
+  if (p.modo === 'ventana') { c.perDesde = mesTxt(p.d); c.perHasta = mesTxt(p.h); }
+  if (p.modo === 'partidas') {
+    c.perPartidas = p.partidas.slice().sort(function (a, b) { return mesKey(a) - mesKey(b); }).map(function (x) {
+      return mesTxt(x) + (x.tn ? ': ' + x.tn : '');
+    }).join(' | ');
+  }
+  return c;
+}
+
 var TIPOS_CTR = [['mani', 'Maní'], ['aceite', 'Aceite'], ['expeller', 'Expeller'], ['otro', 'Otros / sin tipo']];
 function tipoCtr(v) {
   var k = clave(v);
@@ -3908,7 +4156,8 @@ async function crearContrato(datos) {
     '',                   // N PAGOS USA
     sumifs,               // O ENT
     '=G' + n + '-O' + n,  // P Saldo
-    datos.periodo         // Q
+    // Con un apóstrofe al principio Sheets lo guarda como texto: «Octubre 2026» solo se convertía en una fecha.
+    datos.periodo ? "'" + datos.periodo : ''   // Q
   ];
 
   await api(BASE + S.cfg.sheetId + '/values/' +
@@ -3945,6 +4194,17 @@ async function crearContrato(datos) {
           range: { sheetId: sheetId, startRowIndex: n - 1, endRowIndex: n,
                    startColumnIndex: mapaF[c], endColumnIndex: mapaF[c] + 1 },
           rows: [{ values: [{ userEnteredValue: { boolValue: false } }] }],
+          fields: 'userEnteredValue'
+        }
+      });
+    });
+    ['perModo', 'perDesde', 'perHasta', 'perPartidas'].forEach(function (c) {      // la estructura del período, si la planilla tiene las columnas
+      if (mapaF[c] === undefined || !datos[c]) return;
+      reqsF.push({
+        updateCells: {
+          range: { sheetId: sheetId, startRowIndex: n - 1, endRowIndex: n,
+                   startColumnIndex: mapaF[c], endColumnIndex: mapaF[c] + 1 },
+          rows: [{ values: [{ userEnteredValue: { stringValue: String(datos[c]) } }] }],
           fields: 'userEnteredValue'
         }
       });
@@ -7270,6 +7530,7 @@ async function cargarTodo(rapido, silencioso) {
             prev.saldoHoja = (normNum(prev.saldoHoja) || 0) + normNum(g('saldo'));
           }
           // Los productos se listan, que es lo que distingue las filas.
+          ['perModo', 'perDesde', 'perHasta', 'perPartidas'].forEach(function (cp) { if (!prev[cp] && g(cp)) prev[cp] = g(cp); });
           var pNuevo = String(g('producto') || '').trim();
           if (pNuevo && String(prev.producto || '').indexOf(pNuevo) < 0) {
             prev.producto = [prev.producto, pNuevo].filter(Boolean).join(' + ');
@@ -7294,6 +7555,7 @@ async function cargarTodo(rapido, silencioso) {
           entregadoHoja: normNum(g('entregado')),
           saldoHoja: normNum(g('saldo')),
           periodo: g('periodo'),
+          perModo: g('perModo'), perDesde: g('perDesde'), perHasta: g('perHasta'), perPartidas: g('perPartidas'),
           packaging: g('packaging'),
           fecha: normFecha(g('fecha')),
           via: normVia(g('via')),
@@ -7412,6 +7674,7 @@ async function cargarTodo(rapido, silencioso) {
     // ALL CONTRATOS suele ser un IMPORTRANGE: sirve para leer pero no se puede
     // escribir. Para editar hay que ir a la pestaña real donde vive la fila.
     S.ctrEditables = new Map();
+    S.mapaCtrEd = {};
     S.formasPago = [];
     var frecuencia = {};
     var tabsEd = rapido ? [] : await tabsEditablesEfectivas();
@@ -7426,6 +7689,7 @@ async function cargarTodo(rapido, silencioso) {
         continue;
       }
       var de = detectar(he.encabezados, CAMPOS_CTR);
+      S.mapaCtrEd[te] = de.mapa;
       if (de.mapa.contrato === undefined) {
         avisos.push('En "' + te + '" no encontré la columna de contrato (leí la fila ' + he.filaEncabezado + ': ' +
           (he.encabezados.filter(Boolean).slice(0, 12).join(' | ') || 'vacía') + ').');
@@ -7462,6 +7726,17 @@ async function cargarTodo(rapido, silencioso) {
           }
         }
 
+        // El período por meses / partidas vive en la pestaña editable (la de lectura suele ser un IMPORTRANGE más angosto).
+        var ctrP = S.contratos.get(kc);
+        if (ctrP) ['perModo', 'perDesde', 'perHasta', 'perPartidas'].forEach(function (cp) {
+          var vp = de.mapa[cp] === undefined ? null : f.celdas[de.mapa[cp]];
+          if (vp !== null && vp !== undefined && String(vp).trim() !== '' && !ctrP[cp]) ctrP[cp] = String(vp).trim();
+        });
+        // La pestaña donde se escribe manda sobre la importación (ALL CONTRATOS), que puede tardar en ponerse al día.
+        if (ctrP && !ctrP._perEd && de.mapa.periodo !== undefined) {
+          var tpE = f.celdas[de.mapa.periodo];
+          if (tpE !== null && tpE !== undefined && String(tpE).trim() !== '') { ctrP.periodo = String(tpE).trim(); ctrP._perEd = true; }
+        }
         var refPrev = S.ctrEditables.get(kc);
         if (refPrev) {
           refPrev.otras = (refPrev.otras || []);
@@ -7541,7 +7816,7 @@ function huellasCargas() {
 // Lo que se reasigna entero en cargarTodo: si la actualización falla a medias, se vuelve a esto.
 function fotoDeDatos() {
   return { datos: S.datos, fuentes: S.fuentes, datosFact: S.datosFact, fuentesFact: S.fuentesFact, fuentesFactT: S.fuentesFactT,
-           facturar: S.facturar, contratos: S.contratos, ctrEditables: S.ctrEditables, formasPago: S.formasPago, avisos: S.avisos };
+           facturar: S.facturar, contratos: S.contratos, ctrEditables: S.ctrEditables, mapaCtrEd: S.mapaCtrEd, formasPago: S.formasPago, avisos: S.avisos };
 }
 function restaurarFoto(f) { Object.keys(f).forEach(function (k) { S[k] = f[k]; }); }
 
@@ -10012,7 +10287,7 @@ function calcularContratos() {
       contrato: k, origen: c.origen, cond: c.cond,
       tipo: c.tipo, tipos: (c.tipos || [tipoCtr(c.tipo)]).slice(),
       contratado: c.tns, importador: c.importador, exportador: c.exportador,
-      producto: c.producto, periodo: c.periodo, comision: c.comision,
+      producto: c.producto, periodo: c.periodo, per: periodoDeContrato(c), comision: c.comision,
       entregadoHoja: c.entregadoHoja, saldoHoja: c.saldoHoja,
       fecha: c.fecha, via: c.via || '', viaDeducida: false,
       entregado: 0, embarques: [], aFacturar: 0
@@ -10559,6 +10834,11 @@ function contratosFiltrados(omitir) {
   if (omitir !== 'imp' && S.fImpCtr) {
     lista = lista.filter(function (r) { return clave(r.importador) === clave(S.fImpCtr); });
   }
+  if (omitir !== 'mes' && S.fMesCtr) {
+    lista = lista.filter(function (r) {
+      return r.per && (S.fMesCtr === 'prompt' ? r.per.modo === 'prompt' : r.per.meses.indexOf(Number(S.fMesCtr)) >= 0);
+    });
+  }
   return lista;
 }
 
@@ -10594,6 +10874,324 @@ function selectorNombres(id, tipo, rotulo, todos, opciones, elegido) {
     }).join('') + '</select>';
 }
 
+/* ===========================================================================
+   Período de embarque: el control del formulario (alta de contrato y editor), el filtro «Embarca en»,
+   la ficha de cada contrato y el alta de las columnas nuevas en la planilla.
+   =========================================================================== */
+var COLS_PERIODO = [['perModo', 'Modo embarque'], ['perDesde', 'Embarque desde'], ['perHasta', 'Embarque hasta'], ['perPartidas', 'Partidas embarque']];
+var CAMPOS_PER = ['periodo', 'perModo', 'perDesde', 'perHasta', 'perPartidas'];
+
+// Lo que se está editando: se arma de lo que ya dice el contrato (o vacío, en el alta).
+function perDesdeInterpretado(p) {
+  var st = { modo: p.modo || 'ventana', d: p.d ? { m: p.d.m, y: p.d.y } : { m: 0, y: 0 }, h: p.h ? { m: p.h.m, y: p.h.y } : { m: 0, y: 0 },
+    partidas: (p.partidas || []).map(function (x) { return { m: x.m, y: x.y, tn: x.tn ? String(x.tn).replace('.', ',') : '' }; }),
+    texto: p.modo === 'texto' || (!p.modo && p.texto) ? (p.texto || '') : '', aviso: '' };
+  if (!p.modo && p.texto) st.modo = 'texto';
+  if (st.partidas.length < 2) while (st.partidas.length < 2) st.partidas.push({ m: 0, y: 0, tn: '' });
+  if (p.revisar) st.aviso = p.modo === 'partidas'
+    ? 'Dice contenedores, no toneladas: completá las toneladas de cada mes.'
+    : 'Este período está escrito a mano y no lo pude entender del todo. Elegí cómo es.';
+  return st;
+}
+function perEstado(ctx) {
+  var dueno = ctx === 'alta' ? (S.alta = S.alta || {}) : S.editCtr;
+  if (!dueno) return null;
+  if (!dueno.per) {
+    if (ctx === 'alta') dueno.per = perDesdeInterpretado(periodoVacio(''));
+    else {
+      var o = dueno.orig || {};
+      dueno.per = perDesdeInterpretado(periodoDeCampos(o.periodo, o.perModo, o.perDesde, o.perHasta, o.perPartidas, refDeFecha(normFecha(o.fecha))));
+    }
+  }
+  return dueno.per;
+}
+// El estado de edición -> un período (vacío si está incompleto).
+function perAProps(st) {
+  var p = periodoVacio('');
+  if (st.modo === 'ventana') {
+    if (st.d.m && st.d.y && st.h.m && st.h.y) { p.modo = 'ventana'; p.d = { m: st.d.m, y: st.d.y }; p.h = { m: st.h.m, y: st.h.y }; }
+  } else if (st.modo === 'partidas') {
+    p.partidas = st.partidas.filter(function (x) { return x.m && x.y; }).map(function (x) { return { m: x.m, y: x.y, tn: normNum(x.tn) || null }; });
+    if (p.partidas.length) p.modo = 'partidas';
+  } else if (st.modo === 'prompt') p.modo = 'prompt';
+  else { p.texto = String(st.texto || '').trim(); if (p.texto) p.modo = 'texto'; }
+  return p;
+}
+// Lo que impide guardar (vacío si está bien).
+function perError(st, textoOrig) {
+  if (!st) return '';
+  if (st.modo === 'ventana') {
+    var d = !!(st.d.m && st.d.y), h = !!(st.h.m && st.h.y);
+    if (d !== h || ((st.d.m || st.d.y || st.h.m || st.h.y) && !(d && h))) return 'Elegí el mes de inicio y el de fin (mes y año).';
+    if (d && mesKey(st.d) > mesKey(st.h)) return 'El mes final es anterior al inicial.';
+  } else if (st.modo === 'partidas') {
+    var vistos = {}, i;
+    for (i = 0; i < st.partidas.length; i++) {
+      var x = st.partidas[i];
+      if (!(x.m || x.y || String(x.tn || '').trim())) continue;
+      if (!x.m || !x.y) return 'En la partida ' + (i + 1) + ' falta el mes o el año.';
+      if (vistos[mesKey(x)]) return mesTxt(x) + ' está repetido: juntá las toneladas en una sola partida.';
+      vistos[mesKey(x)] = 1;
+    }
+  }
+  // Borrar el período de un contrato que lo tenía tiene que ser a propósito («Otro» y vacío), no por dejar algo a medias.
+  if (textoOrig && st.modo !== 'texto' && !periodoATexto(perAProps(st))) return 'Falta completar el período (o elegí «Otro» y dejalo vacío para borrarlo).';
+  return '';
+}
+function perAnioSugerido(m) {
+  var a = ahoraComoUTC(), y = a.getUTCFullYear();
+  return m < a.getUTCMonth() + 1 - 6 ? y + 1 : y;
+}
+// path: 'd.m' | 'd.y' | 'h.m' | 'h.y' | 'p.<i>.m' | 'p.<i>.y' | 'p.<i>.tn' | 'texto'
+function perPoner(st, path, v) {
+  var q = path.split('.'), n = parseInt(v, 10) || 0, o;
+  if (path === 'texto') { st.texto = v; return; }
+  if (q[0] === 'p') o = st.partidas[+q[1]]; else o = st[q[0]];
+  if (!o) return;
+  var k = q[q.length - 1];
+  if (k === 'tn') o.tn = v; else o[k] = n;
+  if (k === 'm' && n && !o.y) o.y = perAnioSugerido(n);          // al elegir el mes se propone el año
+  if (q[0] === 'd' && st.d.m && st.d.y) {                        // el fin acompaña al inicio para que no quede un rango roto
+    if (!(st.h.m && st.h.y) || mesKey(st.h) < mesKey(st.d)) st.h = { m: st.d.m, y: st.d.y };
+  }
+}
+function perTnTotal(ctx) {
+  var tot = 0, hay = false, add = function (v) { var n = normNum(v); if (n) { tot += n; hay = true; } };
+  if (ctx === 'alta') productosAlta(S.alta || {}).forEach(function (p) { add(p.toneladas); });
+  else if (S.editCtr) {
+    var e = S.editCtr, ref = S.ctrEditables.get(e.contrato), filas = filasDelContrato(ref);
+    if (filas.length > 1) {
+      filas.forEach(function (fr, i) {
+        var k = 'prod_' + i + '_tns';
+        add(k in e.cambios ? e.cambios[k] : (fr.mapa.tns === undefined ? null : fr.celdas[fr.mapa.tns]));
+      });
+    } else add('tns' in e.cambios ? e.cambios.tns : e.orig.tns);
+  }
+  return hay ? tot : null;
+}
+// Los mensajes de abajo del control (se refrescan al teclear sin redibujar todo).
+function perMensajesHtml(ctx) {
+  var st = perEstado(ctx);
+  if (!st) return '';
+  var textoOrig = ctx === 'ctr' && S.editCtr ? String(S.editCtr.orig.periodo || '').trim() : '';
+  var err = perError(st, textoOrig), p = perAProps(st), h = '';
+  if (st.aviso) h += '<p class="per-aviso">' + esc(st.aviso) + '</p>';
+  if (err) h += '<p class="per-error" role="alert">' + esc(err) + '</p>';
+  if (st.modo === 'partidas') {
+    var suma = 0, algunaTn = false;
+    st.partidas.forEach(function (x) { var n = normNum(x.tn); if (n) { suma += n; algunaTn = true; } });
+    var total = perTnTotal(ctx);
+    if (algunaTn) {
+      var difiere = total !== null && Math.abs(suma - total) > 0.5;
+      h += '<p class="per-total' + (difiere ? ' difiere' : '') + '">Suman <b>' + fmtTnPer(suma) + ' tn</b>' +
+        (total !== null ? ' de ' + fmtTnPer(total) + ' del contrato' + (difiere ? ' · no coinciden' : '') : '') + '</p>';
+    }
+  }
+  var texto = periodoATexto(p);
+  h += '<p class="per-resumen">Se guarda como: <b>' + (texto ? esc(texto) : '—') + '</b></p>';
+  return h;
+}
+function perSelMes(ctx, path, val, etiqueta) {
+  return '<select id="per-' + ctx + '-' + path.replace(/\./g, '-') + '" class="per-sel per-mes" data-per="' + path + '" data-perctx="' + ctx + '" aria-label="' + esc(etiqueta) + ' · mes">' +
+    '<option value="0">Mes</option>' + MESES_ES.map(function (n, i) {
+      return '<option value="' + (i + 1) + '"' + (val === i + 1 ? ' selected' : '') + '>' + n + '</option>';
+    }).join('') + '</select>';
+}
+function perSelAnio(ctx, path, val, etiqueta) {
+  var y0 = ahoraComoUTC().getUTCFullYear(), ys = [], y;
+  for (y = y0 - 1; y <= y0 + 3; y++) ys.push(y);
+  if (val && ys.indexOf(val) < 0) { ys.push(val); ys.sort(); }
+  return '<select id="per-' + ctx + '-' + path.replace(/\./g, '-') + '" class="per-sel per-anio" data-per="' + path + '" data-perctx="' + ctx + '" aria-label="' + esc(etiqueta) + ' · año">' +
+    '<option value="0">Año</option>' + ys.map(function (a) {
+      return '<option value="' + a + '"' + (val === a ? ' selected' : '') + '>' + a + '</option>';
+    }).join('') + '</select>';
+}
+function periodoCtlHtml(ctx) {
+  var st = perEstado(ctx);
+  if (!st) return '';
+  var modos = [['ventana', 'Entre meses'], ['partidas', 'Por partidas'], ['prompt', 'Prompt'], ['texto', 'Otro']];
+  var h = '<div class="campo per-ctl" role="group" aria-labelledby="per-' + ctx + '-lbl">' +
+    '<label id="per-' + ctx + '-lbl">Período de embarque</label>' +
+    '<div class="segmento sub per-modos">' + modos.map(function (m) {
+      return '<button type="button" data-act="permodo" data-ctx="' + ctx + '" data-v="' + m[0] + '" aria-pressed="' + (st.modo === m[0]) + '">' + m[1] + '</button>';
+    }).join('') + '</div>';
+  if (st.modo === 'ventana') {
+    var ok = st.d.m && st.d.y && st.h.m && st.h.y && mesKey(st.d) <= mesKey(st.h);
+    h += '<div class="per-fila"><span class="per-et">Desde</span>' + perSelMes(ctx, 'd.m', st.d.m, 'Desde') + perSelAnio(ctx, 'd.y', st.d.y, 'Desde') +
+      '<span class="per-et">hasta</span>' + perSelMes(ctx, 'h.m', st.h.m, 'Hasta') + perSelAnio(ctx, 'h.y', st.h.y, 'Hasta') + '</div>' +
+      '<p class="per-ayuda">' + (ok ? 'Puede cargar en <b>cualquier mes</b> entre ' + mesTxt(st.d) + ' y ' + mesTxt(st.h) + '.'
+                                    : 'Elegí el primer y el último mes en que puede cargarse.') + '</p>';
+  } else if (st.modo === 'partidas') {
+    h += '<p class="per-ayuda">Un renglón por cada mes en que sale una parte, con sus toneladas. Solo cargan en esos meses.</p>';
+    st.partidas.forEach(function (x, i) {
+      var et = 'Partida ' + (i + 1);
+      h += '<div class="per-fila per-partida"><span class="per-num">' + (i + 1) + '</span>' + perSelMes(ctx, 'p.' + i + '.m', x.m, et) + perSelAnio(ctx, 'p.' + i + '.y', x.y, et) +
+        '<input id="per-' + ctx + '-p-' + i + '-tn" class="per-tn" type="text" inputmode="decimal" data-per="p.' + i + '.tn" data-perctx="' + ctx + '" ' +
+          'placeholder="Toneladas" aria-label="' + et + ' · toneladas" value="' + esc(x.tn) + '"><span class="per-et">tn</span>' +
+        (st.partidas.length > 1 ? '<button type="button" class="per-x" data-act="perdel" data-ctx="' + ctx + '" data-i="' + i + '" aria-label="Quitar la ' + et.toLowerCase() + '" title="Quitar">' + ico('x') + '</button>' : '') +
+        '</div>';
+    });
+    h += '<button type="button" class="per-mas" data-act="peradd" data-ctx="' + ctx + '">' + ico('plus') + 'Agregar mes</button>';
+  } else if (st.modo === 'prompt') {
+    h += '<p class="per-ayuda">Entrega inmediata, sin mes fijo.</p>';
+  } else {
+    h += '<input id="per-' + ctx + '-texto" class="per-texto" type="text" data-per="texto" data-perctx="' + ctx + '" ' +
+      'placeholder="Antes del 30 de octubre 2026" aria-label="Período de embarque, texto libre" value="' + esc(st.texto) + '">';
+  }
+  if (columnasPeriodoFaltan().length) h += '<p class="per-ayuda per-sincols">La planilla todavía no tiene las columnas del período: por ahora se guarda solo el texto.</p>';
+  h += '<div id="per-' + ctx + '-msg" class="per-msg" aria-live="polite">' + perMensajesHtml(ctx) + '</div></div>';
+  return h;
+}
+// Pasa lo elegido al formulario: en el alta es el texto; en el editor, las cinco columnas que cambiaron.
+function perAplicar(ctx) {
+  var st = perEstado(ctx);
+  if (!st) return;
+  if (ctx === 'alta') { S.alta.periodo = periodoATexto(perAProps(st)); return; }
+  if (!S.editCtr) return;
+  var cols = periodoAColumnas(perAProps(st)), e = S.editCtr;
+  CAMPOS_PER.forEach(function (c) {
+    var orig = e.orig[c] == null ? '' : String(e.orig[c]);
+    if (cols[c] !== orig) e.cambios[c] = cols[c]; else delete e.cambios[c];
+  });
+  refrescarBarraCtr();
+}
+function perRefrescarMensajes(ctx) {
+  var el = document.getElementById('per-' + ctx + '-msg');
+  if (el) el.innerHTML = perMensajesHtml(ctx);
+  if (ctx === 'ctr') refrescarBarraCtr();
+}
+document.addEventListener('change', function (e) {
+  var path = e.target.getAttribute && e.target.getAttribute('data-per');
+  if (!path || e.target.tagName !== 'SELECT') return;
+  var ctx = e.target.getAttribute('data-perctx'), st = perEstado(ctx);
+  if (!st) return;
+  perPoner(st, path, e.target.value);
+  perAplicar(ctx); pintar();
+});
+document.addEventListener('input', function (e) {
+  var path = e.target.getAttribute && e.target.getAttribute('data-per');
+  if (!path || e.target.tagName !== 'INPUT') return;
+  var ctx = e.target.getAttribute('data-perctx'), st = perEstado(ctx);
+  if (!st) return;
+  perPoner(st, path, e.target.value);
+  perAplicar(ctx); perRefrescarMensajes(ctx);
+});
+
+/* --- Filtro «Embarca en: [mes]» --------------------------------------------- */
+function opcionesMes() {
+  var lista = contratosFiltrados('mes'), por = {}, nPrompt = 0, ahora = ahoraComoUTC();
+  var k0 = ahora.getUTCFullYear() * 12 + ahora.getUTCMonth(), claves = {}, i;
+  lista.forEach(function (r) {
+    if (!r.per) return;
+    if (r.per.modo === 'prompt') nPrompt++;
+    r.per.meses.forEach(function (k) { por[k] = (por[k] || 0) + 1; });
+  });
+  Object.keys(por).forEach(function (k) { if (+k >= k0 - 2) claves[k] = 1; });        // lo vencido hace poco todavía importa
+  for (i = 0; i < 12; i++) claves[k0 + i] = 1;                                         // y siempre el año que viene
+  if (S.fMesCtr && S.fMesCtr !== 'prompt') claves[S.fMesCtr] = 1;
+  return { prompt: nPrompt, meses: Object.keys(claves).map(Number).sort(function (a, b) { return a - b; }).map(function (k) {
+    return { k: String(k), txt: mesTxt(mesDeKey(k)), n: por[k] || 0 };
+  }) };
+}
+function selectorMes() {
+  var o = opcionesMes();
+  return '<select id="f-mes-ctr" class="cf-sel cf-plegable' + (S.fMesCtr ? ' activo' : '') + '" data-ctrfiltro="mes" aria-label="Filtrar por mes de embarque">' +
+    '<option value="">Embarca en: cualquier mes</option>' +
+    '<option value="prompt"' + (S.fMesCtr === 'prompt' ? ' selected' : '') + '>Prompt (' + o.prompt + ')</option>' +
+    o.meses.map(function (m) {
+      return '<option value="' + m.k + '"' + (S.fMesCtr === m.k ? ' selected' : '') + '>' + esc(m.txt) + ' (' + m.n + ')</option>';
+    }).join('') + '</select>';
+}
+
+/* --- La ficha del período en cada contrato ---------------------------------- */
+function perFichaHtml(r) {
+  var p = r.per;
+  if (!p || (!p.modo && !p.texto)) return '';
+  var sel = S.fMesCtr && S.fMesCtr !== 'prompt' ? Number(S.fMesCtr) : null, h = '';
+  var txtLargo = periodoATexto(p);
+  if (p.modo === 'ventana' && p.d && p.h) {
+    var corto = mesKey(p.d) === mesKey(p.h) ? mesCorto(p.d) + ' ' + p.d.y
+      : p.d.y === p.h.y ? mesCorto(p.d) + ' – ' + mesCorto(p.h) + ' ' + p.h.y : mesCorto(p.d) + ' ' + p.d.y + ' – ' + mesCorto(p.h) + ' ' + p.h.y;
+    h = '<span class="per-chip per-ventana' + (sel !== null && p.meses.indexOf(sel) >= 0 ? ' sel' : '') + '"><b>' + esc(corto) + '</b>' +
+      (mesKey(p.d) === mesKey(p.h) ? '' : '<small>cualquier mes</small>') + '</span>';
+  } else if (p.modo === 'partidas') {
+    h = p.partidas.slice().sort(function (a, b) { return mesKey(a) - mesKey(b); }).map(function (x) {
+      return '<span class="per-chip per-partida' + (sel === mesKey(x) ? ' sel' : '') + '"><b>' + esc(mesCorto(x) + ' ' + x.y) + '</b>' +
+        (x.tn ? '<small>' + fmtTnPer(x.tn) + ' tn</small>' : '') + '</span>';
+    }).join('<span class="per-mas-sig" aria-hidden="true">+</span>');
+  } else if (p.modo === 'prompt') {
+    h = '<span class="per-chip per-prompt' + (S.fMesCtr === 'prompt' ? ' sel' : '') + '"><b>Prompt</b></span>';
+  } else {
+    h = '<span class="per-chip per-texto" title="' + esc(p.texto) + '"><b>' + esc(p.texto.length > 46 ? p.texto.slice(0, 45) + '…' : p.texto) + '</b></span>';
+  }
+  return '<div class="ctr-per" role="group" aria-label="Período de embarque: ' + esc(txtLargo) + '"><span class="per-rot">Embarque</span>' + h +
+    (p.revisar ? '<span class="per-rev" title="Está escrito a mano y no lo pude entender del todo">Revisar período</span>' : '') + '</div>';
+}
+
+/* --- Columnas nuevas en la planilla ------------------------------------------ */
+// Las pestañas editables a las que les faltan las columnas del período: [{tab, faltan:[...]}].
+function columnasPeriodoFaltan() {
+  var out = [];
+  Object.keys(S.mapaCtrEd || {}).forEach(function (tab) {
+    var m = S.mapaCtrEd[tab], f = COLS_PERIODO.filter(function (c) { return m[c[0]] === undefined; });
+    if (f.length) out.push({ tab: tab, faltan: f.map(function (c) { return c[1]; }) });
+  });
+  return out;
+}
+function bannerColumnasPeriodoHtml() {
+  var falta = columnasPeriodoFaltan(), P = S.perCols || {};
+  if (!falta.length || S.perColsNo || !S.cfg.tabAlta) return '';
+  var tabs = falta.map(function (x) { return '«' + esc(x.tab) + '»'; }).join(' y ');
+  var h = '<div class="per-banner" role="status"><div class="pb-txt"><b>Para guardar el período por meses o por partidas, la planilla necesita 4 columnas nuevas.</b> ' +
+    'Se agregan al final de ' + tabs + ': ' + COLS_PERIODO.map(function (c) { return '<i>' + c[1] + '</i>'; }).join(', ') +
+    '. No se toca nada de lo que ya está.</div><div class="pb-acc">';
+  if (P.paso === 'haciendo') h += '<button class="primario" disabled>Creando…</button>';
+  else if (P.paso === 'confirmar') h += '<button class="primario" data-act="percolsok">Sí, crear las columnas</button><button data-act="percolsvolver">Cancelar</button>';
+  else h += '<button class="primario" data-act="percols">Crear las columnas</button><button data-act="percolsno">Ahora no</button>';
+  return h + '</div>' + (P.error ? '<p class="per-error" role="alert">' + esc(P.error) + '</p>' : '') + '</div>';
+}
+async function crearColumnasPeriodo() {
+  S.perCols = { paso: 'haciendo' }; pintar();
+  var hechas = [];
+  try {
+    var falta = columnasPeriodoFaltan();
+    for (var i = 0; i < falta.length; i++) {
+      var tab = falta[i].tab;
+      var h = await leerHoja(S.cfg.sheetId, tab);
+      var mapa = detectar(h.encabezados, CAMPOS_CTR).mapa;
+      var nuevos = COLS_PERIODO.filter(function (c) { return mapa[c[0]] === undefined; });
+      if (!nuevos.length) continue;
+      var meta = await api(BASE + S.cfg.sheetId + '?fields=' + encodeURIComponent('sheets(properties(sheetId,title,gridProperties))'));
+      var hoja = (meta.sheets || []).filter(function (x) { return x.properties.title === tab; })[0];
+      if (!hoja) throw new Error('No encuentro la pestaña «' + tab + '».');
+      var ult = -1;
+      h.encabezados.forEach(function (x, j) { if (x !== null && x !== undefined && String(x).trim() !== '') ult = j; });
+      var pos = ult + 1, fe = h.filaEncabezado, sid = hoja.properties.sheetId, reqs = [];
+      var ancho = hoja.properties.gridProperties ? hoja.properties.gridProperties.columnCount : null;
+      if (ancho !== null && pos + nuevos.length > ancho) {
+        reqs.push({ appendDimension: { sheetId: sid, dimension: 'COLUMNS', length: pos + nuevos.length - ancho } });
+      }
+      nuevos.forEach(function (c, j) {
+        reqs.push({ updateCells: { range: { sheetId: sid, startRowIndex: fe - 1, endRowIndex: fe, startColumnIndex: pos + j, endColumnIndex: pos + j + 1 },
+          rows: [{ values: [{ userEnteredValue: { stringValue: c[1] } }] }], fields: 'userEnteredValue' } });
+      });
+      if (ult >= 0) {                                  // mismo formato que el último encabezado
+        reqs.push({ copyPaste: { source: { sheetId: sid, startRowIndex: fe - 1, endRowIndex: fe, startColumnIndex: ult, endColumnIndex: ult + 1 },
+          destination: { sheetId: sid, startRowIndex: fe - 1, endRowIndex: fe, startColumnIndex: pos, endColumnIndex: pos + nuevos.length },
+          pasteType: 'PASTE_FORMAT', pasteOrientation: 'NORMAL' } });
+      }
+      await api(BASE + S.cfg.sheetId + ':batchUpdate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: reqs }) });
+      hechas.push(tab);
+    }
+    S.perCols = null;
+    S.avisoOk = hechas.length ? 'Listo: agregué las columnas del período en ' + hechas.map(function (x) { return '«' + x + '»'; }).join(' y ') + '.' : null;
+    await cargarTodo();
+  } catch (e) {
+    S.perCols = { paso: 'confirmar', error: 'No se pudieron crear las columnas: ' + e.message + (hechas.length ? ' (ya se crearon en ' + hechas.join(', ') + ')' : '') };
+    pintar();
+  }
+}
+
 var ESTADOS_CTR = [['', 'Con movimiento'], ['abiertos', 'Con saldo'], ['completos', 'Completos'],
                    ['excedidos', 'Excedidos'], ['sin_contrato', 'Sin contrato'], ['todos', 'Todos']];
 
@@ -10601,7 +11199,7 @@ function vistaContratos() {
   var lista = contratosFiltrados();
   var conEmb = lista.filter(function (r) { return r.embarques.length; }).length;
 
-  var h = panelFirmas();
+  var h = panelFirmas() + bannerColumnasPeriodoHtml();
 
   if (!S.alta) {
     h += '<div class="barra-alta">' +
@@ -10637,6 +11235,7 @@ function vistaContratos() {
   if (S.fTipoCtr) activos.push(['tipo', 'Tipo: ' + ((TIPOS_CTR.filter(function (t) { return t[0] === S.fTipoCtr; })[0] || [])[1] || S.fTipoCtr)]);
   if (S.fExpCtr) activos.push(['exp', 'Exportador: ' + S.fExpCtr]);
   if (S.fImpCtr) activos.push(['imp', 'Importador: ' + S.fImpCtr]);
+  if (S.fMesCtr) activos.push(['mes', 'Embarca en: ' + (S.fMesCtr === 'prompt' ? 'Prompt' : mesTxt(mesDeKey(Number(S.fMesCtr))))]);
 
   h += (S.alta ? formAlta() : '') +
     '<section class="ctr-filtros' + (S.ctrFiltrosAbierto ? ' abierto' : '') + '" aria-label="Filtros de contratos">' +
@@ -10654,6 +11253,7 @@ function vistaContratos() {
           '<span class="cf-flecha">▾</span></button>' +
         selectorNombres('f-exp-ctr', 'exp', 'exportador', 'Todos los exportadores', opsExp, S.fExpCtr) +
         selectorNombres('f-imp-ctr', 'imp', 'importador', 'Todos los importadores', opsImp, S.fImpCtr) +
+        selectorMes() +
         '<label class="sr-solo" for="orden-ctr">Ordenar</label>' +
         '<select id="orden-ctr" class="cf-sel cf-orden cf-plegable" data-ordenctr="1">' + ORDENES_CTR.map(function (o) {
           return '<option value="' + o[0] + '"' + ((S.ordenCtr || 'recientes') === o[0] ? ' selected' : '') +
@@ -10746,7 +11346,7 @@ var CAMPOS_EDIT_CTR = [
   ['packaging', 'Packaging', 'text'],
   ['incoterm', 'Incoterm', 'text'],
   ['formaPago', 'Forma de pago', 'pago'],
-  ['periodo', 'Período de embarque', 'text'],
+  ['periodo', 'Período de embarque', 'periodo'],
   ['pagosUsa', 'Pagos USA', 'text'],
   ['firmaExp', 'Firmado por el exportador', 'check'],
   ['firmaImp', 'Firmado por el importador', 'check']
@@ -10755,7 +11355,7 @@ var CAMPOS_EDIT_CTR = [
 // Al editar un contrato de varias filas: lo que es del CONTRATO se escribe en
 // todas; lo que es de cada PRODUCTO, solo en la suya.
 var CAMPOS_COMUNES = ['via', 'fecha', 'contrato', 'exportador', 'importador', 'incoterm',
-                      'formaPago', 'periodo', 'pagosUsa', 'firmaExp', 'firmaImp'];
+                      'formaPago', 'periodo', 'perModo', 'perDesde', 'perHasta', 'perPartidas', 'pagosUsa', 'firmaExp', 'firmaImp'];
 var CAMPOS_PRODUCTO = ['producto', 'tipo', 'tns', 'precio', 'packaging'];
 
 function filasDelContrato(ref) {
@@ -10772,7 +11372,7 @@ function refrescarBarraCtr() {
   if (lbl) lbl.textContent = n ? n + (n === 1 ? ' cambio sin guardar' : ' cambios sin guardar')
                                 : 'Sin cambios';
   var btn = document.querySelector('.btn-guardar-ctr');
-  if (btn) btn.disabled = !n || !!S.guardandoCtr;
+  if (btn) btn.disabled = !n || !!S.guardandoCtr || !!(S.editCtr.per && perError(S.editCtr.per, String(S.editCtr.orig.periodo || '').trim()));
 }
 
 async function guardarContrato() {
@@ -10908,6 +11508,7 @@ function panelContrato() {
         (marcado ? '<span class="tick">' + ico('check') + '</span>' : '') +
         '</button></div>';
     }
+    if (tipo === 'periodo') return periodoCtlHtml('ctr');
     if (tipo === 'date') return campoFecha('c-' + campo, 'data-ectr', campo, label, val);
     return '<div class="campo"><label for="c-' + campo + '">' + label + '</label>' +
       '<input id="c-' + campo + '" data-ectr="' + campo + '" type="' +
@@ -10973,7 +11574,8 @@ function panelContrato() {
   var repeEd = contratoRepetido(nuevoNum, e.contrato);
 
   var nCambios = Object.keys(e.cambios).length;
-  var bloqueado = !hayCambios || fuera.length || S.guardandoCtr;
+  var perErr = e.per ? perError(e.per, String(e.orig.periodo || '').trim()) : '';
+  var bloqueado = !hayCambios || fuera.length || S.guardandoCtr || perErr;
   var an = S.animarPanel ? ' anim' : '';
 
   // Cabecera fija con guardar y cancelar: siempre a mano, sin bajar hasta el
@@ -11299,7 +11901,7 @@ function formAlta() {
       txt('incoterm', 'Incoterm', 'text', 'CIF Rotterdam') +
       comboGen('a-formaPago', 'formaPago', 'Forma de pago',
         S.formasPago.map(function (f) { return f.texto; }), a.formaPago || '', true, 'alta', true) +
-      txt('periodo', 'Período de embarque', 'text', 'Octubre 2026') +
+      periodoCtlHtml('alta') +
     '</div>' +
 
     '<div class="alta-prods">' +
@@ -11444,7 +12046,7 @@ function filaContrato(r) {
   };
 
   var datos = [];
-  if (r.periodo) datos.push(['Período de embarque', String(r.periodo), '']);
+  if (r.periodo && !(r.per && r.per.modo && r.per.modo !== 'texto' && !r.per.revisar)) datos.push(['Período de embarque', String(r.periodo), '']);
   if (r.cond && !r.cond.desconocida) datos.push(['Condición de pago', r.cond.texto, '']);
   // Si la planilla trae su propio saldo y no coincide con el calculado,
   // conviene verlo: alguno de los dos está mirando algo que el otro no.
@@ -11485,6 +12087,7 @@ function filaContrato(r) {
         }).join('') + '</div>'
       : '') +
 
+    perFichaHtml(r) +
     '<div class="ctr-cuerpo' + (datos.length ? '' : ' sin-datos') + '">' +
       '<section class="ctr-zona ctr-partes" aria-label="Partes">' +
         parte('Exportador', r.exportador, 'Sin exportador') +
@@ -13354,6 +13957,11 @@ async function guardarAlta() {
     return pintar();
   }
 
+  // El período: o se elige completo, o se deja vacío.
+  var errPer = perError(perEstado('alta'), '');
+  if (errPer) { S.altaError = errPer; return pintar(); }
+  var colsP = periodoAColumnas(perAProps(perEstado('alta')));
+
   // La fecha llega como DD/MM/AAAA.
   // Se manda como número de serie: la columna ya tiene formato de fecha y
   // así no depende del idioma de la planilla para interpretarla.
@@ -13374,7 +13982,8 @@ async function guardarAlta() {
         producto: p.producto, tipo: p.tipo,
         toneladas: parseFloat(p.toneladas), precio: parseFloat(p.precio),
         packaging: p.packaging || '', incoterm: a.incoterm || '',
-        formaPago: a.formaPago || '', periodo: a.periodo || '',
+        formaPago: a.formaPago || '', periodo: colsP.periodo, perModo: colsP.perModo, perDesde: colsP.perDesde,
+        perHasta: colsP.perHasta, perPartidas: colsP.perPartidas,
         via: VIA_TXT[a.via] || ''
       });
       hechas.push(fila);
@@ -14102,6 +14711,23 @@ document.addEventListener('click', function (ev) {
     return pintar();
   }
   if (act === 'ftipo') { S.filtroTipo = el.getAttribute('data-t') || ''; return pintar(); }
+  if (act === 'permodo') {
+    var ctxPm = el.getAttribute('data-ctx'), stPm = perEstado(ctxPm);
+    if (!stPm) return;
+    stPm.modo = el.getAttribute('data-v'); stPm.aviso = ''; perAplicar(ctxPm); return pintar();
+  }
+  if (act === 'peradd') { var stPa = perEstado(el.getAttribute('data-ctx')); if (!stPa) return; stPa.partidas.push({ m: 0, y: 0, tn: '' }); return pintar(); }
+  if (act === 'perdel') {
+    var ctxPd = el.getAttribute('data-ctx'), stPd = perEstado(ctxPd);
+    if (!stPd) return;
+    stPd.partidas.splice(+el.getAttribute('data-i'), 1);
+    if (!stPd.partidas.length) stPd.partidas.push({ m: 0, y: 0, tn: '' });
+    perAplicar(ctxPd); return pintar();
+  }
+  if (act === 'percols') { S.perCols = { paso: 'confirmar' }; return pintar(); }
+  if (act === 'percolsvolver') { S.perCols = null; return pintar(); }
+  if (act === 'percolsok') return crearColumnasPeriodo();
+  if (act === 'percolsno') { S.perColsNo = true; return pintar(); }
   if (act === 'cerraviso') { S.avisoOk = null; return pintar(); }
   if (act === 'altaabrir') {
     S.topeContratos = 8;   // con el formulario abierto, la lista estorba
@@ -14331,11 +14957,11 @@ document.addEventListener('click', function (ev) {
   if (act === 'ctrquitar') {
     var qf = el.getAttribute('data-f');
     if (qf === 'q') S.busca = ''; else if (qf === 'estado') S.fContrato = ''; else if (qf === 'via') S.fVia = '';
-    else if (qf === 'tipo') S.fTipoCtr = ''; else if (qf === 'exp') S.fExpCtr = ''; else if (qf === 'imp') S.fImpCtr = '';
+    else if (qf === 'tipo') S.fTipoCtr = ''; else if (qf === 'exp') S.fExpCtr = ''; else if (qf === 'imp') S.fImpCtr = ''; else if (qf === 'mes') S.fMesCtr = '';
     S.topeContratos = 40; return pintar();
   }
   if (act === 'ctrlimpiar') {
-    S.busca = ''; S.fContrato = ''; S.fVia = ''; S.fTipoCtr = ''; S.fExpCtr = ''; S.fImpCtr = '';
+    S.busca = ''; S.fContrato = ''; S.fVia = ''; S.fTipoCtr = ''; S.fExpCtr = ''; S.fImpCtr = ''; S.fMesCtr = '';
     S.topeContratos = 40; return pintar();
   }
   if (act === 'ftipoctr') { S.fTipoCtr = el.getAttribute('data-t') || ''; S.topeContratos = 40; return pintar(); }
@@ -14794,7 +15420,11 @@ document.addEventListener('change', function (e) {
   }
   var cfNom = e.target.getAttribute && e.target.getAttribute('data-ctrfiltro');
   if (cfNom && e.target.tagName === 'SELECT') {
-    if (cfNom === 'exp') S.fExpCtr = e.target.value; else S.fImpCtr = e.target.value;
+    if (cfNom === 'exp') S.fExpCtr = e.target.value;
+    else if (cfNom === 'mes') {
+      S.fMesCtr = e.target.value;
+      if (S.fMesCtr && !S.fContrato) S.fContrato = 'abiertos';   // para planificar importa lo que todavía tiene saldo (se ve y se puede sacar)
+    } else S.fImpCtr = e.target.value;
     S.topeContratos = 40;
     return pintar();
   }
@@ -15170,7 +15800,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.26-o';
+var APP_VERSION = '2026.10.27-a';
 
 function arrancar() {
   cargarPrefsPlanilla();
