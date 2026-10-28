@@ -4312,14 +4312,18 @@ function textosAdvice(d, idioma) {
       unirLista(d.contratos.map(function (c) { return estadoEs(c) + ' del contrato ' + c.num; }), 'y') + ':';
   }
 
+  // El número de contrato va antes del BL (si la carga no tiene contrato, no se pone nada).
+  var conCtr = d.contratos.filter(function (c) { return c.num !== '(sin contrato)'; }).map(function (c) { return c.num; }).join(', ');
+  var ctrEn = conCtr ? ' - ' + (varios ? 'Contracts: ' : 'Contract: ') + conCtr : '';
+  var ctrEs = conCtr ? ' - ' + (varios ? 'Contratos: ' : 'Contrato: ') + conCtr : '';
   var asuntoEn = 'Shipment advice - ' + d.importer + ' - ' + d.exporter + ' - ' + d.goods +
-    ' - ETD ' + d.etd + ' - ETA ' + d.eta + ' - BL: ' + d.bl;
+    ' - ETD ' + d.etd + ' - ETA ' + d.eta + ctrEn + ' - BL: ' + d.bl;
 
   if (es) {
     return {
       subject: ADV.asuntoSiempreEnIngles ? asuntoEn
         : 'Aviso de embarque - ' + d.importer + ' - ' + d.exporter + ' - ' + d.goods +
-          ' - ETD ' + d.etd + ' - ETA ' + d.eta + ' - BL: ' + d.bl,
+          ' - ETD ' + d.etd + ' - ETA ' + d.eta + ctrEs + ' - BL: ' + d.bl,
       saludo: 'Estimados,',
       intro: 'Les informamos sobre el siguiente embarque de ' + d.exporter + ' a ' + d.importer,
       cabecera: [['Para', d.importer], [varios ? 'Contratos' : 'Contrato', nums]],
@@ -15800,7 +15804,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.27-a';
+var APP_VERSION = '2026.10.28-b';
 
 function arrancar() {
   cargarPrefsPlanilla();
