@@ -4441,6 +4441,36 @@ var CAMPOS_ALTA_EMB = [
   ['mailsCC', 'Mails CC', 'text']
 ];
 
+/* «Año» (el año del ETD, un número) y «País» (solo en Cargas terrestres) son columnas de la planilla que el catálogo general
+   no conoce: se buscan por su encabezado al dar de alta una carga, para que la fila nueva no quede sin ellas. */
+var CAMPOS_ALTA_EXTRA = {
+  anio: { alias: ['año', 'ano', 'anio', 'year'] },
+  pais: { alias: ['pais', 'país', 'country'] }
+};
+function extrasDe(src) { return detectar(src.encabezados || [], CAMPOS_ALTA_EXTRA).mapa; }
+// El año de la carga: el que se escribió o, si no, el del ETD (y si no hay ETD, el del ETA).
+function anioDeAlta(a) {
+  var n = parseInt(String(a.anio || '').trim(), 10);
+  if (n >= 1990 && n <= 2100) return n;
+  var d = normFecha(a.etd);
+  if (!esFecha(d)) d = normFecha(a.eta);
+  return esFecha(d) ? d.getUTCFullYear() : null;
+}
+// Los países que ya están cargados en esa pestaña, para elegir sin tipear.
+function paisesDe(src) {
+  var ix = extrasDe(src).pais, vistos = {}, out = [];
+  if (ix === undefined) return out;
+  (src.filas || []).forEach(function (f) {
+    var v = String((f._celdas || [])[ix] == null ? '' : f._celdas[ix]).trim().toUpperCase();
+    if (v && !vistos[v]) { vistos[v] = 1; out.push(v); }
+  });
+  return out.sort();
+}
+function altaEmbAnioRefrescar() {
+  var el = typeof document !== 'undefined' && document.getElementById('e-anio');
+  if (el && S.altaEmb) { var n = anioDeAlta({ etd: S.altaEmb.etd, eta: S.altaEmb.eta }); el.placeholder = n ? String(n) : 'Año del ETD'; }
+}
+
 /* Las tres listas del alta se condicionan entre sí:
    - elegido el contrato, exportador, importador, producto, tipo y precio salen
      de él, que es lo que evita tipear lo que la planilla ya sabe;
@@ -4537,6 +4567,12 @@ async function crearEmbarque() {
     return pintar();
   }
 
+  var exA = extrasDe(src);
+  if (exA.anio !== undefined && String(a.anio || '').trim() && !(parseInt(a.anio, 10) >= 1990 && parseInt(a.anio, 10) <= 2100)) {
+    S.altaEmbError = 'El año tiene que ser un número de cuatro cifras (por ejemplo 2026), o dejalo vacío para que se tome del ETD.';
+    return pintar();
+  }
+
   S.creandoEmb = true; S.altaEmbError = null; pintar();
   try {
     // Va justo arriba de la fila TOTAL, para quedar dentro del bloque de datos
@@ -4601,6 +4637,20 @@ async function crearEmbarque() {
           range: { sheetId: src.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
                    startColumnIndex: idx, endColumnIndex: idx + 1 },
           rows: [{ values: [{ userEnteredValue: aValorSheets(val) }] }],
+          fields: 'userEnteredValue'
+        }
+      });
+    });
+
+    // Año (número, el del ETD si no se escribió) y País (en mayúsculas, como el resto de la columna).
+    var anioN = anioDeAlta(a), paisT = String(a.pais || '').trim().toUpperCase();
+    [['anio', anioN === null ? null : { numberValue: anioN }], ['pais', paisT ? { stringValue: paisT } : null]].forEach(function (x) {
+      if (exA[x[0]] === undefined || !x[1]) return;
+      reqs.push({
+        updateCells: {
+          range: { sheetId: src.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
+                   startColumnIndex: exA[x[0]], endColumnIndex: exA[x[0]] + 1 },
+          rows: [{ values: [{ userEnteredValue: x[1] }] }],
           fields: 'userEnteredValue'
         }
       });
@@ -4671,6 +4721,21 @@ function formAltaEmb() {
       (tipo === 'number' ? 'number' : 'text') +
       '" value="' + esc(val) + '"></div>';
   }).join('');
+
+  // Año y País, si la pestaña los tiene.
+  var ex = extrasDe(src);
+  if (ex.anio !== undefined) {
+    var anioSug = anioDeAlta({ etd: a.etd, eta: a.eta });
+    campos += '<div class="campo"><label for="e-anio">Año</label>' +
+      '<input id="e-anio" data-aemb="anio" type="number" inputmode="numeric" min="1990" max="2100" placeholder="' +
+      (anioSug ? anioSug : 'Año del ETD') + '" value="' + esc(a.anio || '') + '" aria-describedby="e-anio-ayuda">' +
+      '<span id="e-anio-ayuda" class="ayuda">Si lo dejás vacío, se pone el año del ETD.</span></div>';
+  }
+  if (ex.pais !== undefined) {
+    campos += '<div class="campo"><label for="e-pais">País</label>' +
+      '<input id="e-pais" data-aemb="pais" type="text" list="e-pais-lista" autocomplete="off" value="' + esc(a.pais || '') + '">' +
+      '<datalist id="e-pais-lista">' + paisesDe(src).map(function (x) { return '<option value="' + esc(x) + '">'; }).join('') + '</datalist></div>';
+  }
 
   var pestanas = S.fuentes.map(function (f) {
     return '<button data-act="altaemb-tab" data-t="' + esc(f.tab) + '" aria-pressed="' +
@@ -15324,7 +15389,7 @@ document.addEventListener('input', function (e) {
     if (nat) nat.value = aISO(fmt);
 
     var cF = e.target.getAttribute('data-aemb');
-    if (cF && S.altaEmb) { S.altaEmb[cF] = fmt; return; }
+    if (cF && S.altaEmb) { S.altaEmb[cF] = fmt; altaEmbAnioRefrescar(); return; }
     var cA = e.target.getAttribute('data-alta');
     if (cA) { S.alta = S.alta || {}; S.alta[cA] = fmt; return; }
     var cG = e.target.getAttribute('data-gen');
@@ -15804,7 +15869,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.28-b';
+var APP_VERSION = '2026.10.28-c';
 
 function arrancar() {
   cargarPrefsPlanilla();
