@@ -2344,6 +2344,14 @@ button:disabled{cursor:not-allowed}
 .aviso-fila.docs_fisicos .det{color:#5c4000}
 .alta-nota.docs-fis{background:#fff7e0;color:#5c4000;border:1px solid #f1c15a}
 .alta-nota.docs-fis .ico{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.4;margin-right:6px;vertical-align:-2px}
+.pill-fis.sin{background:#eceff1;border-color:#9aa5ad;color:#37424a}
+.tbl-hoja td.trk-sin{background:#e8e8e8 !important;color:#4b5563;box-shadow:inset 0 0 0 1px #c5cbd0}
+.pe-fis.sin{background:#f1f3f4;border-color:#c5cbd0;color:#37424a}
+.fis-btn{margin-top:8px;min-height:44px;padding:0 14px;border:1px solid #e0a800;border-radius:8px;background:#fff;color:#5c4000;font:inherit;font-weight:600;cursor:pointer}
+.pe-fis .fis-btn{margin:0 0 0 auto;border-color:#9aa5ad;color:#37424a;min-height:36px}
+.pe-fis.sin{flex-wrap:wrap}
+.sel-fis{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1px solid #e0a800;border-radius:8px;background:#fff7e0;color:#5c4000;font:inherit;font-weight:600;cursor:pointer}
+.sel-fis .ico{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.4}
 </style>
 </head>
 <body>
@@ -2751,7 +2759,8 @@ var COLORES = {
   atencion:  { red: 0,   green: 1,   blue: 1 },
   falta_cbte:{ red: 1,   green: 0.6, blue: 0 },
   vacio:     { red: 1,   green: 1,   blue: 1 },
-  docsFisicos:{ red: 1,  green: 0.949, blue: 0.8 }   // Tracking que falta recibir (cliente que pide docs físicos)
+  docsFisicos:{ red: 1,  green: 0.949, blue: 0.8 },  // Tracking que falta recibir (cliente que pide docs físicos)
+  sinDocs:   { red: 0.91, green: 0.91, blue: 0.91 }   // «No corresponde»: esta carga no lleva docs físicos
 };
 
 // El celeste no significa lo mismo en todas las columnas: en T.R. es
@@ -5415,13 +5424,40 @@ function trackingPendiente(emb) {
   if (!emb || emb._aFacturar || emb._esFact || fuenteDe(emb).mapa.tracking === undefined) return false;
   return docsFisicosDe(emb.importer).si && esRecibir(valorVista(emb, 'tracking'));
 }
+var TXT_SIN = 'No corresponde';
+function esNoCorresponde(v) { return clave(v) === 'no corresponde'; }
+function esColorSinDocs(bg) {
+  var c = COLORES.sinDocs;
+  return !!bg && Math.abs((bg.red || 0) - c.red) < 0.02 && Math.abs((bg.green || 0) - c.green) < 0.02 && Math.abs((bg.blue || 0) - c.blue) < 0.02;
+}
+// El cliente suele pedir los papeles pero en ESTA carga no corresponde (se escribió «No corresponde» en Tracking).
+function sinDocsDe(emb) {
+  return !!emb && !emb._aFacturar && !emb._esFact && fuenteDe(emb).mapa.tracking !== undefined &&
+    docsFisicosDe(emb.importer).si && esNoCorresponde(valorVista(emb, 'tracking'));
+}
+// ¿Se le puede marcar «no lleva docs físicos»? Solo si el cliente los pide y todavía está pendiente.
+function puedeSinDocs(emb) { return trackingPendiente(emb); }
 function esColorRecibir(bg) {
   var c = COLORES.docsFisicos;
   return !!bg && Math.abs((bg.red || 0) - c.red) < 0.03 && Math.abs((bg.green || 0) - c.green) < 0.03 && Math.abs((bg.blue || 0) - c.blue) < 0.03;
 }
 function pillFisicos(emb) {
-  return docsFisicosDe(emb.importer).si
-    ? '<span class="pill-fis" title="Este cliente pide los documentos en papel">' + ico('doc') + 'Docs físicos</span>' : '';
+  if (!docsFisicosDe(emb.importer).si) return '';
+  if (sinDocsDe(emb)) return '<span class="pill-fis sin" title="El cliente suele pedir los papeles, pero en esta carga no corresponde">' + ico('doc') + 'Sin docs físicos</span>';
+  return '<span class="pill-fis" title="Este cliente pide los documentos en papel">' + ico('doc') + 'Docs físicos</span>';
+}
+// Marca (o desmarca) que a estas cargas no les corresponde el envío de docs físicos: se escribe en la planilla, en Tracking.
+function marcarSinDocs(ids, volver) {
+  var n = 0;
+  ids.forEach(function (id) {
+    var emb = filaPorId(id);
+    if (!emb || (volver ? !sinDocsDe(emb) : !puedeSinDocs(emb))) return;
+    var a = encolarNuevo(id, 'tracking', volver ? TXT_RECIBIR : TXT_SIN, null);
+    var b = encolarNuevo(id, 'bg:tracking', volver ? COLORES.docsFisicos : COLORES.sinDocs, null);
+    if (a || b) n++;
+  });
+  if (!n) toast(volver ? 'Ninguna de las marcadas estaba sin docs físicos.' : 'Ninguna de las marcadas lleva docs físicos pendientes.', 'ok', 4000);
+  return n;
 }
 function datosEmpresa(nombre) {
   var man = S.empresas && S.empresas.get(clave(nombre));
@@ -12557,9 +12593,19 @@ function selInfoHtml() {
       (nFact > 1 ? ' (' + nFact + ')' : '') + '</button>' : '') +
     (idsParaDevolver().length ? '<button class="primario sel-fact" data-act="lotedev">' + ico('volver') + 'Devolver a su pestaña' +
       (idsParaDevolver().length > 1 ? ' (' + idsParaDevolver().length + ')' : '') + '</button>' : '') +
+    (idsSinDocs(false).length ? '<button class="sel-fis" data-act="fissinsel" title="Estas cargas no llevan docs físicos: el Tracking pasa a «' + TXT_SIN + '»">' + ico('doc') + 'No lleva docs físicos' +
+      (idsSinDocs(false).length > 1 ? ' (' + idsSinDocs(false).length + ')' : '') + '</button>' : '') +
+    (idsSinDocs(true).length ? '<button class="sel-fis" data-act="fisvolversel" title="Vuelven a quedar pendientes de recibir los docs físicos">' + ico('doc') + 'Volver a pedir docs físicos' +
+      (idsSinDocs(true).length > 1 ? ' (' + idsSinDocs(true).length + ')' : '') + '</button>' : '') +
     '<button class="btn-elim" data-act="elimsel" title="Eliminar las filas marcadas de la planilla">' + ico('papelera') + 'Eliminar' + (n > 1 ? ' (' + n + ')' : '') + '</button>' +
     '<button data-act="selsolo" aria-pressed="' + !!S.soloSel + '">' + (S.soloSel ? 'Ver todas' : 'Solo marcadas') + '</button>' +
     '<button data-act="selquitar" title="Quitar todas las marcas (Esc)">Quitar</button></span>';
+}
+function idsSinDocs(volver) {
+  return Object.keys(S.filasSel).filter(function (k) {
+    var e = S.filasSel[k] && filaPorId(k);
+    return e && (volver ? sinDocsDe(e) : puedeSinDocs(e));
+  });
 }
 function idsParaFacturar() {
   return Object.keys(S.filasSel).filter(function (k) {
@@ -13332,8 +13378,13 @@ function encolarCambio(id, c, crudo) {
     : def.tipo === 'fecha' ? convertir(crudo, 'fecha')
     : String(crudo == null ? '' : crudo).trim();
   var hecho = encolarNuevo(id, c, nuevo, null);
-  // Llegó el tracking: el resaltado de «Recibir» ya no corresponde.
-  if (hecho && c === 'tracking' && !esRecibir(nuevo) && esColorRecibir(bgGuardado(emb, 'tracking'))) encolarNuevo(id, 'bg:tracking', COLORES.vacio, null);
+  // El color de Tracking acompaña lo que se escribe: «Recibir» amarillo, «No corresponde» gris y, con un número de verdad, sin color.
+  if (hecho && c === 'tracking') {
+    var bgT = bgGuardado(emb, 'tracking'), marcado = esColorRecibir(bgT) || esColorSinDocs(bgT);
+    if (esNoCorresponde(nuevo)) { if (docsFisicosDe(emb.importer).si && !esColorSinDocs(bgT)) encolarNuevo(id, 'bg:tracking', COLORES.sinDocs, null); }
+    else if (clave(nuevo) === 'recibir') { if (docsFisicosDe(emb.importer).si && !esColorRecibir(bgT)) encolarNuevo(id, 'bg:tracking', COLORES.docsFisicos, null); }
+    else if (marcado) encolarNuevo(id, 'bg:tracking', COLORES.vacio, null);
+  }
   return hecho;
 }
 
@@ -13750,6 +13801,7 @@ function celdaPlanilla(emb, src, c) {
     td = conClaseTd(td, 'trk-recibir');
     if (esRecibir(valorVista(emb, 'tracking')) && !String(valorVista(emb, 'tracking') || '').trim()) td = td.replace(/^(<td[^>]*>)[\s\S]*<\/td>$/, '$1<span class="ph-recibir">' + TXT_RECIBIR + '</span></td>');
   }
+  else if (c === 'tracking' && sinDocsDe(emb)) td = conClaseTd(td, 'trk-sin');
   // Comentarios: la marca va según la CARGA y la columna, no según la posición en pantalla,
   // así que si se reordena o se filtra la planilla, la marca viaja con su fila.
   var hs = hilosDeCelda(emb, c).filter(function (h) { return comentariosVisibles(h).length; });
@@ -13854,8 +13906,12 @@ function vistaPanel(x) {
         (bandera(paisDeEmpresa(emb.importer)) ? ' ' + bandera(paisDeEmpresa(emb.importer)) : '') +
       '</h2>' +
       (docsFisicosDe(emb.importer).si
-        ? '<p class="pe-fis">' + ico('doc') + '<span>Docs físicos · ' + (docsFisicosDe(emb.importer).dir
-            ? 'enviar a: <b>' + esc(docsFisicosDe(emb.importer).dir) + '</b>' : 'este cliente pide los documentos en papel') + '</span></p>' : '') +
+        ? (sinDocsDe(emb)
+            ? '<p class="pe-fis sin">' + ico('doc') + '<span>Docs físicos · <b>no corresponde en esta carga</b></span>' +
+              '<button type="button" class="fis-btn" data-act="fisvolver" data-f="' + esc(emb._id) + '">Volver a pedir</button></p>'
+            : '<p class="pe-fis">' + ico('doc') + '<span>Docs físicos · ' + (docsFisicosDe(emb.importer).dir
+                ? 'enviar a: <b>' + esc(docsFisicosDe(emb.importer).dir) + '</b>' : 'este cliente pide los documentos en papel') + '</span></p>')
+        : '') +
       (emb.exporter && emb.importer
         ? '<p class="pe-desde">desde <b>' + esc(emb.exporter) + '</b> ' +
           bandera(paisDeEmpresa(emb.exporter)) + '</p>'
@@ -13930,7 +13986,9 @@ function vistaPanel(x) {
     ev.alertas.forEach(function (a) {
       h += '<div class="aviso-fila ' + a.nivel + ' ' + a.id + '" style="margin-bottom:8px">' +
         '<p class="tit">' + esc(a.titulo) + '</p>' +
-        '<p class="det">' + esc(a.detalle) + '</p></div>';
+        '<p class="det">' + esc(a.detalle) + '</p>' +
+        (a.id === 'docs_fisicos' ? '<button type="button" class="fis-btn" data-act="fissin" data-f="' + esc(emb._id) + '">Esta carga no lleva docs físicos</button>' : '') +
+        '</div>';
     });
     h += '</div>';
   }
@@ -14890,6 +14948,10 @@ document.addEventListener('click', function (ev) {
   if (act === 'percolsvolver') { S.perCols = null; return pintar(); }
   if (act === 'percolsok') return crearColumnasPeriodo();
   if (act === 'percolsno') { S.perColsNo = true; return pintar(); }
+  if (act === 'fissin') { marcarSinDocs([el.getAttribute('data-f')], false); return; }
+  if (act === 'fisvolver') { marcarSinDocs([el.getAttribute('data-f')], true); return; }
+  if (act === 'fissinsel') { marcarSinDocs(idsSinDocs(false), false); return; }
+  if (act === 'fisvolversel') { marcarSinDocs(idsSinDocs(true), true); return; }
   if (act === 'cerraviso') { S.avisoOk = null; return pintar(); }
   if (act === 'altaabrir') {
     S.topeContratos = 8;   // con el formulario abierto, la lista estorba
@@ -15962,7 +16024,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.29-e';
+var APP_VERSION = '2026.10.29-f';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
