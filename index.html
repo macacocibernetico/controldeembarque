@@ -2352,6 +2352,12 @@ button:disabled{cursor:not-allowed}
 .pe-fis.sin{flex-wrap:wrap}
 .sel-fis{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1px solid #e0a800;border-radius:8px;background:#fff7e0;color:#5c4000;font:inherit;font-weight:600;cursor:pointer}
 .sel-fis .ico{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.4}
+.fis-ir{display:inline-flex;align-items:center;min-height:28px;padding:0 11px;font:inherit;font-size:12.5px;font-weight:600;border:1px solid #e0a800;border-radius:980px;background:#fff7e0;color:#5c4000;cursor:pointer;white-space:nowrap}
+.fis-ir:hover{background:#ffeeb8}
+.fis-ir .ico{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.4;margin-right:4px}
+.fis-ir.sin{border-color:#9aa5ad;background:#f1f3f4;color:#37424a}
+.fis-ir.sin:hover{background:#e3e7ea}
+.sel-fis.sin{border-color:#9aa5ad;background:#f1f3f4;color:#37424a}
 </style>
 </head>
 <body>
@@ -5456,7 +5462,31 @@ function marcarSinDocs(ids, volver) {
     var b = encolarNuevo(id, 'bg:tracking', volver ? COLORES.docsFisicos : COLORES.sinDocs, null);
     if (a || b) n++;
   });
-  if (!n) toast(volver ? 'Ninguna de las marcadas estaba sin docs físicos.' : 'Ninguna de las marcadas lleva docs físicos pendientes.', 'ok', 4000);
+  if (!n) {
+    if (!ids.length) {
+      toast('Primero marcá las filas: tocá el número de cada fila (con Mayús marcás varias) y después este botón.', 'error', 8000);
+    } else if (volver) {
+      toast('Ninguna de las marcadas estaba como «' + TXT_SIN + '».', 'error', 6000);
+    } else {
+      var q = { terr: 0, noCli: 0, yaTrk: 0, ya: 0, fact: 0 };
+      ids.forEach(function (id) {
+        var e = filaPorId(id);
+        if (!e) return;
+        if (e._aFacturar || e._esFact) q.fact++;
+        else if (fuenteDe(e).mapa.tracking === undefined) q.terr++;
+        else if (!docsFisicosDe(e.importer).si) q.noCli++;
+        else if (esNoCorresponde(valorVista(e, 'tracking'))) q.ya++;
+        else q.yaTrk++;
+      });
+      var por = [];
+      if (q.noCli) por.push(q.noCli + ' de clientes que no figuran con «Envío docs físicos» = SI en la Database_old');
+      if (q.terr) por.push(q.terr + ' terrestres (no tienen Tracking)');
+      if (q.yaTrk) por.push(q.yaTrk + ' ya tienen número de tracking');
+      if (q.ya) por.push(q.ya + ' ya estaban marcadas');
+      if (q.fact) por.push(q.fact + ' ya pasaron a A facturar');
+      toast('Ninguna de las ' + ids.length + ' marcadas se puede marcar: ' + por.join('; ') + '.', 'error', 10000);
+    }
+  }
   return n;
 }
 function datosEmpresa(nombre) {
@@ -10069,6 +10099,7 @@ function filaEmbarque(x, opts) {
           ? '<span class="pill nar"><span class="pt"></span>Falta comprobante</span>' : '') +
         (emb._aFacturar
           ? '<span class="pill ok"><span class="pt"></span>Cliente pagó</span>' : '') +
+        (opts.acciones !== false ? btnSinDocsCarga(emb) : '') +
         ((S.fuentesFact || []).length && !emb._aFacturar && opts.acciones !== false
           ? '<button class="ir-fact" data-act="abrirpasar" data-f="' + esc(emb._id) + '" ' +
             'title="Pasar a ' + esc(S.fuentesFact[0].tab) + '">' + ico('mover') +
@@ -10771,7 +10802,7 @@ function detalleCargas(cargas) {
       'data-act="abrir" data-f="' + esc(e._id) + '" tabindex="0">' +
 
       '<div class="cd-cab">' +
-        '<span class="cd-ctr">' + esc(e.contract || 'sin contrato') + '</span>' +
+        '<span class="cd-ctr">' + esc(e.contract || 'sin contrato') + '</span>' + pillFisicos(e) +
         '<span class="cd-prod">' + esc(e.product || '') +
           (e.tns ? ' · ' + fmtNum(normNum(e.tns)) + ' tn' : '') + '</span>' +
         '<span class="cd-estado"><span class="cd-etapa">' + esc(etiquetaEtapa(ev.etapa)) + '</span>' +
@@ -10785,6 +10816,7 @@ function detalleCargas(cargas) {
             '"><span class="pt"></span>' + ev.alertas.length +
             (ev.alertas.length === 1 ? ' alerta' : ' alertas') + '</span>'
           : '') +
+        btnSinDocsCarga(e) +
         ((S.fuentesFact || []).length && !e._aFacturar
           ? '<button class="btn-elim chico" data-act="elimabrir" data-f="' + esc(e._id) + '" title="Eliminar esta carga de la planilla" aria-label="Eliminar esta carga">' + ico('papelera') + '</button>' +
             '<button class="ir-fact" data-f="' + esc(e._id) + '" title="Pasar a ' + esc(S.fuentesFact[0].tab) + '">' +
@@ -12450,12 +12482,12 @@ function vistaPlanilla(filas) {
 
   encabezadoPlanilla = function (colsX) {
     congActual = congEfectiva(colsX);
-    return '<tr><th class="nrofila">#</th>' +
+    return '<tr><th class="nrofila" title="Tocá el número de una fila para marcarla (con Mayús, varias)">#</th>' +
       '<th class="sel-col" title="Elegir para el shipment advice">' + ico('mail') + '</th>' +
       colsX.map(encabezado).join('') + '</tr>';
   };
   congActual = congEfectiva(cols);
-  var enc = '<tr><th class="nrofila">#</th>' +
+  var enc = '<tr><th class="nrofila" title="Tocá el número de una fila para marcarla (con Mayús, varias)">#</th>' +
               '<th class="sel-col" title="Elegir para el shipment advice">' + ico('mail') + '</th>' +
               cols.map(encabezado).join('') + '</tr>';
 
@@ -12585,7 +12617,7 @@ function selInfoHtml() {
     // Sin filas marcadas el botón está igual, a la vista: al tocarlo explica cómo elegir.
     if (S.verFact) return (S.fuentesFact || []).length ? '<button class="btn-pasar" data-act="lotedev" title="Devolver cargas de A facturar a su pestaña">' + ico('volver') + 'Devolver a su pestaña</button>' : '';
     var d0 = (S.fuentesFact || [])[0];
-    return d0 ? '<button class="btn-pasar" data-act="lotefact" title="Pasar cargas a ' + esc(d0.tab) + '">' + ico('mover') + 'Pasar a ' + esc(d0.tab) + '</button>' : '';
+    return (d0 ? '<button class="btn-pasar" data-act="lotefact" title="Pasar cargas a ' + esc(d0.tab) + '">' + ico('mover') + 'Pasar a ' + esc(d0.tab) + '</button>' : '') + btnSinDocsBarra();
   }
   var nFact = idsParaFacturar().length, dest = (S.fuentesFact || [])[0];
   return '<span class="sel-info" role="status"><b>' + n + (n === 1 ? ' marcada' : ' marcadas') + '</b>' +
@@ -12593,19 +12625,34 @@ function selInfoHtml() {
       (nFact > 1 ? ' (' + nFact + ')' : '') + '</button>' : '') +
     (idsParaDevolver().length ? '<button class="primario sel-fact" data-act="lotedev">' + ico('volver') + 'Devolver a su pestaña' +
       (idsParaDevolver().length > 1 ? ' (' + idsParaDevolver().length + ')' : '') + '</button>' : '') +
-    (idsSinDocs(false).length ? '<button class="sel-fis" data-act="fissinsel" title="Estas cargas no llevan docs físicos: el Tracking pasa a «' + TXT_SIN + '»">' + ico('doc') + 'No lleva docs físicos' +
-      (idsSinDocs(false).length > 1 ? ' (' + idsSinDocs(false).length + ')' : '') + '</button>' : '') +
-    (idsSinDocs(true).length ? '<button class="sel-fis" data-act="fisvolversel" title="Vuelven a quedar pendientes de recibir los docs físicos">' + ico('doc') + 'Volver a pedir docs físicos' +
-      (idsSinDocs(true).length > 1 ? ' (' + idsSinDocs(true).length + ')' : '') + '</button>' : '') +
+    btnSinDocsBarra() +
     '<button class="btn-elim" data-act="elimsel" title="Eliminar las filas marcadas de la planilla">' + ico('papelera') + 'Eliminar' + (n > 1 ? ' (' + n + ')' : '') + '</button>' +
     '<button data-act="selsolo" aria-pressed="' + !!S.soloSel + '">' + (S.soloSel ? 'Ver todas' : 'Solo marcadas') + '</button>' +
     '<button data-act="selquitar" title="Quitar todas las marcas (Esc)">Quitar</button></span>';
 }
+// Las filas marcadas: las que se marcan tocando el número de la fila (como en Sheets) y las tildadas para el shipment advice.
+function idsMarcados() {
+  var o = {};
+  Object.keys(S.filasSel || {}).forEach(function (k) { if (S.filasSel[k] && filaPorId(k)) o[k] = 1; });
+  Object.keys(S.marcados || {}).forEach(function (k) { if (S.marcados[k] && filaPorId(k)) o[k] = 1; });
+  return Object.keys(o);
+}
 function idsSinDocs(volver) {
-  return Object.keys(S.filasSel).filter(function (k) {
-    var e = S.filasSel[k] && filaPorId(k);
-    return e && (volver ? sinDocsDe(e) : puedeSinDocs(e));
-  });
+  return idsMarcados().filter(function (k) { var e = filaPorId(k); return e && (volver ? sinDocsDe(e) : puedeSinDocs(e)); });
+}
+// El botón de la barra de la Planilla: siempre a la vista (como «Pasar a A facturar»); explica qué hacer si no hay filas marcadas.
+function btnSinDocsBarra() {
+  if (S.verFact || !(S.fuentes || []).some(function (f) { return f.mapa.tracking !== undefined; })) return '';
+  var c = idsSinDocs(false).length, v = idsSinDocs(true).length;
+  return '<button class="sel-fis" data-act="fissinsel" title="Marcá las filas tocando su número (con Mayús, varias): en esas cargas el Tracking pasa a «' + TXT_SIN + '»">' +
+    ico('doc') + 'No lleva docs físicos' + (c > 1 ? ' (' + c + ')' : '') + '</button>' +
+    (v ? '<button class="sel-fis sin" data-act="fisvolversel" title="Vuelven a quedar pendientes de recibir los docs físicos">' + ico('doc') + 'Volver a pedir docs físicos' + (v > 1 ? ' (' + v + ')' : '') + '</button>' : '');
+}
+// El botón en cada carga (tarjetas y «Por exportador»).
+function btnSinDocsCarga(emb) {
+  if (puedeSinDocs(emb)) return '<button type="button" class="fis-ir" data-act="fissin" data-f="' + esc(emb._id) + '" title="El cliente suele pedir los papeles, pero en esta carga no corresponde">' + ico('doc') + 'No lleva docs físicos</button>';
+  if (sinDocsDe(emb)) return '<button type="button" class="fis-ir sin" data-act="fisvolver" data-f="' + esc(emb._id) + '" title="Vuelve a quedar pendiente de recibir los docs físicos">' + ico('doc') + 'Volver a pedir docs físicos</button>';
+  return '';
 }
 function idsParaFacturar() {
   return Object.keys(S.filasSel).filter(function (k) {
@@ -13307,7 +13354,7 @@ function filasHtmlPlanilla(filas, cols) {
     if (noCombina) clases.push('incompat');
     return '<tr' + (clases.length ? ' class="' + clases.join(' ') + '"' : '') +
       ' data-f="' + esc(emb._id) + '" aria-selected="' + (S.filasSel[emb._id] ? 'true' : 'false') + '">' +
-      '<td class="nrofila' + (hilosDeCelda(emb, '').some(function (h) { return comentariosVisibles(h).length; }) ? ' tiene-com' : '') + '" title="' + esc(emb._tab) +
+      '<td class="nrofila' + (hilosDeCelda(emb, '').some(function (h) { return comentariosVisibles(h).length; }) ? ' tiene-com' : '') + '" title="Tocá el número para marcar la fila · ' + esc(emb._tab) +
         (adviceDe(emb) ? ' · advice enviado' : '') + '" tabindex="0" role="rowheader" aria-label="Fila ' + emb._fila + ': marcar o desmarcar (Espacio)"><span class="nro">' + emb._fila + '</span>' +
         (hilosDeCelda(emb, '').some(function (h) { return comentariosVisibles(h).length; })
           ? '<button class="fila-com" title="Ver los comentarios de esta carga" aria-label="Comentarios de la fila ' + emb._fila + '">' + ico('chat') + '</button>' : '') +
@@ -14950,8 +14997,8 @@ document.addEventListener('click', function (ev) {
   if (act === 'percolsno') { S.perColsNo = true; return pintar(); }
   if (act === 'fissin') { marcarSinDocs([el.getAttribute('data-f')], false); return; }
   if (act === 'fisvolver') { marcarSinDocs([el.getAttribute('data-f')], true); return; }
-  if (act === 'fissinsel') { marcarSinDocs(idsSinDocs(false), false); return; }
-  if (act === 'fisvolversel') { marcarSinDocs(idsSinDocs(true), true); return; }
+  if (act === 'fissinsel') { marcarSinDocs(idsMarcados(), false); return; }
+  if (act === 'fisvolversel') { marcarSinDocs(idsMarcados(), true); return; }
   if (act === 'cerraviso') { S.avisoOk = null; return pintar(); }
   if (act === 'altaabrir') {
     S.topeContratos = 8;   // con el formulario abierto, la lista estorba
@@ -16024,7 +16071,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.29-f';
+var APP_VERSION = '2026.10.29-g';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
