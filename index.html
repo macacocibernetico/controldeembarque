@@ -2453,7 +2453,7 @@ var S = {
   enviarPia: false,
   tGuardado: null,
   filtroNivel: '',
-  modo: 'tarjetas',
+  modo: 'planilla',        // lo primero que se ve en Cargas (en el celular, tarjetas: ver arrancar)
   colsOcultas: {},
   menuCfg: false,
   menuPintar: false,
@@ -15962,9 +15962,10 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.28-d';
+var APP_VERSION = '2026.10.29-e';
 
 function arrancar() {
+  if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
   cargarPrefsPlanilla();
   // La leyenda: abierta en pantalla ancha, cerrada en el celular (ahí empuja la lista hacia
   // abajo), hasta que la persona elija; desde entonces se recuerda lo que eligió.
