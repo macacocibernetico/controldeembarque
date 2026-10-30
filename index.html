@@ -2358,6 +2358,14 @@ button:disabled{cursor:not-allowed}
 .fis-ir.sin{border-color:#9aa5ad;background:#f1f3f4;color:#37424a}
 .fis-ir.sin:hover{background:#e3e7ea}
 .sel-fis.sin{border-color:#9aa5ad;background:#f1f3f4;color:#37424a}
+.ctr-pie .btn-estado{flex:none}
+.btn-estado.suave{background:#fff;border-color:var(--linea2);color:var(--tinta2)}
+.btn-estado.suave .letra{background:#f3f4f6;color:var(--tinta2)}
+.btn-estado.listo{box-shadow:0 0 0 2px rgba(179,38,30,.18)}
+.ctr-aviso-cerrar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 14px;padding:10px 14px;border:1px solid #f1c15a;border-radius:12px;background:#fff7e0;color:#5c4000;font-size:14px}
+.ctr-aviso-cerrar span{flex:1 1 320px;line-height:1.45}
+.ctr-aviso-cerrar button{min-height:44px;padding:0 16px;border:1px solid #e0a800;border-radius:980px;background:#fff;color:#5c4000;font:inherit;font-weight:600;cursor:pointer}
+@media(max-width:900px){.ctr-pie{flex-wrap:wrap}.ctr-pie .btn-estado{min-height:44px}}
 </style>
 </head>
 <body>
@@ -9257,6 +9265,29 @@ function modalMoverCtr() {
     '</div></div>';
 }
 
+// Contrato que ya entregó todo (saldo 0) y sigue en «Contratos Abiertos»: la app no lo cierra sola.
+function esCompletoSinCerrar(r) {
+  return !!r && !r.huerfano && r.contratado !== null && r.contratado !== undefined && r.saldo !== null && r.saldo !== undefined &&
+    r.saldo <= 0.5 && estadoContrato(r.contrato) === 'A';
+}
+// El botón de cada tarjeta: un clic y abre el cartel de confirmación (el mismo del editor). A la fila la deja arriba del TOTAL del destino.
+function botonMoverTarjeta(r) {
+  var est = estadoContrato(r.contrato);
+  if (!est) return '';
+  var haciaC = est === 'A', listo = esCompletoSinCerrar(r);
+  return '<button type="button" class="btn-estado ' + (haciaC ? 'c' : 'a') + (listo ? ' listo' : ' suave') + '" data-act="ctrmover" data-k="' + esc(r.contrato) + '" ' +
+    'title="' + (haciaC ? 'Pasa a «Contratos Cerrados», arriba de la fila TOTAL' : 'Vuelve a «Contratos Abiertos», arriba de la fila TOTAL') + '">' +
+    '<span class="letra">' + (haciaC ? 'C' : 'A') + '</span>' +
+    (listo ? 'Completo · Pasar a Cerrados' : (haciaC ? 'Pasar a Cerrados' : 'Pasar a Abiertos')) + '</button>';
+}
+function avisoCompletosHtml() {
+  if (S.vista !== 'contratos' || S.fContrato === 'sin_cerrar') return '';
+  var n = calcularContratos().filter(esCompletoSinCerrar).length;
+  if (!n) return '';
+  return '<div class="ctr-aviso-cerrar" role="status"><span><b>' + n + (n === 1 ? ' contrato completo' : ' contratos completos') + '</b> ' +
+    (n === 1 ? 'sigue' : 'siguen') + ' en «Contratos Abiertos» con saldo 0. No se cierran solos: pasalos con un clic desde cada tarjeta.</span>' +
+    '<button type="button" data-act="ctrsincerrar">Verlos</button></div>';
+}
 // Botón del editor: dice a dónde va.
 function botonEstadoCtr(nombre) {
   var est = estadoContrato(nombre);
@@ -11022,6 +11053,7 @@ function contratosFiltrados(omitir) {
     if (S.fContrato === 'abiertos') lista = lista.filter(function (r) { return r.saldo > 0.5; });
     if (S.fContrato === 'completos') lista = lista.filter(function (r) { return r.saldo !== null && r.saldo <= 0.5; });
     if (S.fContrato === 'excedidos') lista = lista.filter(function (r) { return r.saldo !== null && r.saldo < -0.5; });
+    if (S.fContrato === 'sin_cerrar') lista = lista.filter(esCompletoSinCerrar);
     if (S.fContrato === 'sin_contrato') lista = lista.filter(function (r) { return r.huerfano; });
     if (S.fContrato === 'sin_firma') {
       var pend = {};
@@ -11409,14 +11441,14 @@ async function crearColumnasPeriodo() {
   }
 }
 
-var ESTADOS_CTR = [['', 'Con movimiento'], ['abiertos', 'Con saldo'], ['completos', 'Completos'],
+var ESTADOS_CTR = [['', 'Con movimiento'], ['abiertos', 'Con saldo'], ['completos', 'Completos'], ['sin_cerrar', 'Completos sin cerrar'],
                    ['excedidos', 'Excedidos'], ['sin_contrato', 'Sin contrato'], ['todos', 'Todos']];
 
 function vistaContratos() {
   var lista = contratosFiltrados();
   var conEmb = lista.filter(function (r) { return r.embarques.length; }).length;
 
-  var h = panelFirmas() + bannerColumnasPeriodoHtml();
+  var h = panelFirmas() + bannerColumnasPeriodoHtml() + avisoCompletosHtml();
 
   if (!S.alta) {
     h += '<div class="barra-alta">' +
@@ -12336,6 +12368,7 @@ function filaContrato(r) {
     '<footer class="ctr-pie">' +
       '<span class="orig">' + origen + '</span>' +
       (r.huerfano ? '<span class="pill nar"><span class="pt"></span>No figura en las pestañas de contratos</span>' : '') +
+      (ref ? botonMoverTarjeta(r) : '') +
       (ref ? '<span class="ed">Editar ›</span>' : '') +
     '</footer>' +
     '</article>';
@@ -14999,6 +15032,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'fisvolver') { marcarSinDocs([el.getAttribute('data-f')], true); return; }
   if (act === 'fissinsel') { marcarSinDocs(idsMarcados(), false); return; }
   if (act === 'fisvolversel') { marcarSinDocs(idsMarcados(), true); return; }
+  if (act === 'ctrsincerrar') { S.fContrato = 'sin_cerrar'; S.busca = ''; S.topeContratos = 40; return pintar(); }
   if (act === 'cerraviso') { S.avisoOk = null; return pintar(); }
   if (act === 'altaabrir') {
     S.topeContratos = 8;   // con el formulario abierto, la lista estorba
@@ -16071,7 +16105,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.29-g';
+var APP_VERSION = '2026.10.30-h';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
