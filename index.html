@@ -2366,6 +2366,38 @@ button:disabled{cursor:not-allowed}
 .ctr-aviso-cerrar span{flex:1 1 320px;line-height:1.45}
 .ctr-aviso-cerrar button{min-height:44px;padding:0 16px;border:1px solid #e0a800;border-radius:980px;background:#fff;color:#5c4000;font:inherit;font-weight:600;cursor:pointer}
 @media(max-width:900px){.ctr-pie{flex-wrap:wrap}.ctr-pie .btn-estado{min-height:44px}}
+/* Rango de celdas, suma y búsqueda en la planilla */
+.tbl-hoja td.cel-rango{background:rgba(26,115,232,.14) !important;
+  box-shadow:var(--rt,inset 0 0 0 0 transparent),var(--rb,inset 0 0 0 0 transparent),var(--rl,inset 0 0 0 0 transparent),var(--rr,inset 0 0 0 0 transparent)}
+.tbl-hoja td.rg-t{--rt:inset 0 2px 0 #1a73e8}
+.tbl-hoja td.rg-b{--rb:inset 0 -2px 0 #1a73e8}
+.tbl-hoja td.rg-l{--rl:inset 2px 0 0 #1a73e8}
+.tbl-hoja td.rg-r{--rr:inset -2px 0 0 #1a73e8}
+body.rango-arrastrando, body.rango-arrastrando *{user-select:none !important;cursor:cell !important}
+.rango-barra{position:fixed;right:24px;bottom:18px;z-index:75;display:flex;flex-wrap:nowrap;align-items:center;gap:6px 16px;max-width:calc(100% - 48px);white-space:nowrap;
+  padding:8px 10px 8px 16px;border-radius:14px;background:#1d1d1f;color:#fff;font-size:13.5px;box-shadow:0 8px 28px rgba(0,0,0,.3)}
+.rango-barra .rg-celdas small{color:#a1a1a6;margin-left:6px}
+.rango-barra .rg-dato em{font-style:normal;color:#a1a1a6;font-size:12px;margin-right:6px}
+.rango-barra .rg-dato b{font-variant-numeric:tabular-nums}
+.rango-barra .rg-nada{color:#a1a1a6}
+@media(max-width:1100px){.rango-barra{flex-wrap:wrap;white-space:normal}}
+.find-bar input[type=search]::-webkit-search-cancel-button{display:none}
+.rango-barra .rg-btn{min-height:36px;padding:0 14px;border:1px solid #6b6b70;border-radius:980px;background:transparent;color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.rango-barra .rg-x{width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:#d2d2d7;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.rango-barra .rg-x .ico{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6}
+.tbl-hoja td.cel-busca{background:#fff3a8 !important}
+.tbl-hoja td.cel-busca-act{background:#ffb74d !important;box-shadow:inset 0 0 0 2px #e65100}
+.find-bar{position:fixed;top:12px;right:24px;z-index:90;display:flex;align-items:center;gap:6px;padding:6px 8px 6px 12px;border-radius:12px;
+  background:#fff;border:1px solid #c7c7cc;box-shadow:0 8px 28px rgba(0,0,0,.2)}
+.find-bar:focus-within{border-color:#1a73e8;box-shadow:0 0 0 2px rgba(26,115,232,.25),0 8px 28px rgba(0,0,0,.2)}
+.find-bar .find-lupa .ico{width:16px;height:16px;fill:none;stroke:#6b7280;stroke-width:1.6}
+.find-bar input{width:230px;min-height:36px;border:0;outline:0;background:transparent;font:inherit;font-size:15px;color:#1d1d1f}
+.find-bar .find-n{min-width:78px;color:#4b5563;font-size:13px;white-space:nowrap}
+.find-bar .find-b{width:36px;height:36px;border:0;border-radius:8px;background:transparent;color:#374151;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.find-bar .find-b:hover{background:#f3f4f6}
+.find-bar .find-x .ico{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6}
+.find-bar .find-todas{min-height:36px;padding:0 12px;border:1px solid #c7c7cc;border-radius:980px;background:#fff;color:#1d1d1f;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.btn-buscar[aria-pressed="true"]{background:#e8f0fe;border-color:#1a73e8;color:#1a56b8}
 </style>
 </head>
 <body>
@@ -3874,14 +3906,18 @@ function interpretarPeriodoTexto(texto, ref) {
 // «Septiembre 2026: 500 | Diciembre 2026: 500»
 function parsePartidasCol(v) {
   return String(v == null ? '' : v).split('|').map(function (s) {
-    var p = s.split(':'), mo = parseMesTxt(p[0]);
-    return mo ? { m: mo.m, y: mo.y, tn: p.length > 1 ? normNum(p.slice(1).join(':')) : null } : null;
+    var p = s.split(':'), mo = clave(p[0]) === 'prompt' ? { m: 0, y: 0, prompt: true } : parseMesTxt(p[0]);
+    return mo ? { m: mo.m, y: mo.y, prompt: !!mo.prompt, tn: p.length > 1 ? normNum(p.slice(1).join(':')) : null } : null;
   }).filter(Boolean);
 }
+// Una partida puede ser «Prompt» (sin mes fijo): {prompt:true, m:0, y:0, tn}. Va primera al ordenar.
+function claveParte(x) { return x.prompt ? -1 : mesKey(x); }
+function etiqParte(x) { return x.prompt ? 'Prompt' : mesTxt(x); }
+function perTienePrompt(p) { return !!p && (p.modo === 'prompt' || (p.modo === 'partidas' && p.partidas.some(function (x) { return x.prompt; }))); }
 function mesesDe(p) {
   var out = [];
   if (p.modo === 'ventana' && p.d && p.h) out = mesesEntre(p.d, p.h);
-  else if (p.modo === 'partidas') out = p.partidas.map(mesKey);
+  else if (p.modo === 'partidas') out = p.partidas.filter(function (x) { return !x.prompt; }).map(mesKey);
   else if (p.modo === 'texto') out = (p.mesesTxt || []).slice();
   return out.filter(function (k, i) { return out.indexOf(k) === i; }).sort(function (a, b) { return a - b; });
 }
@@ -3917,8 +3953,8 @@ function fmtTnPer(n) { return Number(n).toLocaleString('es-AR', { maximumFractio
 function periodoATexto(p) {
   if (p.modo === 'ventana' && p.d && p.h) return mesKey(p.d) === mesKey(p.h) ? mesTxt(p.d) : mesTxt(p.d) + ' - ' + mesTxt(p.h);
   if (p.modo === 'partidas') {
-    return p.partidas.slice().sort(function (a, b) { return mesKey(a) - mesKey(b); }).map(function (x) {
-      return mesTxt(x) + (x.tn ? ' (' + fmtTnPer(x.tn) + ' tn)' : '');
+    return p.partidas.slice().sort(function (a, b) { return claveParte(a) - claveParte(b); }).map(function (x) {
+      return etiqParte(x) + (x.tn ? ' (' + fmtTnPer(x.tn) + ' tn)' : '');
     }).join(' + ');
   }
   if (p.modo === 'prompt') return 'Prompt';
@@ -3932,8 +3968,8 @@ function periodoAColumnas(p) {
   c.perModo = PER_MODOS[p.modo] || '';
   if (p.modo === 'ventana') { c.perDesde = mesTxt(p.d); c.perHasta = mesTxt(p.h); }
   if (p.modo === 'partidas') {
-    c.perPartidas = p.partidas.slice().sort(function (a, b) { return mesKey(a) - mesKey(b); }).map(function (x) {
-      return mesTxt(x) + (x.tn ? ': ' + x.tn : '');
+    c.perPartidas = p.partidas.slice().sort(function (a, b) { return claveParte(a) - claveParte(b); }).map(function (x) {
+      return etiqParte(x) + (x.tn ? ': ' + x.tn : '');
     }).join(' | ');
   }
   return c;
@@ -8772,7 +8808,7 @@ function vistaApp() {
       segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     ((S.modo === 'planilla' || S.modo === 'tabla') && S.vista === 'carga' ? menuColumna() : '') +
-    modalMoverCtr() + modalLoteFact() + modalLoteDev() + modalElim() + modalElimCtr() + pendFlotaHtml() + avisoVersionHtml() + comPopHtml() + comCtxHtml();
+    modalMoverCtr() + modalLoteFact() + modalLoteDev() + modalElim() + modalElimCtr() + pendFlotaHtml() + avisoVersionHtml() + busquedaHtml() + comPopHtml() + comCtxHtml();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -11085,7 +11121,7 @@ function contratosFiltrados(omitir) {
   }
   if (omitir !== 'mes' && S.fMesCtr) {
     lista = lista.filter(function (r) {
-      return r.per && (S.fMesCtr === 'prompt' ? r.per.modo === 'prompt' : r.per.meses.indexOf(Number(S.fMesCtr)) >= 0);
+      return r.per && (S.fMesCtr === 'prompt' ? perTienePrompt(r.per) : r.per.meses.indexOf(Number(S.fMesCtr)) >= 0);
     });
   }
   return lista;
@@ -11133,7 +11169,7 @@ var CAMPOS_PER = ['periodo', 'perModo', 'perDesde', 'perHasta', 'perPartidas'];
 // Lo que se está editando: se arma de lo que ya dice el contrato (o vacío, en el alta).
 function perDesdeInterpretado(p) {
   var st = { modo: p.modo || 'ventana', d: p.d ? { m: p.d.m, y: p.d.y } : { m: 0, y: 0 }, h: p.h ? { m: p.h.m, y: p.h.y } : { m: 0, y: 0 },
-    partidas: (p.partidas || []).map(function (x) { return { m: x.m, y: x.y, tn: x.tn ? String(x.tn).replace('.', ',') : '' }; }),
+    partidas: (p.partidas || []).map(function (x) { return { m: x.m, y: x.y, prompt: !!x.prompt, tn: x.tn ? String(x.tn).replace('.', ',') : '' }; }),
     texto: p.modo === 'texto' || (!p.modo && p.texto) ? (p.texto || '') : '', aviso: '' };
   if (!p.modo && p.texto) st.modo = 'texto';
   if (st.partidas.length < 2) while (st.partidas.length < 2) st.partidas.push({ m: 0, y: 0, tn: '' });
@@ -11160,7 +11196,7 @@ function perAProps(st) {
   if (st.modo === 'ventana') {
     if (st.d.m && st.d.y && st.h.m && st.h.y) { p.modo = 'ventana'; p.d = { m: st.d.m, y: st.d.y }; p.h = { m: st.h.m, y: st.h.y }; }
   } else if (st.modo === 'partidas') {
-    p.partidas = st.partidas.filter(function (x) { return x.m && x.y; }).map(function (x) { return { m: x.m, y: x.y, tn: normNum(x.tn) || null }; });
+    p.partidas = st.partidas.filter(function (x) { return x.prompt || (x.m && x.y); }).map(function (x) { return { m: x.m, y: x.y, prompt: !!x.prompt, tn: normNum(x.tn) || null }; });
     if (p.partidas.length) p.modo = 'partidas';
   } else if (st.modo === 'prompt') p.modo = 'prompt';
   else { p.texto = String(st.texto || '').trim(); if (p.texto) p.modo = 'texto'; }
@@ -11177,10 +11213,10 @@ function perError(st, textoOrig) {
     var vistos = {}, i;
     for (i = 0; i < st.partidas.length; i++) {
       var x = st.partidas[i];
-      if (!(x.m || x.y || String(x.tn || '').trim())) continue;
-      if (!x.m || !x.y) return 'En la partida ' + (i + 1) + ' falta el mes o el año.';
-      if (vistos[mesKey(x)]) return mesTxt(x) + ' está repetido: juntá las toneladas en una sola partida.';
-      vistos[mesKey(x)] = 1;
+      if (!(x.prompt || x.m || x.y || String(x.tn || '').trim())) continue;
+      if (!x.prompt && (!x.m || !x.y)) return 'En la partida ' + (i + 1) + ' falta el mes o el año.';
+      if (vistos[claveParte(x)]) return etiqParte(x) + ' está repetido: juntá las toneladas en una sola partida.';
+      vistos[claveParte(x)] = 1;
     }
   }
   // Borrar el período de un contrato que lo tenía tiene que ser a propósito («Otro» y vacío), no por dejar algo a medias.
@@ -11198,6 +11234,8 @@ function perPoner(st, path, v) {
   if (q[0] === 'p') o = st.partidas[+q[1]]; else o = st[q[0]];
   if (!o) return;
   var k = q[q.length - 1];
+  if (k === 'm' && n === -1) { o.prompt = true; o.m = 0; o.y = 0; return; }          // «Prompt» en la lista de meses
+  if (k === 'm') o.prompt = false;
   if (k === 'tn') o.tn = v; else o[k] = n;
   if (k === 'm' && n && !o.y) o.y = perAnioSugerido(n);          // al elegir el mes se propone el año
   if (q[0] === 'd' && st.d.m && st.d.y) {                        // el fin acompaña al inicio para que no quede un rango roto
@@ -11240,9 +11278,9 @@ function perMensajesHtml(ctx) {
   h += '<p class="per-resumen">Se guarda como: <b>' + (texto ? esc(texto) : '—') + '</b></p>';
   return h;
 }
-function perSelMes(ctx, path, val, etiqueta) {
+function perSelMes(ctx, path, val, etiqueta, conPrompt) {
   return '<select id="per-' + ctx + '-' + path.replace(/\./g, '-') + '" class="per-sel per-mes" data-per="' + path + '" data-perctx="' + ctx + '" aria-label="' + esc(etiqueta) + ' · mes">' +
-    '<option value="0">Mes</option>' + MESES_ES.map(function (n, i) {
+    '<option value="0">Mes</option>' + (conPrompt ? '<option value="-1"' + (val === -1 ? ' selected' : '') + '>Prompt</option>' : '') + MESES_ES.map(function (n, i) {
       return '<option value="' + (i + 1) + '"' + (val === i + 1 ? ' selected' : '') + '>' + n + '</option>';
     }).join('') + '</select>';
 }
@@ -11271,10 +11309,10 @@ function periodoCtlHtml(ctx) {
       '<p class="per-ayuda">' + (ok ? 'Puede cargar en <b>cualquier mes</b> entre ' + mesTxt(st.d) + ' y ' + mesTxt(st.h) + '.'
                                     : 'Elegí el primer y el último mes en que puede cargarse.') + '</p>';
   } else if (st.modo === 'partidas') {
-    h += '<p class="per-ayuda">Un renglón por cada mes en que sale una parte, con sus toneladas. Solo cargan en esos meses.</p>';
+    h += '<p class="per-ayuda">Un renglón por cada mes en que sale una parte, con sus toneladas. Solo cargan en esos meses. Una parte puede ser «Prompt» (entrega inmediata).</p>';
     st.partidas.forEach(function (x, i) {
       var et = 'Partida ' + (i + 1);
-      h += '<div class="per-fila per-partida"><span class="per-num">' + (i + 1) + '</span>' + perSelMes(ctx, 'p.' + i + '.m', x.m, et) + perSelAnio(ctx, 'p.' + i + '.y', x.y, et) +
+      h += '<div class="per-fila per-partida"><span class="per-num">' + (i + 1) + '</span>' + perSelMes(ctx, 'p.' + i + '.m', x.prompt ? -1 : x.m, et, true) + (x.prompt ? '' : perSelAnio(ctx, 'p.' + i + '.y', x.y, et)) +
         '<input id="per-' + ctx + '-p-' + i + '-tn" class="per-tn" type="text" inputmode="decimal" data-per="p.' + i + '.tn" data-perctx="' + ctx + '" ' +
           'placeholder="Toneladas" aria-label="' + et + ' · toneladas" value="' + esc(x.tn) + '"><span class="per-et">tn</span>' +
         (st.partidas.length > 1 ? '<button type="button" class="per-x" data-act="perdel" data-ctx="' + ctx + '" data-i="' + i + '" aria-label="Quitar la ' + et.toLowerCase() + '" title="Quitar">' + ico('x') + '</button>' : '') +
@@ -11332,7 +11370,7 @@ function opcionesMes() {
   var k0 = ahora.getUTCFullYear() * 12 + ahora.getUTCMonth(), claves = {}, i;
   lista.forEach(function (r) {
     if (!r.per) return;
-    if (r.per.modo === 'prompt') nPrompt++;
+    if (perTienePrompt(r.per)) nPrompt++;
     r.per.meses.forEach(function (k) { por[k] = (por[k] || 0) + 1; });
   });
   Object.keys(por).forEach(function (k) { if (+k >= k0 - 2) claves[k] = 1; });        // lo vencido hace poco todavía importa
@@ -11364,8 +11402,8 @@ function perFichaHtml(r) {
     h = '<span class="per-chip per-ventana' + (sel !== null && p.meses.indexOf(sel) >= 0 ? ' sel' : '') + '"><b>' + esc(corto) + '</b>' +
       (mesKey(p.d) === mesKey(p.h) ? '' : '<small>cualquier mes</small>') + '</span>';
   } else if (p.modo === 'partidas') {
-    h = p.partidas.slice().sort(function (a, b) { return mesKey(a) - mesKey(b); }).map(function (x) {
-      return '<span class="per-chip per-partida' + (sel === mesKey(x) ? ' sel' : '') + '"><b>' + esc(mesCorto(x) + ' ' + x.y) + '</b>' +
+    h = p.partidas.slice().sort(function (a, b) { return claveParte(a) - claveParte(b); }).map(function (x) {
+      return '<span class="per-chip per-partida' + (x.prompt ? (S.fMesCtr === 'prompt' ? ' sel' : '') : (sel === mesKey(x) ? ' sel' : '')) + '"><b>' + esc(x.prompt ? 'Prompt' : mesCorto(x) + ' ' + x.y) + '</b>' +
         (x.tn ? '<small>' + fmtTnPer(x.tn) + ' tn</small>' : '') + '</span>';
     }).join('<span class="per-mas-sig" aria-hidden="true">+</span>');
   } else if (p.modo === 'prompt') {
@@ -12464,6 +12502,7 @@ function vistaPlanilla(filas) {
       'title="' + (S.planillaFull ? 'Salir (Esc)' : 'Ver la planilla en pantalla completa') + '">' +
       ico(S.planillaFull ? 'achicar' : 'agrandar') +
       (S.planillaFull ? 'Salir de pantalla completa' : 'Pantalla completa') + '</button>' +
+    '<button class="btn-buscar" data-act="findabrir" aria-pressed="' + !!S.busq + '" title="Buscar en toda la planilla (Ctrl+F)">' + ico('lupa') + 'Buscar</button>' +
     (Object.keys(S.fCol).some(function (k) { return filtroColActivo(S.fCol[k]); }) || S.ordenCol
       ? '<button data-act="limpiarcol">Quitar filtros de columna</button>' : '') +
     '<button class="btn-com" data-act="comcelda" title="Comentar la celda marcada (Ctrl+Alt+M). También con clic derecho sobre la celda."' +
@@ -14465,6 +14504,7 @@ function pintar() {
    las flechas, editar con Enter o F2, vaciar con Supr y copiar con Ctrl+C. */
 function marcarCeldaActiva(td) {
   S.copiarFilas = false;
+  limpiarRango();
   var viejo = document.querySelector('.tbl-hoja td.cel-act');
   if (viejo) viejo.classList.remove('cel-act');
   td.classList.add('cel-act');
@@ -14506,6 +14546,8 @@ function tdActiva() {
 function aplicarCeldaActiva() {
   var td = tdActiva();
   if (td) td.classList.add('cel-act');
+  aplicarRango();
+  if (S.busq) buscarEnPlanilla(false);
 }
 
 // Cambia el ancho de una columna en pantalla, sin redibujar nada.
@@ -14582,7 +14624,9 @@ document.addEventListener('keydown', function (ev) {
   if (ev.key === 'Escape' && nSelFilas()) { if (td) td.classList.remove('cel-act'); S.celdaAct = null; return limpiarSelFilas(); }
   if (!td) return;
   if (ev.key === 'Enter' || ev.key === 'F2') { ev.preventDefault(); return editarCelda(td); }
+  if (ev.key === 'Escape' && S.rango) { limpiarRango(); return; }
   if (ev.key === 'Escape') { td.classList.remove('cel-act'); S.celdaAct = null; return; }
+  if ((ev.key === 'Delete' || ev.key === 'Backspace') && S.rango && rangoEsVarias()) { ev.preventDefault(); return vaciarRango(); }
   if (ev.key === 'Delete' || ev.key === 'Backspace') {
     var cd = td.getAttribute('data-c');
     if (CAMPOS[cd] && CAMPOS[cd].tipo !== 'semaforo' && !motivoNoEditable(filaPorId(td.closest('tr').getAttribute('data-f')), cd)) {
@@ -14593,6 +14637,7 @@ document.addEventListener('keydown', function (ev) {
   var mov = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[ev.key];
   if (!mov) return;
   ev.preventDefault();
+  if (ev.shiftKey) return extenderRango(mov[0], mov[1]);
   var tr = td.closest('tr'), sig = null;
   if (mov[0]) {
     sig = mov[0] < 0 ? td.previousElementSibling : td.nextElementSibling;
@@ -14604,12 +14649,280 @@ document.addEventListener('keydown', function (ev) {
   if (sig) { marcarCeldaActiva(sig); sig.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
 });
 
+/* ===========================================================================
+   Planilla: seleccionar un grupo de celdas arrastrando el mouse (con la suma, el promedio y demás abajo, como en Sheets)
+   y buscar en toda la planilla con Ctrl+F.
+   =========================================================================== */
+
+/* --- Rango de celdas ---------------------------------------------------------
+   S.rango = { f0, c0, f1, c1 }: desde la celda donde se empezó (fila y columna) hasta donde se llegó. Se guarda por
+   fila/columna y no por posición, así sobrevive a un redibujado. */
+function limpiarRango() {
+  if (!S.rango) return;
+  S.rango = null;
+  aplicarRango();
+}
+// El rectángulo marcado, en el orden en que se ve: { trs, cols } (o null si no hay o no se ve).
+function rangoCeldas() {
+  var R = S.rango;
+  if (!R || typeof document === 'undefined') return null;
+  var trs = Array.prototype.slice.call(document.querySelectorAll('.tbl-hoja tbody tr[data-f]'));
+  if (!trs.length) return null;
+  var ids = trs.map(function (tr) { return tr.getAttribute('data-f'); });
+  var cols = Array.prototype.map.call(trs[0].querySelectorAll('td[data-c]'), function (td) { return td.getAttribute('data-c'); });
+  var i0 = ids.indexOf(R.f0), i1 = ids.indexOf(R.f1), j0 = cols.indexOf(R.c0), j1 = cols.indexOf(R.c1);
+  if (i0 < 0 || i1 < 0 || j0 < 0 || j1 < 0) return null;
+  return { trs: trs.slice(Math.min(i0, i1), Math.max(i0, i1) + 1), cols: cols.slice(Math.min(j0, j1), Math.max(j0, j1) + 1) };
+}
+function rangoEsVarias() { var r = rangoCeldas(); return !!r && r.trs.length * r.cols.length > 1; }
+// Pinta el rectángulo (fondo azul suave y borde por fuera) y actualiza la barra de abajo.
+function aplicarRango() {
+  if (typeof document === 'undefined') return;
+  Array.prototype.forEach.call(document.querySelectorAll('.tbl-hoja td.cel-rango'), function (td) {
+    td.classList.remove('cel-rango', 'rg-t', 'rg-b', 'rg-l', 'rg-r');
+  });
+  var rg = rangoCeldas();
+  if (!rg || rg.trs.length * rg.cols.length < 2) { refrescarRangoBarra(null); return; }
+  rg.trs.forEach(function (tr, i) {
+    rg.cols.forEach(function (c, j) {
+      var td = tr.querySelector('td[data-c="' + c + '"]');
+      if (!td) return;
+      td.classList.add('cel-rango');
+      if (i === 0) td.classList.add('rg-t');
+      if (i === rg.trs.length - 1) td.classList.add('rg-b');
+      if (j === 0) td.classList.add('rg-l');
+      if (j === rg.cols.length - 1) td.classList.add('rg-r');
+    });
+  });
+  refrescarRangoBarra(rg);
+}
+// Suma, promedio, mínimo, máximo y cuántas celdas: se cuentan solo las que tienen un número de verdad (como Sheets).
+function estadisticasRango(rg) {
+  var nums = [], total = 0;
+  rg.trs.forEach(function (tr) {
+    var emb = filaPorId(tr.getAttribute('data-f'));
+    rg.cols.forEach(function (c) {
+      total++;
+      if (!emb || c === '_etapa') return;
+      var v;
+      try { v = valorVista(emb, c); } catch (e) { v = null; }
+      if (typeof v === 'number' && isFinite(v)) nums.push(v);
+    });
+  });
+  var suma = nums.reduce(function (a, b) { return a + b; }, 0);
+  return { celdas: total, filas: rg.trs.length, columnas: rg.cols.length, n: nums.length, suma: suma,
+    promedio: nums.length ? suma / nums.length : null,
+    min: nums.length ? Math.min.apply(null, nums) : null, max: nums.length ? Math.max.apply(null, nums) : null };
+}
+function fmtRango(n) { return n === null || n === undefined ? '—' : Number(n).toLocaleString('es-AR', { maximumFractionDigits: 2 }); }
+function rangoBarraHtml(rg) {
+  var s = estadisticasRango(rg);
+  var dato = function (et, v, id) { return '<span class="rg-dato"><em>' + et + '</em><b' + (id ? ' id="' + id + '"' : '') + '>' + fmtRango(v) + '</b></span>'; };
+  return '<div id="rango-barra" class="rango-barra" role="status" aria-live="polite" aria-label="Resumen de las celdas marcadas">' +
+    '<span class="rg-celdas"><b>' + s.celdas.toLocaleString('es-AR') + '</b> celdas <small>' + s.filas + ' × ' + s.columnas + '</small></span>' +
+    (s.n
+      ? dato('Suma', s.suma, 'rg-suma') + dato('Promedio', s.promedio, 'rg-prom') + dato('Mín.', s.min, 'rg-min') + dato('Máx.', s.max, 'rg-max') +
+        '<span class="rg-dato"><em>Con número</em><b id="rg-n">' + s.n.toLocaleString('es-AR') + '</b></span>'
+      : '<span class="rg-nada">sin números en lo marcado</span>') +
+    '<button type="button" class="rg-btn" data-act="rangocopiar" title="Copiar lo marcado (Ctrl+C), con las columnas separadas por tab">Copiar</button>' +
+    '<button type="button" class="rg-x" data-act="rangoquitar" aria-label="Quitar la selección (Esc)" title="Quitar la selección (Esc)">' + ico('x') + '</button></div>';
+}
+function refrescarRangoBarra(rg) {
+  if (typeof document === 'undefined' || !document.body) return;
+  var viejo = document.getElementById('rango-barra');
+  if (!rg) { if (viejo) viejo.parentNode.removeChild(viejo); return; }
+  var html = rangoBarraHtml(rg);
+  if (viejo) viejo.outerHTML = html; else document.body.insertAdjacentHTML('beforeend', html);
+}
+// Mayús + flechas: se estira el rectángulo desde la celda marcada.
+function extenderRango(dx, dy) {
+  var td0 = tdActiva();
+  if (!td0) return;
+  var R = S.rango || { f0: S.celdaAct.id, c0: S.celdaAct.c, f1: S.celdaAct.id, c1: S.celdaAct.c };
+  var trs = Array.prototype.slice.call(document.querySelectorAll('.tbl-hoja tbody tr[data-f]'));
+  if (!trs.length) return;
+  var ids = trs.map(function (tr) { return tr.getAttribute('data-f'); });
+  var cols = Array.prototype.map.call(trs[0].querySelectorAll('td[data-c]'), function (td) { return td.getAttribute('data-c'); });
+  var i = ids.indexOf(R.f1), j = cols.indexOf(R.c1);
+  if (i < 0 || j < 0) return;
+  i = Math.max(0, Math.min(ids.length - 1, i + dy)); j = Math.max(0, Math.min(cols.length - 1, j + dx));
+  S.rango = { f0: R.f0, c0: R.c0, f1: ids[i], c1: cols[j] };
+  aplicarRango();
+  var td = trs[i].querySelector('td[data-c="' + cols[j] + '"]');
+  if (td) td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+// Supr con un grupo marcado: se vacían las celdas que se pueden editar (Ctrl+Z lo deshace).
+function vaciarRango() {
+  var rg = rangoCeldas(), n = 0;
+  if (!rg) return;
+  rg.trs.forEach(function (tr) {
+    var id = tr.getAttribute('data-f'), emb = filaPorId(id);
+    rg.cols.forEach(function (c) {
+      if (!emb || !CAMPOS[c] || CAMPOS[c].tipo === 'semaforo' || motivoNoEditable(emb, c)) return;
+      if (encolarCambio(id, c, '')) n++;
+    });
+  });
+  toast(n ? 'Se vaciaron ' + n + (n === 1 ? ' celda' : ' celdas') + ' · Ctrl+Z lo deshace' : 'Ninguna de esas celdas se puede vaciar', n ? 'ok' : 'error', 3500);
+}
+function textoDelRango() {
+  var rg = rangoCeldas();
+  if (!rg || rg.trs.length * rg.cols.length < 2) return null;
+  return rg.trs.map(function (tr) {
+    return rg.cols.map(function (c) {
+      var td = tr.querySelector('td[data-c="' + c + '"]');
+      return td ? td.innerText.replace(/\s+/g, ' ').trim() : '';
+    }).join('\t');
+  }).join('\n');
+}
+
+// Arrastrar con el mouse: desde una celda hasta otra. Un clic sin mover sigue siendo «marcar esa celda».
+document.addEventListener('mousedown', function (ev) {
+  if (ev.button !== 0 || S.editCel || !ev.target.closest) return;
+  var td = ev.target.closest('.tbl-hoja td[data-c]');
+  if (!td || ev.target.closest('.col-check, button, a, input, textarea, select, .edit-cel, .sem-ed, .th-resize, .fila-com')) return;
+  var f = td.closest('tr').getAttribute('data-f'), c = td.getAttribute('data-c');
+  if (ev.shiftKey && S.celdaAct) {                      // Mayús + clic: desde la celda marcada hasta esta
+    ev.preventDefault();
+    S.rango = { f0: S.celdaAct.id, c0: S.celdaAct.c, f1: f, c1: c };
+    S.rangoSinClic = true; aplicarRango();
+    return;
+  }
+  S.arr = { f0: f, c0: c, movido: false };
+}, true);
+document.addEventListener('mousemove', function (ev) {
+  var A = S.arr;
+  if (!A) return;
+  if (!(ev.buttons & 1)) { S.arr = null; document.body.classList.remove('rango-arrastrando'); return; }
+  var hoja = document.querySelector('.hoja');
+  if (hoja && A.movido) {                                // cerca del borde: la hoja se desplaza sola
+    var r = hoja.getBoundingClientRect();
+    if (ev.clientY > r.bottom - 28) hoja.scrollTop += 22; else if (ev.clientY < r.top + 28) hoja.scrollTop -= 22;
+    if (ev.clientX > r.right - 28) hoja.scrollLeft += 22; else if (ev.clientX < r.left + 28) hoja.scrollLeft -= 22;
+  }
+  var td = ev.target.closest && ev.target.closest('.tbl-hoja td[data-c]');
+  if (!td) return;
+  var f = td.closest('tr').getAttribute('data-f'), c = td.getAttribute('data-c');
+  if (!A.movido && f === A.f0 && c === A.c0) return;
+  if (!A.movido) {                                       // empezó el arrastre: la celda de partida queda marcada
+    A.movido = true;
+    document.body.classList.add('rango-arrastrando');
+    var trI = document.querySelector('.tbl-hoja tbody tr[data-f="' + A.f0 + '"]');
+    var tdI = trI && trI.querySelector('td[data-c="' + A.c0 + '"]');
+    if (tdI) marcarCeldaActiva(tdI);
+    try { window.getSelection().removeAllRanges(); } catch (e) {}
+  }
+  S.rango = { f0: A.f0, c0: A.c0, f1: f, c1: c };
+  aplicarRango();
+}, true);
+document.addEventListener('mouseup', function () {
+  var A = S.arr;
+  S.arr = null;
+  document.body.classList.remove('rango-arrastrando');
+  if (A && A.movido) S.rangoSinClic = true;              // el «clic» que sigue a soltar no marca ni abre nada
+  // Si no llega ningún clic (por ejemplo, se soltó fuera de la ventana), la marca no puede quedar puesta: se tragaría el clic siguiente.
+  setTimeout(function () { S.rangoSinClic = false; }, 0);
+}, true);
+document.addEventListener('click', function (ev) {
+  if (!S.rangoSinClic) return;
+  S.rangoSinClic = false;
+  if (ev.target.closest && ev.target.closest('.tbl-hoja')) { ev.stopPropagation(); ev.preventDefault(); }
+}, true);
+
+/* --- Buscar en la planilla (Ctrl+F) --------------------------------------------
+   Resalta en amarillo todo lo que coincide (sin tildes ni mayúsculas) y salta de a una: Enter / Mayús+Enter.
+   No saca filas (para eso está el buscador de arriba): marca y lleva. */
+function hayGrilla() {
+  return S.vista === 'carga' && (S.modo === 'tabla' || S.modo === 'planilla') && !!(typeof document !== 'undefined' && document.querySelector && document.querySelector('.tbl-hoja'));
+}
+function busquedaHtml() {
+  var B = S.busq;
+  if (!B || S.vista !== 'carga' || !(S.modo === 'tabla' || S.modo === 'planilla')) return '';
+  var rec = S.verFact && S.datosFact && (S.datosFact.filas || []).length > 0 && (S.topeFactT || 0) < (S.datosFact.filas || []).length;
+  return '<div class="find-bar" role="search" aria-label="Buscar en la planilla">' +
+    '<span class="find-lupa" aria-hidden="true">' + ico('lupa') + '</span>' +
+    '<input id="find-in" type="search" autocomplete="off" spellcheck="false" placeholder="Buscar en la planilla" aria-label="Buscar en la planilla" value="' + esc(B.q || '') + '">' +
+    '<span id="find-n" class="find-n" aria-live="polite">' + esc(textoContadorBusqueda()) + '</span>' +
+    '<button type="button" class="find-b" data-act="findprev" aria-label="Anterior (Mayús+Enter)" title="Anterior (Mayús+Enter)">▲</button>' +
+    '<button type="button" class="find-b" data-act="findnext" aria-label="Siguiente (Enter)" title="Siguiente (Enter)">▼</button>' +
+    (rec ? '<button type="button" class="find-todas" data-act="factodas" title="Hoy se ven solo las últimas filas: se muestran todas para buscar en todas">Buscar en todas</button>' : '') +
+    '<button type="button" class="find-b find-x" data-act="findcerrar" aria-label="Cerrar la búsqueda (Esc)" title="Cerrar (Esc)">' + ico('x') + '</button></div>';
+}
+function textoContadorBusqueda() {
+  var B = S.busq;
+  if (!B || !B.q) return '';
+  return B.n ? (B.i + 1) + ' de ' + B.n : 'Sin resultados';
+}
+// Vuelve a buscar y marca. irA=false: solo repinta las marcas (después de un redibujado), sin mover la vista.
+function buscarEnPlanilla(irA) {
+  var B = S.busq;
+  if (!B || typeof document === 'undefined') return;
+  Array.prototype.forEach.call(document.querySelectorAll('.tbl-hoja td.cel-busca'), function (td) { td.classList.remove('cel-busca', 'cel-busca-act'); });
+  var q = clave(B.q), hits = [];
+  if (q) {
+    Array.prototype.forEach.call(document.querySelectorAll('.tbl-hoja tbody td[data-c]'), function (td) {
+      if (clave(td.textContent).indexOf(q) >= 0) { td.classList.add('cel-busca'); hits.push(td); }
+    });
+  }
+  B.n = hits.length;
+  if (B.i >= B.n) B.i = 0;
+  if (B.i < 0) B.i = Math.max(0, B.n - 1);
+  if (hits[B.i]) {
+    hits[B.i].classList.add('cel-busca-act');
+    if (irA !== false) {
+      if (!hits[B.i].classList.contains('editando')) marcarCeldaActiva(hits[B.i]);
+      hits[B.i].classList.add('cel-busca-act');
+      hits[B.i].scrollIntoView({ block: 'center', inline: 'nearest' });
+    }
+  }
+  var n = document.getElementById('find-n');
+  if (n) n.textContent = textoContadorBusqueda();
+}
+function irABusqueda(dir) {
+  var B = S.busq;
+  if (!B || !B.n) return;
+  B.i = (B.i + dir + B.n) % B.n;
+  buscarEnPlanilla(true);
+}
+function abrirBusqueda() {
+  if (!hayGrilla()) return false;
+  var ya = !!S.busq;
+  S.busq = S.busq || { q: '', i: 0, n: 0 };
+  if (!ya) pintar();
+  var inp = document.getElementById('find-in');
+  if (inp) { inp.focus(); inp.select(); }
+  return true;
+}
+function cerrarBusqueda() {
+  if (!S.busq) return;
+  S.busq = null;
+  Array.prototype.forEach.call(document.querySelectorAll('.tbl-hoja td.cel-busca'), function (td) { td.classList.remove('cel-busca', 'cel-busca-act'); });
+  pintar();
+}
+document.addEventListener('keydown', function (ev) {
+  if (!(ev.ctrlKey || ev.metaKey) || ev.altKey || ev.shiftKey || String(ev.key).toLowerCase() !== 'f') return;
+  if (S.editCel || hayAlgoEncima() || !hayGrilla()) return;      // fuera de la planilla se queda el buscador del navegador
+  ev.preventDefault();
+  abrirBusqueda();
+});
+document.addEventListener('input', function (ev) {
+  if (!ev.target || ev.target.id !== 'find-in' || !S.busq) return;
+  S.busq.q = ev.target.value; S.busq.i = 0;
+  buscarEnPlanilla(true);
+});
+document.addEventListener('keydown', function (ev) {
+  if (!ev.target || ev.target.id !== 'find-in' || !S.busq) return;
+  if (ev.key === 'Enter') { ev.preventDefault(); irABusqueda(ev.shiftKey ? -1 : 1); }
+  else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); cerrarBusqueda(); }
+}, true);
+
 // Ctrl+C con una celda marcada y nada seleccionado: se copia el contenido de la celda.
 // Si lo último que se marcó fueron filas, se copian como en Sheets (columnas separadas por tab) para pegarlas en una planilla.
 function textoParaCopiar() {
   if (S.editCel) return null;
   try { if (String(window.getSelection())) return null; } catch (e) {}
   var limpiar = function (td) { return td.innerText.replace(/\s+/g, ' ').trim(); };
+  var delRango = textoDelRango();
+  if (delRango !== null) return delRango;
   if (S.copiarFilas && nSelFilas()) {
     var trs = document.querySelectorAll('.tbl-hoja tbody tr.fila-sel');
     return Array.prototype.map.call(trs, function (tr) {
@@ -15032,6 +15345,12 @@ document.addEventListener('click', function (ev) {
   if (act === 'fisvolver') { marcarSinDocs([el.getAttribute('data-f')], true); return; }
   if (act === 'fissinsel') { marcarSinDocs(idsMarcados(), false); return; }
   if (act === 'fisvolversel') { marcarSinDocs(idsMarcados(), true); return; }
+  if (act === 'findabrir') { abrirBusqueda(); return; }
+  if (act === 'findnext') { irABusqueda(1); return; }
+  if (act === 'findprev') { irABusqueda(-1); return; }
+  if (act === 'findcerrar') { cerrarBusqueda(); return; }
+  if (act === 'rangoquitar') { limpiarRango(); return; }
+  if (act === 'rangocopiar') { var txR = textoDelRango(); if (txR) { copiarAlPortapapeles(txR); toast('Copiado', 'ok', 1200); } return; }
   if (act === 'ctrsincerrar') { S.fContrato = 'sin_cerrar'; S.busca = ''; S.topeContratos = 40; return pintar(); }
   if (act === 'cerraviso') { S.avisoOk = null; return pintar(); }
   if (act === 'altaabrir') {
@@ -16105,7 +16424,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.10.30-h';
+var APP_VERSION = '2026.11.02-i';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
