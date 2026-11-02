@@ -11564,8 +11564,8 @@ var ESTADOS_CTR = [['', 'Con movimiento'], ['abiertos', 'Con saldo'], ['completo
 
 /* ===========================================================================
    Programación de embarques: lo que falta cargar de cada contrato abierto, según su período.
-   El saldo de cada contrato se reparte entre sus partidas en orden (Prompt primero, después por mes): lo que ya
-   salió se descuenta de las primeras. Un contrato «entre meses» cuenta una sola vez, entero, en cualquier mes
+   Lo que ya salió de un contrato por partidas (lo programado menos el saldo) se descuenta de las primeras
+   (Prompt, y después por mes). Un contrato «entre meses» cuenta una sola vez, entero, en cualquier mes
    del rango en el que pueda cargar.
    =========================================================================== */
 function progMesActual() { var a = ahoraComoUTC(); return a.getUTCFullYear() * 12 + a.getUTCMonth(); }
@@ -11595,12 +11595,14 @@ function progLineas() {
       return;
     }
     if (p.modo === 'partidas' && p.partidas.length) {
-      var resto = saldo;
-      p.partidas.slice().sort(function (a, b) { return claveParte(a) - claveParte(b); }).forEach(function (x) {
+      // Lo que ya salió = lo programado menos lo que queda de saldo; se descuenta de las primeras partidas (Prompt, y después por mes).
+      var orden = p.partidas.slice().sort(function (a, b) { return claveParte(a) - claveParte(b); });
+      var yaSalio = Math.max(0, orden.reduce(function (acc, x) { return acc + (x.tn || 0); }, 0) - saldo);
+      orden.forEach(function (x) {
         var k = x.prompt ? null : mesKey(x), atras = !x.prompt && k < k0, tipo = x.prompt ? 'prompt' : 'partida';
         if (x.tn == null) { add({ tipo: tipo, k: k, tn: null, atras: atras }); return; }
-        var t = Math.min(x.tn, Math.max(resto, 0));
-        resto -= t;
+        var t = x.tn - Math.min(x.tn, yaSalio);
+        yaSalio -= Math.min(x.tn, yaSalio);
         if (t > 0.5) add({ tipo: tipo, k: k, tn: t, atras: atras });
       });
       return;
@@ -16776,7 +16778,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.02-j';
+var APP_VERSION = '2026.11.02-k';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
