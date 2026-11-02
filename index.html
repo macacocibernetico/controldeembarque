@@ -122,6 +122,8 @@ body.con-barra .app{padding-bottom:calc(215px + var(--safe))}
 .v-naranja{--acento:var(--naranja-d);--acentobg:var(--naranjabg);--acento-d:#9a3412}
 .v-violeta{--acento:var(--violeta);--acentobg:var(--violetabg);--acento-d:var(--violeta-d)}
 
+.v-verde{--acento:var(--verde);--acentobg:#ecfdf5;--acento-d:#065f46}
+
 /* Casilleros de color con emoji, como en Ajustes de iOS */
 .tile{width:27px;height:27px;border-radius:7px;flex:none;display:inline-flex;
   align-items:center;justify-content:center;font-size:15px;line-height:1;
@@ -1316,6 +1318,7 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .tabbar button[aria-current=true].c-azul{color:var(--azul)}
   .tabbar button[aria-current=true].c-naranja{color:var(--naranja-d)}
   .tabbar button[aria-current=true].c-violeta{color:var(--violeta)}
+  .tabbar button[aria-current=true].c-verde{color:var(--verde)}
   .tabbar button[aria-current=true] .tb-ico{transform:scale(1.06)}
   .tabbar button[aria-current=true] .tb-l{font-weight:600}
   .tabbar .tb-ico{font-size:22px;line-height:1;filter:saturate(.25) opacity(.55)}
@@ -2398,6 +2401,79 @@ body.rango-arrastrando, body.rango-arrastrando *{user-select:none !important;cur
 .find-bar .find-x .ico{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6}
 .find-bar .find-todas{min-height:36px;padding:0 12px;border:1px solid #c7c7cc;border-radius:980px;background:#fff;color:#1d1d1f;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .btn-buscar[aria-pressed="true"]{background:#e8f0fe;border-color:#1a73e8;color:#1a56b8}
+/* Programación de embarques */
+.cf-borrar[hidden]{display:none}
+.prog-ctl .cf-busca{flex:1 1 280px}
+.prog-ctl .cf-sel{flex:0 1 220px;min-width:0}
+.prog-seg{display:flex;width:100%;max-width:640px;overflow:visible;margin:0}
+.segmento.sub.prog-seg button{flex:1 1 0;min-width:0;min-height:44px;padding:0 6px;font-size:13.5px;line-height:1.15;white-space:normal}
+.prog-hoy{min-height:44px;padding:0 14px;border:1px solid var(--linea2);border-radius:980px;background:var(--sup);color:var(--acento-d);font:inherit;font-weight:600;cursor:pointer}
+.prog-rango{align-items:center;gap:10px}
+.prog-rango .cf-sel{flex:0 1 190px}
+.prog-tira{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 6px;margin-top:14px;scroll-snap-type:x proximity}
+.prog-mes{flex:1 0 66px;min-width:66px;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding:8px 6px;
+  border:1px solid var(--linea2);border-radius:var(--r2);background:var(--sup);color:var(--tinta);font:inherit;cursor:pointer;scroll-snap-align:start;
+  transition:border-color .15s,background .15s,box-shadow .15s}
+.prog-mes:hover{border-color:var(--linea3);background:var(--sup2)}
+.prog-mes[aria-pressed=true]{border-color:var(--acento);background:var(--acentobg);box-shadow:0 0 0 2px var(--acento) inset}
+.prog-mes.en-rango{background:var(--acentobg)}
+.prog-mes .pm-rot{font-size:12px;font-weight:600;color:var(--tinta2);text-transform:capitalize}
+.prog-mes .pm-rot i{font-style:normal;font-weight:400;color:var(--tinta3)}
+.prog-mes.es-hoy .pm-rot{color:var(--acento-d)}
+.prog-mes b{font-size:13.5px;font-variant-numeric:tabular-nums}
+.prog-mes small{font-size:11px;color:var(--tinta3)}
+.pm-bar{width:100%;height:40px;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;gap:1px}
+.pm-fijo{display:block;background:var(--acento);border-radius:3px 3px 0 0}
+.pm-vent{display:block;background:repeating-linear-gradient(135deg,var(--acento) 0 2px,transparent 2px 5px);opacity:.5;border-radius:3px 3px 0 0}
+.prog-esp{justify-content:center;flex:0 0 92px;min-height:70px}
+.prog-esp b{font-size:18px}
+.pm-atras .pm-rot{color:var(--pend)}.pm-atras[aria-pressed=true]{border-color:var(--pend);background:var(--pendbg);box-shadow:0 0 0 2px var(--pend) inset}
+.pm-prompt .pm-rot{color:#6d28d9}.pm-prompt[aria-pressed=true]{border-color:#6d28d9;background:#f5f3ff;box-shadow:0 0 0 2px #6d28d9 inset}
+.pm-sep{flex:none;width:1px;background:var(--linea2);margin:4px 4px}
+.prog-leyenda{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 2px 0;font-size:12.5px;color:var(--tinta3)}
+.prog-leyenda i{display:inline-block;width:14px;height:10px;border-radius:2px}
+.prog-leyenda i + i, .prog-leyenda i:not(:first-child){margin-left:10px}
+.prog-kpis{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:14px 0}
+.prog-kpi{background:var(--sup);border-radius:var(--r);box-shadow:var(--s1);padding:14px 18px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.prog-kpi span{font-size:13px;color:var(--tinta3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prog-kpi b{font-size:26px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--tinta)}
+.prog-kpi.grande b{font-size:34px;color:var(--acento-d)}
+.prog-kpi small{font-size:14px;font-weight:500;color:var(--tinta3)}
+.prog-alerta{display:flex;align-items:center;gap:8px;width:100%;min-height:48px;margin:0 0 14px;padding:10px 16px;border:1px solid #fecaca;border-radius:var(--r2);
+  background:var(--pendbg);color:var(--pend);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.prog-alerta span{margin-left:auto;font-weight:700;text-decoration:underline}
+.prog-grupos{display:flex;flex-direction:column;gap:14px}
+.prog-grupo{background:var(--sup);border-radius:var(--r);box-shadow:var(--s1);overflow:hidden}
+.prog-grupo > header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:12px 18px;background:var(--sup2);border-bottom:1px solid var(--linea2)}
+.prog-grupo h3{margin:0;font-size:15px}
+.pg-sub{font-size:13px;color:var(--tinta3)}
+.pg-tot{margin-left:auto;font-size:13.5px;color:var(--tinta2);font-variant-numeric:tabular-nums}
+.pg-tot b{color:var(--tinta)}
+.g-prompt > header{background:#f5f3ff}.g-prompt h3{color:#5b21b6}
+.g-atras > header{background:var(--pendbg)}.g-atras h3{color:var(--pend)}
+.prog-fila{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(0,1.6fr) minmax(130px,.9fr) 118px 44px;gap:12px;align-items:center;padding:11px 18px;border-top:1px solid var(--linea)}
+.prog-fila:first-child{border-top:0}
+.prog-fila:hover{background:var(--papel)}
+.pf-ctr,.pf-part,.pf-tn{display:flex;flex-direction:column;min-width:0}
+.pf-ctr b{font-size:14.5px}
+.pf-ctr span,.pf-exp,.pf-tn small{font-size:12.5px;color:var(--tinta3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-imp{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-tn{text-align:right;font-variant-numeric:tabular-nums}
+.pf-tn b{font-size:15px}
+.pf-vencido{border-color:#fecaca;background:var(--pendbg)}
+.pf-abrir{width:44px;height:44px;min-height:44px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--tinta3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.pf-abrir:hover{background:var(--sup2);color:var(--acento-d)}
+.pf-abrir .ico{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6}
+.prog-vacio{display:flex;align-items:center;gap:12px;padding:28px 20px;border:1px dashed var(--linea3);border-radius:var(--r);color:var(--tinta2)}
+.prog-vacio .ico{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;flex:none}
+.prog-vacio p{margin:0}
+@media(max-width:900px){
+  .prog-kpis{grid-template-columns:1fr 1fr}.prog-kpi.grande{grid-column:1 / -1}
+  .prog-fila{grid-template-columns:minmax(0,1fr) auto 44px;grid-template-areas:"ctr tn abrir" "part cuando abrir";row-gap:6px;padding:12px 14px}
+  .pf-ctr{grid-area:ctr}.pf-tn{grid-area:tn}.pf-part{grid-area:part}.pf-cuando{grid-area:cuando;justify-self:end}.pf-abrir{grid-area:abrir}
+  .prog-grupo > header{padding:12px 14px}
+  .prog-ctl .cf-sel{flex:1 1 100%}
+}
 </style>
 </head>
 <body>
@@ -8779,13 +8855,14 @@ function vistaApp() {
   evs.forEach(function (x) { x.ev.nivelMax ? cuenta[x.ev.nivelMax]++ : cuenta.ok++; });
 
   // Pestañas y tipos de las CARGAS: en Contratos filtrarían algo que ni se ve (Contratos tiene los suyos).
-  var segmentado = S.vista === 'contratos' ? ''
+  var segmentado = S.vista === 'contratos' || S.vista === 'prog' ? ''
     : S.verFact && S.vista === 'carga' ? segmentoPestanas(todosEvs)      // «A facturar»: el filtro por producto no aplica
     : segmentoPestanas(todosEvs) + segmentoTipos(todosEvs);
   var modoFactT = S.verFact && S.vista === 'carga' && (S.modo === 'tabla' || S.modo === 'planilla');
   var evsFact = modoFactT ? evaluarFactT() : [];
   var cuerpo = S.vista === 'control' ? vistaControl(evs, cuenta)
              : S.vista === 'contratos' ? vistaContratos()
+             : S.vista === 'prog' ? vistaProg()
              : S.verFact ? (modoFactT ? vistaGrillaFact(evsFact) : vistaFacturadas())
              : vistaGrilla(evs);
   var panel = '';
@@ -9711,7 +9788,7 @@ function tiposDisponibles(evs) {
 // Título grande, como el "Large Title" de iOS: ancla la pantalla y hace que
 // el contenido respire antes de empezar.
 function tituloVista() {
-  var t = { control: 'Control', carga: 'Cargas', contratos: 'Contratos' }[S.vista] || '';
+  var t = { control: 'Control', carga: 'Cargas', contratos: 'Contratos', prog: 'Programación' }[S.vista] || '';
   var sub = '';
   if (S.vista === 'carga' && S.verFact) {
     t = 'A facturar';
@@ -9724,6 +9801,8 @@ function tituloVista() {
     if (S.filtroTab) sub += ' · ' + nombreCorto(S.filtroTab);
   } else if (S.vista === 'contratos') {
     sub = S.contratos.size + ' contratos';
+  } else if (S.vista === 'prog') {
+    sub = 'Lo que falta embarcar de los contratos abiertos, según su período';
   } else if (S.vista === 'control' && S.datos) {
     sub = 'Lo que necesita atención';
   }
@@ -9767,7 +9846,8 @@ var LOGO_SVG =
 var VISTAS = [
   { id: 'carga',       label: 'Cargas',       emoji: '🚢', color: 'azul' },
   { id: 'control',     label: 'Control',      emoji: '🔔', color: 'naranja' },
-  { id: 'contratos',   label: 'Contratos',    emoji: '📄', color: 'violeta' }
+  { id: 'contratos',   label: 'Contratos',    emoji: '📄', color: 'violeta' },
+  { id: 'prog',        label: 'Programación', emoji: '🗓️', color: 'verde' }
 ];
 
 function colorDeVista(id) {
@@ -11481,6 +11561,255 @@ async function crearColumnasPeriodo() {
 
 var ESTADOS_CTR = [['', 'Con movimiento'], ['abiertos', 'Con saldo'], ['completos', 'Completos'], ['sin_cerrar', 'Completos sin cerrar'],
                    ['excedidos', 'Excedidos'], ['sin_contrato', 'Sin contrato'], ['todos', 'Todos']];
+
+/* ===========================================================================
+   Programación de embarques: lo que falta cargar de cada contrato abierto, según su período.
+   El saldo de cada contrato se reparte entre sus partidas en orden (Prompt primero, después por mes): lo que ya
+   salió se descuenta de las primeras. Un contrato «entre meses» cuenta una sola vez, entero, en cualquier mes
+   del rango en el que pueda cargar.
+   =========================================================================== */
+function progMesActual() { var a = ahoraComoUTC(); return a.getUTCFullYear() * 12 + a.getUTCMonth(); }
+function progEstado() {
+  if (!S.prog) {
+    var k0 = progMesActual();
+    S.prog = { vista: 'mes', mes: k0, desde: k0, hasta: k0 + 2, conPrompt: true, busca: '', exp: '', imp: '' };
+  }
+  return S.prog;
+}
+function progNum(n) { return fmtTnPer(n) + ' tn'; }
+function progMesLargo(k) { var m = mesDeKey(k); return MESES_ES[m.m - 1] + ' ' + m.y; }
+function progMesCorto(k) { var m = mesDeKey(k); return mesCorto(m) + ' ' + m.y; }
+
+// Una línea por cada tramo de cada contrato abierto con saldo: {r, tipo:'prompt'|'partida'|'ventana'|'sin', k, d, h, tn, saldo, atras}
+function progLineas() {
+  var k0 = progMesActual(), out = [];
+  calcularContratos().forEach(function (r) {
+    var saldo = r.saldo;
+    if (!(saldo > 0.5) || estadoContrato(r.contrato) === 'C') return;
+    var p = r.per || {};
+    var add = function (o) { o.r = r; o.saldo = saldo; out.push(o); };
+    if (p.modo === 'prompt') { add({ tipo: 'prompt', tn: saldo }); return; }
+    if (p.modo === 'ventana' && p.d && p.h) {
+      var d = mesKey(p.d), h = mesKey(p.h);
+      add({ tipo: 'ventana', d: d, h: h, tn: saldo, atras: h < k0 });
+      return;
+    }
+    if (p.modo === 'partidas' && p.partidas.length) {
+      var resto = saldo;
+      p.partidas.slice().sort(function (a, b) { return claveParte(a) - claveParte(b); }).forEach(function (x) {
+        var k = x.prompt ? null : mesKey(x), atras = !x.prompt && k < k0, tipo = x.prompt ? 'prompt' : 'partida';
+        if (x.tn == null) { add({ tipo: tipo, k: k, tn: null, atras: atras }); return; }
+        var t = Math.min(x.tn, Math.max(resto, 0));
+        resto -= t;
+        if (t > 0.5) add({ tipo: tipo, k: k, tn: t, atras: atras });
+      });
+      return;
+    }
+    add({ tipo: 'sin', tn: saldo });
+  });
+  return out;
+}
+// ¿Esta línea entra en lo que se está mirando?
+function progEnAlcance(l, v) {
+  if (v.vista === 'prompt') return l.tipo === 'prompt';
+  if (v.vista === 'atrasados') return !!l.atras;
+  if (v.vista === 'sin') return l.tipo === 'sin';
+  var a = v.vista === 'mes' ? v.mes : v.desde, b = v.vista === 'mes' ? v.mes : v.hasta;
+  if (l.tipo === 'prompt') return v.vista === 'mes' || !!v.conPrompt;
+  if (l.tipo === 'partida') return l.k >= a && l.k <= b;
+  if (l.tipo === 'ventana') return l.d <= b && l.h >= a;
+  return false;
+}
+// Búsqueda y filtros de empresa (todo menos el alcance).
+function progFiltradas(lineas, v) {
+  var q = clave(v.busca), palabras = q ? q.split(' ').filter(Boolean) : [];
+  return lineas.filter(function (l) {
+    if (v.exp && clave(l.r.exportador) !== clave(v.exp)) return false;
+    if (v.imp && clave(l.r.importador) !== clave(v.imp)) return false;
+    if (palabras.length && !coincideBusqueda(textoBuscableContrato(l.r), palabras)) return false;
+    return true;
+  });
+}
+function progSuma(ls) { return ls.reduce(function (a, l) { return a + (l.tn || 0); }, 0); }
+function progContratos(ls) { var u = {}; ls.forEach(function (l) { u[l.r.contrato] = 1; }); return Object.keys(u).length; }
+
+function progChipCuando(l) {
+  if (l.tipo === 'prompt') return '<span class="per-chip per-prompt"><b>Prompt</b></span>';
+  if (l.tipo === 'partida') return '<span class="per-chip per-partida' + (l.atras ? ' pf-vencido' : '') + '"><b>' + esc(progMesCorto(l.k)) + '</b>' + (l.atras ? '<small>venció</small>' : '') + '</span>';
+  if (l.tipo === 'ventana') {
+    var a = mesDeKey(l.d), b = mesDeKey(l.h);
+    var corto = l.d === l.h ? progMesCorto(l.d) : a.y === b.y ? mesCorto(a) + ' – ' + mesCorto(b) + ' ' + b.y : progMesCorto(l.d) + ' – ' + progMesCorto(l.h);
+    return '<span class="per-chip per-ventana' + (l.atras ? ' pf-vencido' : '') + '"><b>' + esc(corto) + '</b><small>' + (l.atras ? 'venció' : l.d === l.h ? '' : 'cualquier mes') + '</small></span>';
+  }
+  var t = String(l.r.periodo || '').trim();
+  return '<span class="per-chip per-texto"><b>' + esc(t ? (t.length > 28 ? t.slice(0, 27) + '…' : t) : 'Sin período') + '</b></span>';
+}
+function progFilaHtml(l) {
+  var r = l.r, difiere = l.tn !== null && Math.abs(l.tn - l.saldo) > 0.5;
+  return '<div class="prog-fila" role="listitem">' +
+    '<div class="pf-ctr"><b>' + esc(r.contrato) + '</b><span>' + esc(r.producto || '') + '</span></div>' +
+    '<div class="pf-part"><span class="pf-imp">' + esc(r.importador || '—') + '</span><span class="pf-exp">' + esc(r.exportador || '—') + '</span></div>' +
+    '<div class="pf-cuando">' + progChipCuando(l) + '</div>' +
+    '<div class="pf-tn"><b>' + (l.tn === null ? 's/d' : progNum(l.tn)) + '</b>' +
+      (l.tn === null || difiere ? '<small>saldo ' + progNum(l.saldo) + '</small>' : '') + '</div>' +
+    '<button type="button" class="pf-abrir" data-act="progabrir" data-k="' + esc(r.contrato) + '" aria-label="Abrir el contrato ' + esc(r.contrato) + '">' + ico('flecha') + '</button>' +
+    '</div>';
+}
+function progGrupoHtml(titulo, sub, ls, cls) {
+  ls = ls.slice().sort(function (a, b) { return (b.tn || 0) - (a.tn || 0) || String(a.r.contrato).localeCompare(String(b.r.contrato), 'es'); });
+  return '<section class="prog-grupo' + (cls ? ' ' + cls : '') + '"><header><h3>' + esc(titulo) + '</h3>' +
+    (sub ? '<span class="pg-sub">' + esc(sub) + '</span>' : '') +
+    '<span class="pg-tot"><b>' + progNum(progSuma(ls)) + '</b> · ' + progContratos(ls) + (progContratos(ls) === 1 ? ' contrato' : ' contratos') + '</span></header>' +
+    '<div role="list">' + ls.map(progFilaHtml).join('') + '</div></section>';
+}
+// La tira de meses: se ve de un vistazo dónde se junta la carga, y cada mes se toca para abrirlo.
+function progTiraHtml(todas, v) {
+  var k0 = progMesActual(), i, max = 1, meses = [];
+  for (i = 0; i < 12; i++) {
+    var k = k0 + i, fijo = 0, vent = 0;
+    todas.forEach(function (l) {
+      if (l.atras) return;
+      if (l.tipo === 'partida' && l.k === k) fijo += l.tn || 0;
+      else if (l.tipo === 'ventana' && l.d <= k && l.h >= k) vent += l.tn || 0;
+    });
+    meses.push({ k: k, fijo: fijo, vent: vent }); max = Math.max(max, fijo + vent);
+  }
+  var atr = todas.filter(function (l) { return l.atras; }), pro = todas.filter(function (l) { return l.tipo === 'prompt'; });
+  var esp = function (data, vista, rot, tn, sel, extra) {
+    return '<button type="button" class="prog-mes prog-esp ' + extra + '" data-act="progscope" data-v="' + vista + '" aria-pressed="' + sel + '" ' +
+      'aria-label="' + rot + ': ' + progNum(tn) + '"><span class="pm-rot">' + rot + '</span><b>' + fmtTnPer(tn) + '</b><small>tn</small></button>';
+  };
+  var h = '<div class="prog-tira" role="group" aria-label="Toneladas por mes">' +
+    esp(null, 'atrasados', 'Atrasados', progSuma(atr), v.vista === 'atrasados', 'pm-atras') +
+    esp(null, 'prompt', 'Prompt', progSuma(pro), v.vista === 'prompt', 'pm-prompt') + '<span class="pm-sep" aria-hidden="true"></span>';
+  meses.forEach(function (m) {
+    var sel = v.vista === 'mes' && v.mes === m.k, enRango = v.vista === 'rango' && m.k >= v.desde && m.k <= v.hasta;
+    var hf = m.fijo ? Math.max(3, Math.round(40 * m.fijo / max)) : 0, hv = m.vent ? Math.max(3, Math.round(40 * m.vent / max)) : 0;
+    h += '<button type="button" class="prog-mes' + (enRango ? ' en-rango' : '') + (m.k === k0 ? ' es-hoy' : '') + '" data-act="progscope" data-v="mes" data-k="' + m.k + '" aria-pressed="' + (sel || enRango) + '" ' +
+      'aria-label="' + esc(progMesLargo(m.k)) + ': ' + progNum(m.fijo) + ' con mes fijo' + (m.vent ? ' y ' + progNum(m.vent) + ' que pueden cargar en el mes' : '') + '">' +
+      '<span class="pm-rot">' + esc(mesCorto(mesDeKey(m.k))) + (mesDeKey(m.k).m === 1 || m.k === k0 ? ' <i>' + String(mesDeKey(m.k).y).slice(2) + '</i>' : '') + '</span>' +
+      '<span class="pm-bar" aria-hidden="true">' + (hv ? '<i class="pm-vent" style="height:' + hv + 'px"></i>' : '') + (hf ? '<i class="pm-fijo" style="height:' + hf + 'px"></i>' : '') + '</span>' +
+      '<b>' + (m.fijo + m.vent ? fmtTnPer(m.fijo + m.vent) : '–') + '</b></button>';
+  });
+  return h + '</div><p class="prog-leyenda"><i class="pm-fijo"></i> mes fijo (partidas) <i class="pm-vent"></i> puede cargar en el mes (entre meses)</p>';
+}
+function progResultadoHtml() {
+  var v = progEstado(), k0 = progMesActual();
+  var todas = progFiltradas(progLineas(), v), vis = todas.filter(function (l) { return progEnAlcance(l, v); });
+  var nPro = vis.filter(function (l) { return l.tipo === 'prompt'; }), atr = todas.filter(function (l) { return l.atras; });
+  var h = progTiraHtml(todas, v);
+
+  var titulo = v.vista === 'mes' ? progMesLargo(v.mes) + (v.mes === k0 ? ' · este mes' : '') + ' + Prompt'
+    : v.vista === 'prompt' ? 'Prompt' : v.vista === 'atrasados' ? 'Atrasados' : v.vista === 'sin' ? 'Sin período'
+    : progMesLargo(v.desde) + (v.hasta > v.desde ? ' a ' + progMesLargo(v.hasta) : '') + (v.conPrompt ? ' + Prompt' : '');
+  h += '<div class="prog-kpis" aria-label="Resumen de ' + esc(titulo) + '">' +
+    '<div class="prog-kpi grande"><span>A salir · ' + esc(titulo) + '</span><b>' + fmtTnPer(progSuma(vis)) + '<small> tn</small></b></div>' +
+    '<div class="prog-kpi"><span>Contratos</span><b>' + progContratos(vis) + '</b></div>' +
+    '<div class="prog-kpi"><span>De eso, Prompt</span><b>' + fmtTnPer(progSuma(nPro)) + '<small> tn</small></b></div>' +
+    '</div>';
+  if (atr.length && v.vista !== 'atrasados') {
+    h += '<button type="button" class="prog-alerta" data-act="progscope" data-v="atrasados"><b>' + progContratos(atr) + (progContratos(atr) === 1 ? ' contrato con el período vencido' : ' contratos con el período vencido') +
+      '</b> y todavía con saldo (' + progNum(progSuma(atr)) + ')<span>Ver</span></button>';
+  }
+
+  if (!vis.length) {
+    var vacio = v.busca || v.exp || v.imp ? 'Ningún contrato coincide con la búsqueda o los filtros.'
+      : v.vista === 'prompt' ? 'No hay contratos en Prompt con saldo.' : v.vista === 'atrasados' ? 'No hay contratos con el período vencido. Todo al día.'
+      : v.vista === 'sin' ? 'Todos los contratos abiertos tienen su período cargado.' : 'No hay nada programado para este período.';
+    return h + '<div class="prog-vacio" role="status">' + ico('info') + '<p>' + esc(vacio) + '</p></div>';
+  }
+
+  h += '<div class="prog-grupos">';
+  if (v.vista === 'atrasados') h += progGrupoHtml('Con el período vencido', 'ordenados por toneladas', vis, 'g-atras');
+  else if (v.vista === 'sin') h += progGrupoHtml('Sin período definido', 'completalo en el contrato', vis, '');
+  else if (v.vista === 'prompt') h += progGrupoHtml('Prompt', 'entrega inmediata', vis, 'g-prompt');
+  else {
+    var pr = vis.filter(function (l) { return l.tipo === 'prompt'; });
+    if (pr.length) h += progGrupoHtml('Prompt', 'entrega inmediata', pr, 'g-prompt');
+    var meses = {};
+    vis.filter(function (l) { return l.tipo === 'partida'; }).forEach(function (l) { (meses[l.k] = meses[l.k] || []).push(l); });
+    Object.keys(meses).map(Number).sort(function (a, b) { return a - b; }).forEach(function (k) {
+      h += progGrupoHtml(progMesLargo(k), 'mes fijo', meses[k], k < k0 ? 'g-atras' : '');
+    });
+    var ve = vis.filter(function (l) { return l.tipo === 'ventana'; });
+    if (ve.length) h += progGrupoHtml('Entre meses', 'pueden cargar en cualquier mes de su ventana; cada contrato cuenta una vez', ve, '');
+  }
+  return h + '</div>';
+}
+function progOpciones(lineas, campo, elegido) {
+  var vistos = {}, rs = [];
+  lineas.forEach(function (l) { if (!vistos[l.r.contrato]) { vistos[l.r.contrato] = 1; rs.push(l.r); } });
+  return opcionesNombres(rs, campo, elegido);
+}
+function progSelectMes(id, dato, val) {
+  var k0 = progMesActual(), i, o = '';
+  for (i = -1; i < 18; i++) o += '<option value="' + (k0 + i) + '"' + (k0 + i === val ? ' selected' : '') + '>' + esc(progMesLargo(k0 + i)) + '</option>';
+  if (val < k0 - 1 || val > k0 + 17) o += '<option value="' + val + '" selected>' + esc(progMesLargo(val)) + '</option>';
+  return '<select id="' + id + '" class="cf-sel" data-prog="' + dato + '" aria-label="' + (dato === 'desde' ? 'Desde el mes' : 'Hasta el mes') + '">' + o + '</select>';
+}
+function vistaProg() {
+  var v = progEstado(), k0 = progMesActual(), todas = progLineas();
+  var segs = [['mes', v.vista === 'mes' && v.mes !== k0 ? progMesCorto(v.mes) : 'Este mes'], ['prompt', 'Prompt'], ['atrasados', 'Atrasados'], ['rango', 'Entre meses'], ['sin', 'Sin período']];
+  var h = '<section class="ctr-filtros prog-ctl" aria-label="Qué programación ver">' +
+    '<div class="cf-fila">' +
+      '<div class="cf-busca"><span class="cf-lupa" aria-hidden="true">' + ico('lupa') + '</span>' +
+        '<input id="prog-busca" type="text" autocomplete="off" placeholder="Buscar contrato, cliente o producto" value="' + esc(v.busca) + '" aria-label="Buscar en la programación">' +
+        '<button id="prog-borrar" class="cf-borrar" type="button" data-act="progquitar" aria-label="Borrar la búsqueda"' + (v.busca ? '' : ' hidden') + '>' + ico('x') + '</button></div>' +
+      selectorProgNombres('prog-exp', 'exp', 'Todos los exportadores', progOpciones(todas, 'exportador', v.exp), v.exp) +
+      selectorProgNombres('prog-imp', 'imp', 'Todos los importadores', progOpciones(todas, 'importador', v.imp), v.imp) +
+    '</div>' +
+    '<div class="cf-fila cf-grupos"><div class="segmento sub prog-seg" role="group" aria-label="Qué ver">' +
+      segs.map(function (s) {
+        return '<button type="button" data-act="progscope" data-v="' + s[0] + '"' + (s[0] === 'mes' ? ' data-k="' + (v.vista === 'mes' ? v.mes : k0) + '"' : '') + ' aria-pressed="' + (v.vista === s[0]) + '">' + esc(s[1]) + '</button>';
+      }).join('') + '</div>' +
+      (v.vista === 'mes' && v.mes !== k0 ? '<button type="button" class="prog-hoy" data-act="progscope" data-v="mes" data-k="' + k0 + '">Volver a este mes</button>' : '') +
+    '</div>';
+  if (v.vista === 'rango') {
+    h += '<div class="cf-fila cf-grupos prog-rango"><span class="cf-rot">Desde</span>' + progSelectMes('prog-desde', 'desde', v.desde) +
+      '<span class="cf-rot">hasta</span>' + progSelectMes('prog-hasta', 'hasta', v.hasta) +
+      '<div class="chips" aria-label="Atajos"><button type="button" data-act="progrango" data-n="3">3 meses</button><button type="button" data-act="progrango" data-n="6">6 meses</button><button type="button" data-act="progrango" data-n="fin">Hasta fin de año</button></div>' +
+      '<button type="button" class="sw-peter prog-sw' + (v.conPrompt ? ' on' : '') + '" data-act="progprompt" aria-pressed="' + !!v.conPrompt + '"><span class="riel"><span class="bolita"></span></span><span class="et">Sumar Prompt</span></button></div>';
+  }
+  h += '</section><div id="prog-res" aria-live="polite">' + progResultadoHtml() + '</div>';
+  return h;
+}
+function selectorProgNombres(id, dato, todos, ops, elegido) {
+  var e = clave(elegido);
+  return '<select id="' + id + '" class="cf-sel' + (elegido ? ' activo' : '') + '" data-prog="' + dato + '" aria-label="Filtrar por ' + (dato === 'exp' ? 'exportador' : 'importador') + '">' +
+    '<option value="">' + todos + '</option>' + ops.map(function (o) {
+      return '<option value="' + esc(o.nombre) + '"' + (o.k === e ? ' selected' : '') + '>' + esc(o.nombre) + ' (' + o.n + ')</option>';
+    }).join('') + '</select>';
+}
+// Al escribir en el buscador solo se vuelve a dibujar el resultado, no la pantalla entera (el cuadro no pierde el foco).
+function refrescarProgRes() {
+  var el = document.getElementById('prog-res');
+  if (el && S.vista === 'prog') el.innerHTML = progResultadoHtml();
+}
+document.addEventListener('input', function (e) {
+  if (e.target.id !== 'prog-busca') return;
+  progEstado().busca = e.target.value;
+  var x = document.getElementById('prog-borrar');
+  if (x) x.hidden = !e.target.value;
+  clearTimeout(S.tProg);
+  S.tProg = setTimeout(refrescarProgRes, 120);
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape' || e.target.id !== 'prog-busca' || !e.target.value) return;
+  e.preventDefault(); e.target.value = ''; progEstado().busca = '';
+  var x = document.getElementById('prog-borrar'); if (x) x.hidden = true;
+  refrescarProgRes();
+});
+document.addEventListener('change', function (e) {
+  var d = e.target.getAttribute && e.target.getAttribute('data-prog');
+  if (!d || e.target.tagName !== 'SELECT') return;
+  var v = progEstado();
+  if (d === 'exp' || d === 'imp') v[d] = e.target.value;
+  else {
+    v[d] = parseInt(e.target.value, 10);
+    if (v.desde > v.hasta) { if (d === 'desde') v.hasta = v.desde; else v.desde = v.hasta; }
+  }
+  pintar();
+});
 
 function vistaContratos() {
   var lista = contratosFiltrados();
@@ -15219,6 +15548,29 @@ document.addEventListener('click', function (ev) {
   }
 
   if (act === 'tab') return irAVista(el.getAttribute('data-v'));
+  if (act === 'progscope') {
+    var vP = progEstado(), qP = el.getAttribute('data-v'), kP = parseInt(el.getAttribute('data-k'), 10);
+    vP.vista = qP;
+    if (qP === 'mes') vP.mes = isNaN(kP) ? progMesActual() : kP;
+    return pintar();
+  }
+  if (act === 'progrango') {
+    var vR = progEstado(), nR = el.getAttribute('data-n'), k0R = progMesActual();
+    vR.desde = k0R; vR.hasta = nR === 'fin' ? Math.floor(k0R / 12) * 12 + 11 : k0R + parseInt(nR, 10) - 1;
+    return pintar();
+  }
+  if (act === 'progprompt') { var vQ = progEstado(); vQ.conPrompt = !vQ.conPrompt; return pintar(); }
+  if (act === 'progquitar') {
+    progEstado().busca = '';
+    var inP = document.getElementById('prog-busca'); if (inP) { inP.value = ''; inP.focus(); }
+    el.hidden = true; return refrescarProgRes();
+  }
+  if (act === 'progabrir') {
+    var cP = el.getAttribute('data-k');
+    irAVista('contratos');
+    S.busca = cP; S.fContrato = 'todos'; S.fVia = ''; S.fTipoCtr = ''; S.fExpCtr = ''; S.fImpCtr = ''; S.fMesCtr = '';
+    return pintar();
+  }
   if (act === 'csv') { S.menuCfg = false; pintar(); return exportarCSV(); }
   if (act === 'comentar') return enviarCom(el);
   if (act === 'comcelda') {
@@ -16424,7 +16776,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.02-i';
+var APP_VERSION = '2026.11.02-j';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
