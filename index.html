@@ -2405,6 +2405,9 @@ body.rango-arrastrando, body.rango-arrastrando *{user-select:none !important;cur
 .find-bar .find-x .ico{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6}
 .find-bar .find-todas{min-height:36px;padding:0 12px;border:1px solid #c7c7cc;border-radius:980px;background:#fff;color:#1d1d1f;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .btn-buscar[aria-pressed="true"]{background:#e8f0fe;border-color:#1a73e8;color:#1a56b8}
+.cf-dup{display:flex;gap:10px;align-items:flex-start;margin:10px 0 0;padding:10px 12px;border-radius:10px;background:#fffbeb;border:1px solid #fcd34d;color:#78350f;font-size:13.5px;line-height:1.45}
+.cf-dup .ico{width:16px;height:16px;flex:none;margin-top:2px;fill:none;stroke:currentColor;stroke-width:1.5}
+.cf-dup-pill{margin-left:6px;white-space:nowrap}
 /* Programación de embarques */
 .cf-borrar[hidden]{display:none}
 .prog-ctl .cf-busca{flex:1 1 280px}
@@ -4991,6 +4994,21 @@ var CAMPOS_MUDANZA = ['exporter', 'importer', 'contract', 'product', 'tipo',
   'lots', 'containers', 'bl', 'booking', 'invoice', 'docs', 'pics', 'tr',
   'guia', 'commission', 'status', 'incoterm', 'mailsCC', 'pagoEstimado', 'nota'];
 
+// Cómo reconocer una carga que no tiene BL (las terrestres): lo que la distingue de otra de las mismas toneladas.
+function datosCargaSinBl(emb) {
+  var out = [];
+  if (emb.vessel) out.push(['Camión', String(emb.vessel)]);
+  if (emb.invoice) out.push(['Factura', String(emb.invoice)]);
+  if (emb.guia) out.push(['Guía', String(emb.guia)]);
+  if (esFecha(emb.etd)) out.push(['Salida', fmtFecha(emb.etd)]);
+  return out;
+}
+function avisoDuplicadoHtml(emb) {
+  if (!emb._posiblePagada || emb._aFacturar) return '';
+  var dest = (S.fuentesFact || [{ tab: 'A facturar' }])[0].tab;
+  return '<p class="cf-dup" role="note">' + ico('info') + '<span><b>Ojo, posible duplicado.</b> En «' + esc(dest) + '» ya hay una carga de este contrato con las mismas toneladas' +
+    (emb._posiblePagada.tns ? ' (' + fmtNum(emb._posiblePagada.tns) + ' tn)' : '') + '. Si es otro camión, seguí: se puede pasar igual.</span></p>';
+}
 function resumenMudanza(emb) {
   var tn = normNum(emb.tns), pr = normNum(emb.price);
   return {
@@ -7776,6 +7794,29 @@ function armarFilaEmb(f, tab, sheetId, det) {
       return o;
 }
 
+// Una carga SIN BL contra las filas ya pasadas de su contrato. Devuelve 'pagada' (coincide un dato propio y nada lo contradice),
+// 'posible' (coincide solo la cantidad) o null. Una pagada consume la fila.
+function cruzarSinBl(o, reg) {
+  var d = function (x) {
+    var out = {};
+    ['invoice', 'guia', 'booking', 'vessel'].forEach(function (k) { if (x[k] !== null && x[k] !== undefined && String(x[k]).trim() !== '') out[k] = clave(String(x[k])); });
+    if (esFecha(x.etd)) out.etd = x.etd.getTime();
+    return out;
+  };
+  var dO = d(o), tn = o.tns, fuerte = null, debil = null;
+  reg.items.forEach(function (i) {
+    if (i.usado) return;
+    var mismoTn = tn && i.tns && Math.abs(i.tns - tn) < 0.05, sinCantidad = !i.bl && !i.tns && !tn;
+    if (!mismoTn && !sinCantidad) return;
+    var igual = false, distinto = false, dI = i.id || {};
+    Object.keys(dO).forEach(function (k) { if (k in dI) { if (dO[k] === dI[k]) igual = true; else distinto = true; } });
+    if (distinto) return;                                        // un dato propio lo contradice: es otra carga
+    if (igual) { if (!fuerte) fuerte = i; } else if (!debil) debil = i;
+  });
+  if (fuerte) { fuerte.usado = true; return 'pagada'; }
+  return debil ? 'posible' : null;
+}
+
 async function cargarTodo(rapido, silencioso) {
   // rapido: después de mover/borrar/guardar cargas solo se vuelven a leer las pestañas de cargas y «A facturar»
   // (los contratos, listas, empresas y avisos no cambian con eso), y todas a la vez.
@@ -7980,7 +8021,14 @@ async function cargarTodo(rapido, silencioso) {
         var bl = df.mapa.bl !== undefined ? f.celdas[df.mapa.bl] : null;
         var blk = bl ? String(bl).trim() : '';
         if (blk) reg.bls.push(blk);
-        reg.items.push({ bl: blk, tns: tn, usado: false });
+        var datosId = {};
+        ['invoice', 'guia', 'booking', 'vessel'].forEach(function (k) {
+          var vk = df.mapa[k] !== undefined ? f.celdas[df.mapa[k]] : null;
+          if (vk !== null && vk !== undefined && String(vk).trim() !== '') datosId[k] = clave(String(vk));
+        });
+        var etdK = df.mapa.etd !== undefined ? f.celdas[df.mapa.etd] : null;
+        if (esFecha(etdK)) datosId.etd = etdK.getTime();
+        reg.items.push({ bl: blk, tns: tn, usado: false, id: datosId });
         S.facturar.set(kk, reg);
       });
     }
@@ -8006,20 +8054,14 @@ async function cargarTodo(rapido, silencioso) {
       pend.push({ o: o, reg: reg });
     });
 
+    // Las terrestres no tienen BL y los camiones repiten toneladas (28 tn, 28 tn…): con solo las toneladas, una carga NUEVA
+    // quedaba como «Cliente pagó» y perdía el botón «A facturar». Ahora solo se da por pasada si además coincide algún
+    // dato propio (factura, guía, reserva, camión o fecha de salida) y ninguno lo contradice. Si coincide solo la
+    // cantidad, se avisa como «posible duplicado» pero NO se bloquea: se puede pasar igual.
     pend.forEach(function (x) {
-      var o = x.o, reg = x.reg;
-      var tn = o.tns;
-      var it = null;
-      if (tn) {
-        it = reg.items.filter(function (i) {
-          return !i.usado && i.tns && Math.abs(i.tns - tn) < 0.05;
-        })[0];
-      }
-      if (!it) {
-        // Sin BL ni toneladas comparables: solo si queda alguna fila libre.
-        it = reg.items.filter(function (i) { return !i.usado && !i.bl && !i.tns; })[0];
-      }
-      if (it) { it.usado = true; o._aFacturar = true; }
+      var o = x.o, res = cruzarSinBl(o, x.reg);
+      o._posiblePagada = res === 'posible' ? { contrato: String(o.contract || '').trim(), tns: o.tns } : null;
+      if (res === 'pagada') o._aFacturar = true;
     });
 
     if (!rapido) {
@@ -10292,6 +10334,9 @@ function filaEmbarque(x, opts) {
           ? '<span class="pill nar"><span class="pt"></span>Falta comprobante</span>' : '') +
         (emb._aFacturar
           ? '<span class="pill ok"><span class="pt"></span>Cliente pagó</span>' : '') +
+        (!emb._aFacturar && emb._posiblePagada
+          ? '<span class="pill nar" title="En «' + esc((S.fuentesFact || [{ tab: 'A facturar' }])[0].tab) + '» hay una carga de este contrato con las mismas toneladas' +
+            (emb._posiblePagada.tns ? ' (' + fmtNum(emb._posiblePagada.tns) + ' tn)' : '') + '. Puede ser otra: la podés pasar igual."><span class="pt"></span>Posible duplicado</span>' : '') +
         (opts.acciones !== false ? btnSinDocsCarga(emb) : '') +
         ((S.fuentesFact || []).length && !emb._aFacturar && opts.acciones !== false
           ? '<button class="ir-fact" data-act="abrirpasar" data-f="' + esc(emb._id) + '" ' +
@@ -13566,7 +13611,9 @@ function modalLoteFact() {
   var lista = L.ids.map(filaPorId).filter(Boolean).map(function (emb) {
     var q = resumenMudanza(emb);
     return '<li><b>' + esc(q.quien) + '</b> · ' + esc(q.contrato || 'sin contrato') + (q.bl ? ' · BL ' + esc(q.bl) : '') +
-      (q.tns ? ' · ' + fmtNum(q.tns) + ' tn' : '') + ' <span class="ayuda">(' + esc(nombreCorto(q.desde)) + ', fila ' + q.fila + ')</span></li>';
+      (!q.bl ? datosCargaSinBl(emb).map(function (d) { return ' · ' + d[0] + ' ' + esc(d[1]); }).join('') : '') +
+      (q.tns ? ' · ' + fmtNum(q.tns) + ' tn' : '') + ' <span class="ayuda">(' + esc(nombreCorto(q.desde)) + ', fila ' + q.fila + ')</span>' +
+      (emb._posiblePagada && !emb._aFacturar ? ' <span class="pill nar cf-dup-pill" title="Hay una carga del contrato con las mismas toneladas en A facturar. Si es otro camión, seguí.">Posible duplicado</span>' : '') + '</li>';
   }).join('');
   var n = L.ids.length;
   return '<div class="modal-velo" data-act="lotefactno"></div>' +
@@ -14436,14 +14483,16 @@ function vistaPanel(x) {
         '<dl class="cf-datos">' +
           '<div><dt>Qué</dt><dd>' + esc(r0.quien) + '</dd></div>' +
           '<div><dt>Contrato</dt><dd>' + esc(r0.contrato || '—') + '</dd></div>' +
-          (r0.bl ? '<div><dt>BL</dt><dd>' + esc(r0.bl) + '</dd></div>' : '') +
+          (r0.bl ? '<div><dt>BL</dt><dd>' + esc(r0.bl) + '</dd></div>'
+                 : datosCargaSinBl(emb).map(function (d) { return '<div><dt>' + d[0] + '</dt><dd>' + esc(d[1]) + '</dd></div>'; }).join('')) +
           '<div><dt>Toneladas</dt><dd>' + (r0.tns ? fmtNum(r0.tns) : '—') + '</dd></div>' +
           (r0.total ? '<div><dt>Total</dt><dd>USD ' + fmtNum(r0.total) + '</dd></div>' : '') +
           '<div><dt>De</dt><dd>' + esc(r0.desde) + ', fila ' + r0.fila + '</dd></div>' +
           '<div><dt>A</dt><dd>' + esc(destinoNom) + ', arriba del TOTAL</dd></div>' +
         '</dl>' +
-        '<p class="cf-ojo">La fila se borra de «' + esc(r0.desde) + '». No se puede deshacer ' +
-          'desde acá: si algo sale mal, se recupera con el historial de versiones de Sheets.</p>' +
+        avisoDuplicadoHtml(emb) +
+        '<p class="cf-ojo">La fila se borra de «' + esc(r0.desde) + '». Si te equivocás, tocá «Deshacer» en el aviso que sale al terminar ' +
+          '(o Ctrl+Z): se copia primero y se comprueba antes de borrar.</p>' +
 
         '<label class="chk entiendo"><input type="checkbox" data-entiendo="1"' +
           (S.entiendo ? ' checked' : '') + '>' +
@@ -16833,7 +16882,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.03-m';
+var APP_VERSION = '2026.11.03-n';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
