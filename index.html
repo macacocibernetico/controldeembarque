@@ -5840,6 +5840,7 @@ function totalLinea(p) {
 }
 
 // Lo que el motor necesita, a partir del formulario.
+var VENDEDOR_CONTACTO = 'Manuel Torrecillas', VENDEDOR_EMAIL = 'manuel@latinutsa.com';
 function datosDelGenerador(G) {
   var d = normFecha(G.fecha);
   var lineas = G.productos.filter(function (p) { return p.desc || p.tns || p.precio; });
@@ -5859,7 +5860,8 @@ function datosDelGenerador(G) {
     buyer_empresa: G.buyer.nombre, buyer_direccion: G.buyer.direccion,
     buyer_vat: G.buyer.vat, buyer_contacto: G.buyer.contacto, buyer_email: G.buyer.email,
     seller_empresa: G.seller.nombre, seller_direccion: G.seller.direccion, seller_vat: G.seller.vat,
-    seller_contacto: G.seller.contacto, seller_email: G.seller.email,
+    // El contacto del vendedor es siempre el mismo (pedido del dueño), sea cual sea el exportador y lo que diga la base de datos.
+    seller_contacto: VENDEDOR_CONTACTO, seller_email: VENDEDOR_EMAIL,
     cons_empresa: cons.nombre, cons_taxid: cons.vat, cons_direccion: cons.direccion,
     notif_empresa: notif.nombre, notif_taxid: notif.vat, notif_direccion: notif.direccion,
     productos: lineas.map(function (p) {
@@ -16913,7 +16915,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.03-o';
+var APP_VERSION = '2026.11.03-p';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
