@@ -2408,6 +2408,8 @@ body.rango-arrastrando, body.rango-arrastrando *{user-select:none !important;cur
 .cf-dup{display:flex;gap:10px;align-items:flex-start;margin:10px 0 0;padding:10px 12px;border-radius:10px;background:#fffbeb;border:1px solid #fcd34d;color:#78350f;font-size:13.5px;line-height:1.45}
 .cf-dup .ico{width:16px;height:16px;flex:none;margin-top:2px;fill:none;stroke:currentColor;stroke-width:1.5}
 .cf-dup-pill{margin-left:6px;white-space:nowrap}
+.cf-dup.ya{background:#fef2f2;border-color:#fca5a5;color:#7f1d1d}
+.sel-ya{margin-left:2px}
 /* Programación de embarques */
 .cf-borrar[hidden]{display:none}
 .prog-ctl .cf-busca{flex:1 1 280px}
@@ -5004,6 +5006,11 @@ function datosCargaSinBl(emb) {
   return out;
 }
 function avisoDuplicadoHtml(emb) {
+  var dest0 = (S.fuentesFact || [{ tab: 'A facturar' }])[0].tab;
+  if (emb._aFacturar && !emb._esFact) {
+    return '<p class="cf-dup ya" role="note">' + ico('info') + '<span><b>Ojo: esta carga ya figura en «' + esc(dest0) + '».</b> Coincide en: ' + esc(emb._pagadaPor || 'los datos') +
+      '. Si la pasás igual, queda duplicada. Revisalo antes; si es otra carga, seguí.</span></p>';
+  }
   if (!emb._posiblePagada || emb._aFacturar) return '';
   var dest = (S.fuentesFact || [{ tab: 'A facturar' }])[0].tab;
   return '<p class="cf-dup" role="note">' + ico('info') + '<span><b>Ojo, posible duplicado.</b> En «' + esc(dest) + '» ya hay una carga de este contrato con las mismas toneladas' +
@@ -7796,7 +7803,7 @@ function armarFilaEmb(f, tab, sheetId, det) {
 
 // Una carga SIN BL contra las filas ya pasadas de su contrato. Devuelve 'pagada' (coincide un dato propio y nada lo contradice),
 // 'posible' (coincide solo la cantidad) o null. Una pagada consume la fila.
-function cruzarSinBl(o, reg) {
+function cruzarSinBl(o, reg, info) {
   var d = function (x) {
     var out = {};
     ['invoice', 'guia', 'booking', 'vessel'].forEach(function (k) { if (x[k] !== null && x[k] !== undefined && String(x[k]).trim() !== '') out[k] = clave(String(x[k])); });
@@ -7813,7 +7820,14 @@ function cruzarSinBl(o, reg) {
     if (distinto) return;                                        // un dato propio lo contradice: es otra carga
     if (igual) { if (!fuerte) fuerte = i; } else if (!debil) debil = i;
   });
-  if (fuerte) { fuerte.usado = true; return 'pagada'; }
+  if (fuerte) {
+    fuerte.usado = true;
+    if (info) {
+      var rot = { invoice: 'misma factura', guia: 'misma guía', booking: 'misma reserva', vessel: 'mismo camión', etd: 'misma fecha de salida' }, dI2 = fuerte.id || {};
+      info.por = Object.keys(dO).filter(function (k) { return k in dI2 && dO[k] === dI2[k]; }).map(function (k) { return rot[k]; });
+    }
+    return 'pagada';
+  }
   return debil ? 'posible' : null;
 }
 
@@ -8042,13 +8056,13 @@ async function cargarTodo(rapido, silencioso) {
     // BL, por toneladas, consumiendo cada coincidencia una sola vez.
     var pend = [];
     todas.forEach(function (o) {
-      o._aFacturar = false;
+      o._aFacturar = false; o._pagadaPor = '';
       var reg = S.facturar.get(String(o.contract || '').trim());
       if (!reg) return;
       var blo = o.bl ? String(o.bl).trim() : '';
       if (blo) {
         var it = reg.items.filter(function (i) { return !i.usado && i.bl === blo; })[0];
-        if (it) { it.usado = true; o._aFacturar = true; }
+        if (it) { it.usado = true; o._aFacturar = true; o._pagadaPor = 'mismo BL ' + blo; }
         return;   // Tiene BL y no matcheó: no se cobró, no se adivina.
       }
       pend.push({ o: o, reg: reg });
@@ -8059,9 +8073,9 @@ async function cargarTodo(rapido, silencioso) {
     // dato propio (factura, guía, reserva, camión o fecha de salida) y ninguno lo contradice. Si coincide solo la
     // cantidad, se avisa como «posible duplicado» pero NO se bloquea: se puede pasar igual.
     pend.forEach(function (x) {
-      var o = x.o, res = cruzarSinBl(o, x.reg);
+      var o = x.o, inf = {}, res = cruzarSinBl(o, x.reg, inf);
       o._posiblePagada = res === 'posible' ? { contrato: String(o.contract || '').trim(), tns: o.tns } : null;
-      if (res === 'pagada') o._aFacturar = true;
+      if (res === 'pagada') { o._aFacturar = true; o._pagadaPor = ['mismo contrato'].concat(o.tns ? ['mismas toneladas (' + fmtNum(o.tns) + ' tn)'] : [], inf.por || []).join(', '); }
     });
 
     if (!rapido) {
@@ -10342,6 +10356,11 @@ function filaEmbarque(x, opts) {
           ? '<button class="ir-fact" data-act="abrirpasar" data-f="' + esc(emb._id) + '" ' +
             'title="Pasar a ' + esc(S.fuentesFact[0].tab) + '">' + ico('mover') +
             'A facturar</button>'
+          : '') +
+        ((S.fuentesFact || []).length && emb._aFacturar && !emb._esFact && opts.acciones !== false
+          ? '<button class="ir-fact" data-act="abrirpasar" data-f="' + esc(emb._id) + '" ' +
+            'title="Ya figura en ' + esc(S.fuentesFact[0].tab) + ' (coincide en: ' + esc(emb._pagadaPor || '') + '). Pasala igual solo si es otra carga.">' + ico('mover') +
+            'Pasar igual</button>'
           : '') +
         (opts.acciones !== false
           ? '<button class="btn-elim chico" data-act="elimabrir" data-f="' + esc(emb._id) + '" title="Eliminar esta carga de la planilla" aria-label="Eliminar esta carga">' + ico('papelera') + '</button>'
@@ -13113,8 +13132,11 @@ function selInfoHtml() {
     var d0 = (S.fuentesFact || [])[0];
     return (d0 ? '<button class="btn-pasar" data-act="lotefact" title="Pasar cargas a ' + esc(d0.tab) + '">' + ico('mover') + 'Pasar a ' + esc(d0.tab) + '</button>' : '') + btnSinDocsBarra();
   }
-  var nFact = idsParaFacturar().length, dest = (S.fuentesFact || [])[0];
+  var nFact = idsParaFacturar().length, dest = (S.fuentesFact || [])[0], nYa = idsPagadasSel().length;
+  var porQue = nYa ? filaPorId(idsPagadasSel()[0])._pagadaPor : '';
   return '<span class="sel-info" role="status"><b>' + n + (n === 1 ? ' marcada' : ' marcadas') + '</b>' +
+    (dest && !nFact && nYa ? '<span class="pill nar sel-ya" title="Coincide en: ' + esc(porQue) + '">' + (nYa === 1 ? 'Ya figura en ' : nYa + ' ya figuran en ') + esc(dest.tab) + '</span>' +
+      '<button class="primario sel-fact" data-act="lotefact" title="Coincide en: ' + esc(porQue) + '. Se pasa igual y queda duplicada.">' + ico('mover') + 'Pasar igual</button>' : '') +
     (dest && nFact ? '<button class="primario sel-fact" data-act="lotefact">' + ico('mover') + 'Pasar a ' + esc(dest.tab) +
       (nFact > 1 ? ' (' + nFact + ')' : '') + '</button>' : '') +
     (idsParaDevolver().length ? '<button class="primario sel-fact" data-act="lotedev">' + ico('volver') + 'Devolver a su pestaña' +
@@ -13152,6 +13174,12 @@ function idsParaFacturar() {
   return Object.keys(S.filasSel).filter(function (k) {
     var e = S.filasSel[k] && filaPorId(k);
     return e && !e._aFacturar && !e._esFact;
+  });
+}
+function idsPagadasSel() {
+  return Object.keys(S.filasSel).filter(function (k) {
+    var e = S.filasSel[k] && filaPorId(k);
+    return e && e._aFacturar && !e._esFact;
   });
 }
 function idsParaDevolver() {
@@ -13613,13 +13641,15 @@ function modalLoteFact() {
     return '<li><b>' + esc(q.quien) + '</b> · ' + esc(q.contrato || 'sin contrato') + (q.bl ? ' · BL ' + esc(q.bl) : '') +
       (!q.bl ? datosCargaSinBl(emb).map(function (d) { return ' · ' + d[0] + ' ' + esc(d[1]); }).join('') : '') +
       (q.tns ? ' · ' + fmtNum(q.tns) + ' tn' : '') + ' <span class="ayuda">(' + esc(nombreCorto(q.desde)) + ', fila ' + q.fila + ')</span>' +
-      (emb._posiblePagada && !emb._aFacturar ? ' <span class="pill nar cf-dup-pill" title="Hay una carga del contrato con las mismas toneladas en A facturar. Si es otro camión, seguí.">Posible duplicado</span>' : '') + '</li>';
+      (emb._posiblePagada && !emb._aFacturar ? ' <span class="pill nar cf-dup-pill" title="Hay una carga del contrato con las mismas toneladas en A facturar. Si es otro camión, seguí.">Posible duplicado</span>' : '') +
+      (emb._aFacturar && !emb._esFact ? ' <span class="pill pend cf-dup-pill" title="Coincide en: ' + esc(emb._pagadaPor || '') + '">Ya figura en ' + esc(destino.tab) + '</span>' : '') + '</li>';
   }).join('');
   var n = L.ids.length;
   return '<div class="modal-velo" data-act="lotefactno"></div>' +
     '<div class="modal-caja"><div class="modal-cambio" role="alertdialog" aria-modal="true" aria-labelledby="lf-t">' +
       '<h3 id="lf-t">¿Pasar ' + (n === 1 ? 'esta carga' : 'estas ' + n + ' cargas') + ' a «' + esc(destino.tab) + '»?</h3>' +
       '<ul class="mover-ctr-lista">' + lista + '</ul>' +
+      L.ids.map(filaPorId).filter(function (e) { return e && e._aFacturar && !e._esFact; }).slice(0, 1).map(avisoDuplicadoHtml).join('') +
       '<ul class="mover-que"><li>Cada fila se copia a «' + esc(destino.tab) + '» arriba del TOTAL, con sus datos y colores, ' +
         'se comprueba que quedó bien y recién entonces se borra de su pestaña.</li>' +
         '<li>Para devolverla: «' + esc(destino.tab) + '» → Devolver.</li></ul>' +
@@ -15947,6 +15977,7 @@ document.addEventListener('click', function (ev) {
   if (act === 'lotedevok') { return devolverLote(); }
   if (act === 'lotefact') {
     var idsF = idsParaFacturar();
+    if (!idsF.length) idsF = idsPagadasSel();           // solo hay marcadas que «ya figuran»: se ofrece pasarlas igual, con el aviso
     if (!idsF.length && S.celdaAct) { var ev1 = filaPorId(S.celdaAct.id); if (ev1 && !ev1._aFacturar && !ev1._esFact) idsF = [ev1._id]; }
     if (!idsF.length) { toast('Marcá una o más filas (clic en su número, a la izquierda) y volvé a tocar «Pasar a A facturar»', 'ok', 6000); return; }
     S.loteFact = { ids: idsF, entiendo: false, moviendo: false, error: null };
@@ -16882,7 +16913,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.03-n';
+var APP_VERSION = '2026.11.03-o';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
