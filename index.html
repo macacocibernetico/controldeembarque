@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Política de contenido: la página solo puede hablar con Google (y con ella misma). Si algún día un script ajeno se colara, no tendría adónde mandar los datos. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; object-src 'none'; base-uri 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Control de embarques</title>
 <meta name="theme-color" content="#f5f5f7">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2480,7 +2483,7 @@ body.rango-arrastrando, body.rango-arrastrando *{user-select:none !important;cur
 <body>
 <div id="root"><p class="centro">Cargando…</p></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
 'use strict';
 /* ===========================================================================
@@ -2497,7 +2500,8 @@ body.rango-arrastrando, body.rango-arrastrando *{user-select:none !important;cur
 // userinfo.email para saber quién comenta: el portal lo usan varias personas y
 // un comentario sin autor no sirve de nada.
 // gmail.compose deja que CADA persona cree el borrador en SU propio Gmail: la
-// app nunca manda desde otra cuenta. settings.basic es solo para leer la firma.
+// app nunca manda desde otra cuenta. Ya no se pide gmail.settings.basic (solo servía para leer la firma y daba demasiado poder:
+// permite crear filtros y reenvíos). Los borradores salen sin la firma automática.
 var GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.compose';
 // drive.file: la app solo ve los archivos que ella misma crea. Lo usa para
 // convertir el contrato a PDF; no puede leer el resto del Drive de nadie.
@@ -2506,7 +2510,6 @@ var SCOPE = 'https://www.googleapis.com/auth/spreadsheets ' +
             'https://www.googleapis.com/auth/userinfo.email ' +
             'https://www.googleapis.com/auth/userinfo.profile ' +
             'https://www.googleapis.com/auth/gmail.compose ' +
-            'https://www.googleapis.com/auth/gmail.settings.basic ' +
             DRIVE_SCOPE;
 
 var HOJA_COMENTARIOS = 'Comentarios app';
@@ -4099,14 +4102,25 @@ function esVerdadero(v) {
   return t === 'true' || t === 'verdadero' || t === 'sí' || t === 'si' || t === 'x';
 }
 
+// Para las escrituras con USER_ENTERED (comentarios, bitácora, alta de contrato): un texto que Sheets interpretaría como
+// fórmula (= + - @) se guarda con un apóstrofe adelante, que Sheets no muestra y lo deja como texto.
+function textoSeguro(v) {
+  return typeof v === 'string' && /^[=+\-@\t\r]/.test(v) ? "'" + v : v;
+}
+// Una fórmula que arma la propia app (p. ej. el Total = precio × toneladas) se marca así para que sí se escriba como fórmula.
+function formulaApp(f) { return { formulaApp: String(f) }; }
 function aValorSheets(v) {
+  if (v && typeof v === 'object' && typeof v.formulaApp === 'string') return { formulaValue: v.formulaApp };
   if (v === null || v === undefined || v === '') return { stringValue: '' };
   // Las casillas de verificación son booleanos: escribir "TRUE" como texto
   // rompería la casilla.
   if (typeof v === 'boolean') return { boolValue: v };
   if (typeof v === 'number') return { numberValue: v };
   if (v instanceof Date) return { numberValue: Math.floor((v - EPOCH) / DIA) };
-  if (typeof v === 'string' && v.charAt(0) === '=') return { formulaValue: v };
+  // Un texto que empieza con «=» queda como TEXTO, nunca como fórmula: lo que alguien escribe o pega (p. ej. de un mail
+  // externo) no puede traer un =IMPORTDATA(...) que mande datos de la planilla afuera. Las fórmulas propias de la app
+  // se arman aparte, con formulaValue explícito.
+  if (typeof v === 'string' && v.charAt(0) === '=') return { stringValue: v };
   if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) {
     var d = new Date(String(v) + 'T00:00:00Z');
     if (!isNaN(d)) return { numberValue: Math.floor((d - EPOCH) / DIA) };
@@ -4303,17 +4317,17 @@ async function crearContrato(datos) {
 
   var fila = [
     datos.fecha,          // A Fecha
-    datos.contrato,       // B
-    datos.exportador,     // C
-    datos.importador,     // D
-    datos.producto,       // E
-    datos.tipo,           // F
+    textoSeguro(datos.contrato),       // B
+    textoSeguro(datos.exportador),     // C
+    textoSeguro(datos.importador),     // D
+    textoSeguro(datos.producto),       // E
+    textoSeguro(datos.tipo),           // F
     datos.toneladas,      // G
     datos.precio,         // H
     '=H' + n + '*G' + n,  // I Total
-    datos.packaging,      // J
-    datos.incoterm,       // K
-    datos.formaPago,      // L
+    textoSeguro(datos.packaging),      // J
+    textoSeguro(datos.incoterm),       // K
+    textoSeguro(datos.formaPago),      // L
     '=I' + n + '*0.02',   // M Comisión
     '',                   // N PAGOS USA
     sumifs,               // O ENT
@@ -4548,6 +4562,8 @@ function b64url(str) {
 
 function armarMime(para, cc, asunto, texto, html) {
   var lim = 'b' + Date.now();
+  var unaLinea = function (v) { return String(v == null ? '' : v).replace(/[\r\n]+/g, ' '); };   // sin saltos: no se pueden agregar encabezados
+  para = unaLinea(para); cc = unaLinea(cc); asunto = unaLinea(asunto);
   var enc = function (v) {
     // Asunto con acentos: se codifica para que no se rompa en ningún cliente.
     return /[^\x00-\x7F]/.test(v)
@@ -6841,7 +6857,7 @@ async function registrarAdvice(sel, destino, cc) {
         sel.map(function (o) { return o.bl || ''; }).join(', '),
         destino, S.advicePeter ? 'sí' : 'no', S.adviceIdioma || 'en',
         S.usuario ? S.usuario.email : ''
-      ]] })
+      ].map(textoSeguro)] })
     });
     return null;
   } catch (e) {
@@ -7361,7 +7377,7 @@ async function publicarEvento(o) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ values: [[ev.fecha, ev.autor, ev.tab, ev.contrato, ev.bl, ev.texto, ev.sobre,
-        ev.campo, ev.hilo, ev.id, ev.tipo, ev.ref, JSON.stringify(hu)]] })
+        ev.campo, ev.hilo, ev.id, ev.tipo, ev.ref, JSON.stringify(hu)].map(textoSeguro)] })
     });
     return ev;
   } catch (e) {
@@ -8398,8 +8414,8 @@ async function aplicarCambio(id, campo, valor) {
   // así queda bien aunque en esa fila hubiera un número fijo.
   if ((campo === 'tns' || campo === 'price') && src.mapa.total !== undefined &&
       src.mapa.tns !== undefined && src.mapa.price !== undefined) {
-    valores[src.mapa.total] = '=' + letraCol(src.mapa.price) + f._fila + '*' +
-                              letraCol(src.mapa.tns) + f._fila;
+    valores[src.mapa.total] = formulaApp('=' + letraCol(src.mapa.price) + f._fila + '*' +
+                              letraCol(src.mapa.tns) + f._fila);
     var pr = normNum(f.price), tn = normNum(f.tns);
     f.total = (pr !== null && tn !== null) ? Math.round(pr * tn * 100) / 100 : f.total;
   }
@@ -8639,6 +8655,37 @@ function codigoConfig() {
   try { return b64url(JSON.stringify(configExportable())); } catch (e) { return ''; }
 }
 
+// Lo que viene de afuera (enlace #cfg= o código pegado) se limpia: solo claves conocidas y con el formato esperado.
+function limpiarCfgExterna(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+  var idPlanilla = /^[A-Za-z0-9_-]{20,}$/, idCliente = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/;
+  var txt = function (v, max) { return typeof v === 'string' ? v.slice(0, max) : ''; };
+  var lista = function (v) {
+    return Array.isArray(v) ? v.filter(function (x) { return typeof x === 'string' && x.length <= 100; }).slice(0, 30) : [];
+  };
+  if (typeof obj.sheetId !== 'string' || !idPlanilla.test(obj.sheetId)) return null;
+  var out = { v: 1, sheetId: obj.sheetId };
+  out.clientId = typeof obj.clientId === 'string' && idCliente.test(obj.clientId) ? obj.clientId : '';
+  out.titulo = txt(obj.titulo, 80);
+  out.tabsEmb = lista(obj.tabsEmb); out.tabsFact = lista(obj.tabsFact); out.tabsCtr = lista(obj.tabsCtr); out.tabsCtrEdit = lista(obj.tabsCtrEdit);
+  out.tabAlta = txt(obj.tabAlta, 100); out.tabDB = txt(obj.tabDB, 100);
+  out.paisSheetId = typeof obj.paisSheetId === 'string' && idPlanilla.test(obj.paisSheetId) ? obj.paisSheetId : '';
+  out.tabPaisCli = txt(obj.tabPaisCli, 100); out.tabPaisPro = txt(obj.tabPaisPro, 100);
+  return out;
+}
+// Cambiar a qué planilla (o a qué cuenta de Google) apunta la app es delicado: una persona de afuera podría mandar un
+// enlace armado. Antes de aplicar nada se muestra a dónde apunta y se pide confirmación.
+function confirmarCfgExterna(obj) {
+  var actual = S.cfg || {}, cambia = [];
+  if (actual.sheetId && actual.sheetId !== obj.sheetId) cambia.push('OJO: cambia la planilla que tenés configurada.');
+  if (actual.clientId && obj.clientId && actual.clientId !== obj.clientId) cambia.push('OJO: cambia el Client ID de Google.');
+  try {
+    return window.confirm('Alguien te pasó una configuración para esta app:\n\n' +
+      'Nombre: ' + (obj.titulo || '(sin nombre)') + '\nPlanilla que termina en: …' + obj.sheetId.slice(-6) + '\n' +
+      (cambia.length ? '\n' + cambia.join('\n') + '\n' : '') +
+      '\nUsala solo si te la dio alguien de tu equipo. ¿Aplicarla?');
+  } catch (e) { return false; }
+}
 function aplicarCodigo(txt) {
   var t = String(txt || '').trim();
   if (!t) return null;
@@ -8650,8 +8697,7 @@ function aplicarCodigo(txt) {
     var bin = atob(b);
     var bytes = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    var obj = JSON.parse(new TextDecoder().decode(bytes));
-    return obj && obj.sheetId ? obj : null;
+    return limpiarCfgExterna(JSON.parse(new TextDecoder().decode(bytes)));
   } catch (e) { return null; }
 }
 
@@ -8671,8 +8717,7 @@ function leerConfigDeEnlace() {
     var bin = atob(b);
     var bytes = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    var obj = JSON.parse(new TextDecoder().decode(bytes));
-    return (obj && obj.sheetId) ? obj : null;
+    return limpiarCfgExterna(JSON.parse(new TextDecoder().decode(bytes)));
   } catch (e) { return null; }
 }
 
@@ -14038,7 +14083,7 @@ async function guardarPendientes() {
         });
         // Cambió la cantidad o el precio: el total se escribe como fórmula.
         if (tocaTotal && mp.total !== undefined && mp.tns !== undefined && mp.price !== undefined) {
-          valores[mp.total] = '=' + letraCol(mp.price) + fresca.fila + '*' + letraCol(mp.tns) + fresca.fila;
+          valores[mp.total] = formulaApp('=' + letraCol(mp.price) + fresca.fila + '*' + letraCol(mp.tns) + fresca.fila);
         }
         reqs = reqs.concat(pedidosDeCeldas(h.sheetId, fresca.fila, valores, colores));
         ubicadas[id] = fresca.fila;
@@ -16188,6 +16233,7 @@ document.addEventListener('click', function (ev) {
     var ta = document.getElementById('pegarcfg');
     var obj = aplicarCodigo(ta ? ta.value : '');
     if (!obj) { S.pegadoMsg = 'Ese código no se entiende. Copialo completo.'; return pintar(); }
+    if (!confirmarCfgExterna(obj)) { S.pegadoMsg = 'No se aplicó nada.'; return pintar(); }
     S.cfg = Object.assign({}, S.cfg || {}, obj);
     guardarCfg();
     S.pegadoMsg = 'Listo, configuración cargada. Guardá para entrar.';
@@ -16787,7 +16833,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.03-l';
+var APP_VERSION = '2026.11.03-m';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
@@ -16802,6 +16848,7 @@ function arrancar() {
   // Config compartida por enlace: se toma una vez y queda guardada, así el
   // resto del equipo no repite el alta.
   var deEnlace = leerConfigDeEnlace();
+  if (deEnlace && !confirmarCfgExterna(deEnlace)) { try { history.replaceState(null, '', location.pathname); } catch (e) {} deEnlace = null; }
   if (deEnlace) {
     S.cfg = Object.assign({}, S.cfg || {}, deEnlace);
     guardarCfg();
