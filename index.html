@@ -1323,6 +1323,7 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
   .tabbar button[aria-current=true].c-naranja{color:var(--naranja-d)}
   .tabbar button[aria-current=true].c-violeta{color:var(--violeta)}
   .tabbar button[aria-current=true].c-verde{color:var(--verde)}
+  .tabbar button[aria-current=true].c-dorado{color:#b45309}
   .tabbar button[aria-current=true] .tb-ico{transform:scale(1.06)}
   .tabbar button[aria-current=true] .tb-l{font-weight:600}
   .tabbar .tb-ico{font-size:22px;line-height:1;filter:saturate(.25) opacity(.55)}
@@ -2483,6 +2484,94 @@ body.rango-arrastrando, body.rango-arrastrando *{user-select:none !important;cur
   .prog-grupo > header{padding:12px 14px}
   .prog-ctl .cf-sel{flex:1 1 100%}
 }
+/* Cash Flow */
+.cf-kpis{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:12px;margin:0 0 16px}
+.cf-kpi{background:var(--sup);border-radius:var(--r);box-shadow:var(--s1);padding:14px 18px;min-width:0;display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:3px;border:0;text-align:left;font:inherit;color:inherit}
+.cf-kpi span{font-size:13px;color:var(--tinta3)}
+.cf-kpi b{font-size:26px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cf-kpi small{font-size:13px;color:var(--tinta3)}
+.cf-kpi.sem{background:linear-gradient(180deg,#ecfdf5,#fff);box-shadow:0 0 0 1px #a7f3d0}
+.cf-kpi.sem b{font-size:34px;color:#065f46}
+.cf-kpi.venc b{color:var(--pend)}
+.cf-kpi.venc{cursor:pointer}
+.cf-kpi.venc:hover{box-shadow:0 0 0 2px #fecaca}
+.cf-barra{display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap}
+.cf-mes{font-size:21px;font-weight:700;letter-spacing:-.02em;min-width:170px;text-align:center}
+.cf-nav{width:44px;height:44px;min-height:44px;padding:0;border:1px solid var(--linea2);border-radius:50%;background:var(--sup);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--tinta2)}
+.cf-nav:hover{background:var(--sup2)}
+.cf-nav .ico{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7}
+.cf-hoy{min-height:44px;padding:0 16px;border:1px solid var(--linea2);border-radius:980px;background:var(--sup);font:inherit;font-weight:600;color:var(--acento-d);cursor:pointer}
+.cf-leyenda{margin-left:auto;display:flex;gap:14px;font-size:12.5px;color:var(--tinta3);flex-wrap:wrap}
+.cf-leyenda i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.cf-cuerpo{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+.cf-cal{background:var(--sup);border-radius:var(--r);box-shadow:var(--s1);overflow:hidden}
+.cf-dias{display:grid;grid-template-columns:repeat(7,minmax(0,1fr)) 96px;background:var(--sup2);border-bottom:1px solid var(--linea2)}
+.cf-dias div{padding:9px 10px;font-size:12px;font-weight:600;color:var(--tinta3);text-transform:uppercase;letter-spacing:.04em}
+.cf-dias div:last-child{text-align:right}
+.cf-sem{display:grid;grid-template-columns:repeat(7,minmax(0,1fr)) 96px;border-top:1px solid var(--linea)}
+.cf-sem:first-of-type{border-top:0}
+.cf-sem.actual{background:#f0fdf8}
+.cf-dia{min-height:104px;min-width:0;overflow:hidden;padding:8px;border:0;border-radius:0;border-right:1px solid var(--linea);background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:5px;position:relative;box-shadow:none}
+.cf-dia:hover{background:var(--papel)}
+.cf-dia.fuera{opacity:.42}
+.cf-dia.finde{background:rgba(17,24,39,.025)}
+.cf-dia[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--acento);background:var(--acentobg)}
+.cf-n{font-size:13px;font-weight:600;color:var(--tinta2)}
+.cf-dia.hoy .cf-n{background:var(--acento);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center}
+.cf-monto{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--tinta);white-space:nowrap}
+.cf-monto.venc{color:var(--pend)}
+.cf-monto.cobr{color:var(--tinta3);font-weight:500;text-decoration:line-through}
+.cf-chips{display:flex;flex-direction:column;gap:3px;width:100%;min-width:0}
+.cf-chip{display:block;max-width:100%;box-sizing:border-box;font-size:11.5px;line-height:1.25;padding:2px 6px;border-radius:5px;background:#d1fae5;color:#065f46;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf-chip.venc{background:#fee2e2;color:#991b1b}
+.cf-chip.cobr{background:var(--sup3);color:var(--tinta3)}
+.cf-mas{font-size:11.5px;color:var(--tinta3)}
+.cf-tot{padding:8px 12px;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--tinta2);display:flex;flex-direction:column;justify-content:center;gap:2px}
+.cf-tot small{font-weight:400;color:var(--tinta3);font-size:11.5px}
+.cf-det{background:var(--sup);border-radius:var(--r);box-shadow:var(--s1);position:sticky;top:16px;overflow:hidden}
+.cf-det header{padding:16px 18px;border-bottom:1px solid var(--linea2)}
+.cf-det h2{margin:0;font-size:17px}
+.cf-det header p{margin:3px 0 0;color:var(--tinta3);font-size:13.5px}
+.cf-det header b{color:var(--tinta);font-size:22px;display:block;margin-top:8px;font-variant-numeric:tabular-nums}
+.cf-item{padding:14px 18px;border-top:1px solid var(--linea);display:flex;flex-direction:column;gap:6px}
+.cf-item:first-of-type{border-top:0}
+.cf-fila1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.cf-fila1 b{font-size:14.5px}
+.cf-fila1 strong{font-variant-numeric:tabular-nums;font-size:15px}
+.cf-sub{font-size:13px;color:var(--tinta3)}
+.cf-regla{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.cf-tag{font-size:12px;padding:3px 9px;border-radius:980px;border:1px solid var(--linea2);background:var(--papel);color:var(--tinta2);font-variant-numeric:tabular-nums}
+.cf-tag.ok{background:#d1fae5;border-color:#a7f3d0;color:#065f46}
+.cf-tag.venc{background:#fee2e2;border-color:#fecaca;color:#991b1b}
+.cf-vacio{padding:34px 18px;color:var(--tinta3);text-align:center;font-size:14px}
+.cf-sinfecha{margin-top:16px;background:var(--sup);border-radius:var(--r);box-shadow:var(--s1);overflow:hidden}
+.cf-sinfecha > button{width:100%;display:flex;align-items:center;gap:10px;padding:14px 18px;border:0;background:transparent;font:inherit;font-weight:600;cursor:pointer;min-height:48px;text-align:left}
+.cf-sinfecha .n{background:#fef3c7;color:#92400e;border-radius:980px;padding:1px 10px;font-size:13px}
+.cf-sinfecha ul{list-style:none;margin:0;padding:0 0 6px}
+.cf-sinfecha li{display:flex;justify-content:space-between;gap:12px;padding:10px 18px;border-top:1px solid var(--linea);font-size:14px;flex-wrap:wrap}
+.cf-sinfecha li span{color:var(--tinta3);font-size:13px}
+.cf-aviso{margin:0 0 14px;padding:10px 14px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:13.5px}
+@media(max-width:1100px){.cf-cuerpo{grid-template-columns:1fr}.cf-det{position:static}.cf-kpis{grid-template-columns:1fr 1fr}.cf-kpi.sem{grid-column:1/-1}}
+@media(max-width:900px){
+  .cf-dias,.cf-sem{grid-template-columns:repeat(7,minmax(0,1fr))}
+  .cf-dias div:last-child,.cf-tot{display:none}
+  .cf-dia{min-height:62px;padding:6px 4px;align-items:center}
+  .cf-chips{display:none}
+  .cf-monto{font-size:11px}
+  .cf-dia .pto{display:block}
+  .cf-leyenda{margin-left:0}
+  .cf-mes{min-width:0;flex:1;font-size:18px}
+}
+.cf-dia .pto{display:none;width:6px;height:6px;border-radius:50%;background:#10b981}
+.cf-dia .pto.venc{background:#dc2626}
+.cf-kpi.venc:disabled{cursor:default;opacity:1}
+.cf-kpi.venc:disabled:hover{box-shadow:var(--s1)}
+.cf-tot small.v{color:var(--pend);font-weight:600}
+.cf-tag.sup{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+.cf-ver{align-self:flex-start;min-height:44px;padding:0 14px;border:1px solid var(--linea2);border-radius:980px;background:var(--sup);font:inherit;font-size:13.5px;font-weight:600;color:var(--acento-d);cursor:pointer}
+.cf-ver:hover{background:var(--acentobg)}
+.t-dorado{background:linear-gradient(180deg,#f2b84b,#c98a10)}
+.v-dorado{--acento:var(--verde);--acentobg:#ecfdf5;--acento-d:#065f46}
 </style>
 </head>
 <body>
@@ -8959,7 +9048,7 @@ function vistaApp() {
   evs.forEach(function (x) { x.ev.nivelMax ? cuenta[x.ev.nivelMax]++ : cuenta.ok++; });
 
   // Pestañas y tipos de las CARGAS: en Contratos filtrarían algo que ni se ve (Contratos tiene los suyos).
-  var segmentado = S.vista === 'contratos' || S.vista === 'prog' ? ''
+  var segmentado = S.vista === 'contratos' || S.vista === 'prog' || S.vista === 'cash' ? ''
     : S.verFact && S.vista === 'carga' ? segmentoPestanas(todosEvs)      // «A facturar»: el filtro por producto no aplica
     : segmentoPestanas(todosEvs) + segmentoTipos(todosEvs);
   var modoFactT = S.verFact && S.vista === 'carga' && (S.modo === 'tabla' || S.modo === 'planilla');
@@ -8967,6 +9056,7 @@ function vistaApp() {
   var cuerpo = S.vista === 'control' ? vistaControl(evs, cuenta)
              : S.vista === 'contratos' ? vistaContratos()
              : S.vista === 'prog' ? vistaProg()
+             : S.vista === 'cash' ? vistaCash()
              : S.verFact ? (modoFactT ? vistaGrillaFact(evsFact) : vistaFacturadas())
              : vistaGrilla(evs);
   var panel = '';
@@ -9892,7 +9982,7 @@ function tiposDisponibles(evs) {
 // Título grande, como el "Large Title" de iOS: ancla la pantalla y hace que
 // el contenido respire antes de empezar.
 function tituloVista() {
-  var t = { control: 'Control', carga: 'Cargas', contratos: 'Contratos', prog: 'Programación' }[S.vista] || '';
+  var t = { control: 'Control', carga: 'Cargas', contratos: 'Contratos', prog: 'Programación', cash: 'Cash Flow' }[S.vista] || '';
   var sub = '';
   if (S.vista === 'carga' && S.verFact) {
     t = 'A facturar';
@@ -9907,6 +9997,8 @@ function tituloVista() {
     sub = S.contratos.size + ' contratos';
   } else if (S.vista === 'prog') {
     sub = 'Lo que falta embarcar de los contratos abiertos, según su período';
+  } else if (S.vista === 'cash') {
+    sub = 'Cuándo hay que cobrar cada carga, según la condición de pago de su contrato';
   } else if (S.vista === 'control' && S.datos) {
     sub = 'Lo que necesita atención';
   }
@@ -9951,7 +10043,8 @@ var VISTAS = [
   { id: 'carga',       label: 'Cargas',       emoji: '🚢', color: 'azul' },
   { id: 'control',     label: 'Control',      emoji: '🔔', color: 'naranja' },
   { id: 'contratos',   label: 'Contratos',    emoji: '📄', color: 'violeta' },
-  { id: 'prog',        label: 'Programación', emoji: '🗓️', color: 'verde' }
+  { id: 'prog',        label: 'Programación', emoji: '🗓️', color: 'verde' },
+  { id: 'cash',        label: 'Cash Flow',    emoji: '💲', color: 'dorado' }
 ];
 
 function colorDeVista(id) {
@@ -11924,6 +12017,173 @@ document.addEventListener('change', function (e) {
   }
   pintar();
 });
+
+/* ===========================================================================
+   Cash Flow: cuándo hay que cobrar cada carga, según la condición de pago de su contrato.
+   La condición (texto del contrato) se traduce a cuotas «% · ETD/ETA ± días»; el vencimiento se CALCULA con las fechas de
+   la carga, así que si cambia el ETD o el ETA, el día de cobro se mueve solo. Una carga que ya pasó a «A facturar» es una carga cobrada.
+   =========================================================================== */
+var CASH_ANTICIPADO_DIAS = 5;      // «anticipado / al cargar» = ETD − 5
+var DIAS_SEM = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function cashEtiquetaRegla(c) {
+  var d = c.dias ? (c.dias < 0 ? ' − ' : ' + ') + Math.abs(c.dias) : '';
+  return c.pct + '% · ' + c.base + d;
+}
+// Una cuota suelta (un trozo del texto): {base, dias, supuesto} o null si no se entiende.
+function cashUnaCuota(t) {
+  var m;
+  if ((m = /(\d+)\s*(?:days?|dias?)\s*(?:before|antes|previo|prior)\b.*?(?:arrival|llegada)/.exec(t))) return { base: 'ETA', dias: -(+m[1]) };
+  if ((m = /(\d+)\s*(?:days?|dias?)\s*(?:after|despues(?:\s*de)?|de)\s*(?:the\s*)?(?:arrival|llegada)/.exec(t))) return { base: 'ETA', dias: +m[1] };
+  if ((m = /(\d+)\s*(?:days?|dias?)\s*after\s*receipt/.exec(t))) return { base: 'ETA', dias: +m[1] };
+  if ((m = /(\d+)\s*(?:days?|dias?)\s*(?:after\s*(?:the\s*)?(?:bl|invoice|shipment|loading)|de\s*fecha|despues\s*de\s*(?:la\s*)?(?:carga|factura|bl)|de\s*(?:la\s*)?(?:carga|factura|bl)\b)/.exec(t))) return { base: 'ETD', dias: +m[1] };
+  if (/anticipad|in advance|advance|pre-?\s?payment|momento de (?:la )?carga|al cargar/.test(t)) return { base: 'ETD', dias: -CASH_ANTICIPADO_DIAS };
+  if (/antes de (?:la )?llegada|before arrival/.test(t)) return { base: 'ETA', dias: 0, supuesto: true };
+  if ((m = /(\d+)\s*-\s*(\d+)\s*(?:days?|dias?)/.exec(t))) return { base: 'ETD', dias: Math.max(+m[1], +m[2]), supuesto: true };
+  if ((m = /\b(\d+)\s*(?:days?|dias?)\b/.exec(t))) return { base: 'ETD', dias: +m[1], supuesto: true };
+  if (/after arrival|despues de (?:la )?llegada|\bcad\b|\blc\b|letter of credit|at sight|carta de credito/.test(t)) return { base: 'ETA', dias: 0 };
+  // Frases menos claras: se interpretan con un supuesto y quedan marcadas para que el dueño las revise.
+  if (/contra la carga|confirmacion de carga|against loading/.test(t)) return { base: 'ETD', dias: 0, supuesto: true };
+  if (/against (?:the )?(?:copy|copies|scan|documents?|docs)|contra (?:scan|copia|docs|documentos)|cash against|after (?:the )?scan copy|tt/.test(t)) return { base: 'ETA', dias: 0, supuesto: true };
+  if (/after (?:sound |approval )?arrival|after eu cle/.test(t)) return { base: 'ETA', dias: 0, supuesto: true };
+  return null;
+}
+// El texto de la condición de pago -> {cuotas:[{pct, base, dias, supuesto}], estado:'ok'|'supuesto'|'revisar', motivo}
+function reglaDeTexto(texto) {
+  var crudo = String(texto == null ? '' : texto).trim(), t = clave(crudo);
+  if (!t) return { cuotas: [], estado: 'revisar', motivo: 'El contrato no tiene condición de pago.' };
+  if (/sin egreso de divisas/.test(t)) return { cuotas: [], estado: 'revisar', motivo: 'Regla a revisar: «' + crudo.slice(0, 70) + '»' };
+  var idx = [], re = /(\d+(?:[.,]\d+)?)\s*%/g, mm;
+  while ((mm = re.exec(t))) idx.push({ pos: mm.index, pct: parseFloat(mm[1].replace(',', '.')) });
+  var partes = [];
+  if (idx.length >= 2) idx.forEach(function (x, i) { partes.push({ pct: x.pct, t: t.slice(x.pos, i + 1 < idx.length ? idx[i + 1].pos : t.length) }); });
+  else partes.push({ pct: idx.length === 1 ? idx[0].pct : 100, t: t });
+  var cuotas = [], estado = 'ok', suma = 0;
+  partes.forEach(function (p) {
+    var c = cashUnaCuota(p.t);
+    suma += p.pct;
+    if (!c) { estado = 'revisar'; return; }
+    if (c.supuesto && estado === 'ok') estado = 'supuesto';
+    cuotas.push({ pct: p.pct, base: c.base, dias: c.dias, supuesto: !!c.supuesto });
+  });
+  if (estado === 'revisar' || Math.abs(suma - 100) > 0.5) return { cuotas: [], estado: 'revisar', motivo: 'Regla a revisar: «' + crudo.slice(0, 70) + '»' };
+  return { cuotas: cuotas, estado: estado, motivo: '' };
+}
+function cashDia(d) { return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); }
+function cashClave(d) { return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate(); }
+function cashSuma(d, n) { return new Date(d.getTime() + n * 86400000); }
+function cashLunes(d) { return cashSuma(d, -((d.getUTCDay() + 6) % 7)); }
+function cashFechaCorta(d) { return ('0' + d.getUTCDate()).slice(-2) + '/' + ('0' + (d.getUTCMonth() + 1)).slice(-2); }
+function cashMonto(emb) {
+  var t = normNum(emb.total);
+  if (t) return t;
+  var p = normNum(emb.price), n = normNum(emb.tns);
+  return p && n ? Math.round(p * n * 100) / 100 : 0;
+}
+// Todas las cuotas de cobro (de las cargas y de lo ya cobrado) y las cargas que no se pueden fechar.
+function cashCalcular() {
+  var cuotas = [], sinFecha = [], cache = {};
+  var reglaDe = function (emb) {
+    var c = S.contratos && S.contratos.get(String(emb.contract || '').trim());
+    var tx = c && c.cond && c.cond.texto ? c.cond.texto : '';
+    if (!(tx in cache)) cache[tx] = reglaDeTexto(tx);
+    return { regla: cache[tx], texto: tx };
+  };
+  var hacer = function (emb, cobrada) {
+    var r = reglaDe(emb), nombre = (emb.importer || '—') + ' · ' + (emb.contract || 'sin contrato');
+    if (!r.regla.cuotas.length) { if (!cobrada) sinFecha.push({ emb: emb, nombre: nombre, motivo: r.regla.motivo }); return; }
+    var total = cashMonto(emb), faltaBase = null;
+    r.regla.cuotas.forEach(function (c, i) {
+      var base = c.base === 'ETA' ? emb.eta : emb.etd;
+      if (!esFecha(base)) { faltaBase = faltaBase || 'Falta el ' + c.base + ' (la regla es ' + cashEtiquetaRegla(c) + ')'; return; }
+      cuotas.push({ emb: emb, fecha: cashDia(cashSuma(base, c.dias)), parte: i + 1, de: r.regla.cuotas.length, pct: c.pct,
+        monto: Math.round(total * c.pct) / 100, regla: cashEtiquetaRegla(c), baseTxt: c.base + ' ' + cashFechaCorta(base), supuesto: c.supuesto, texto: r.texto, cobrada: cobrada });
+    });
+    if (faltaBase && !cobrada) sinFecha.push({ emb: emb, nombre: nombre, motivo: faltaBase });
+  };
+  ((S.datos && S.datos.filas) || []).forEach(function (e) { if (!e._aFacturar && !e._esFact) hacer(e, false); });
+  ((S.datosFact && S.datosFact.filas) || []).forEach(function (e) { if (e.contract) hacer(e, true); });
+  return { cuotas: cuotas, sinFecha: sinFecha };
+}
+function cashEstado(q, hoy) { return q.cobrada ? 'cobr' : (q.fecha < hoy ? 'venc' : 'ok'); }
+function cashUsd(n) { return 'US$ ' + Math.round(n).toLocaleString('es-AR'); }
+function cashCorto(n) { return n >= 1000 ? (Math.round(n / 100) / 10).toLocaleString('es-AR') + ' k' : String(Math.round(n)); }
+function cashEstadoInicial() {
+  var h = ahoraComoUTC();
+  return { y: h.getUTCFullYear(), m: h.getUTCMonth(), sel: cashClave(cashDia(h)), sfAbierto: false };
+}
+function vistaCash() {
+  if (!S.cash) S.cash = cashEstadoInicial();
+  var C = S.cash, hoy = cashDia(ahoraComoUTC()), datos = cashCalcular(), cuotas = datos.cuotas;
+  var porDia = {};
+  cuotas.forEach(function (q) { (porDia[cashClave(q.fecha)] = porDia[cashClave(q.fecha)] || []).push(q); });
+  var suma = function (a) { return a.reduce(function (t, q) { return t + q.monto; }, 0); };
+  var pend = cuotas.filter(function (q) { return !q.cobrada; });
+  var l0 = cashLunes(hoy), l1 = cashSuma(l0, 6);
+  var sem = pend.filter(function (q) { return q.fecha >= hoy && q.fecha <= l1; });
+  var venc = pend.filter(function (q) { return q.fecha < hoy; });
+  var mes = pend.filter(function (q) { return q.fecha.getUTCMonth() === hoy.getUTCMonth() && q.fecha.getUTCFullYear() === hoy.getUTCFullYear(); });
+  var prox = sem.slice().sort(function (a, b) { return a.fecha - b.fecha; })[0];
+
+  var h = '<div class="cf-kpis">' +
+    '<div class="cf-kpi sem"><span>Esta semana · ' + cashFechaCorta(l0) + ' al ' + cashFechaCorta(l1) + '</span><b>' + cashUsd(suma(sem)) + '</b><small>' + sem.length +
+      (sem.length === 1 ? ' cobro' : ' cobros') + (prox ? ' · el próximo: ' + DIAS_SEM[prox.fecha.getUTCDay()] + ' ' + cashFechaCorta(prox.fecha) : '') + '</small></div>' +
+    '<div class="cf-kpi"><span>Este mes</span><b>' + cashUsd(suma(mes)) + '</b><small>' + mes.length + (mes.length === 1 ? ' cobro pendiente' : ' cobros pendientes') + '</small></div>' +
+    '<button type="button" class="cf-kpi venc" data-act="cashvenc"' + (venc.length ? '' : ' disabled') + '><span>Vencido</span><b>' + cashUsd(suma(venc)) + '</b><small>' + venc.length +
+      (venc.length === 1 ? ' cobro' : ' cobros') + (venc.length ? ' · tocá para verlos' : '') + '</small></button>' +
+    '<div class="cf-kpi"><span>Sin fecha de cobro</span><b>' + datos.sinFecha.length + '</b><small>' + (datos.sinFecha.length === 1 ? 'carga para completar' : 'cargas para completar') + '</small></div></div>';
+
+  h += '<div class="cf-barra">' +
+    '<button type="button" class="cf-nav" data-act="cashmes" data-d="-1" aria-label="Mes anterior"><svg class="ico" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5"/></svg></button>' +
+    '<div class="cf-mes" aria-live="polite">' + MESES_ES[C.m] + ' ' + C.y + '</div>' +
+    '<button type="button" class="cf-nav" data-act="cashmes" data-d="1" aria-label="Mes siguiente"><svg class="ico" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></button>' +
+    '<button type="button" class="cf-hoy" data-act="cashhoy">Hoy</button>' +
+    '<div class="cf-leyenda"><span>Montos en US$</span><span><i style="background:#10b981"></i>A cobrar</span><span><i style="background:#dc2626"></i>Vencido</span><span><i style="background:#9ca3af"></i>Cobrado</span></div></div>';
+
+  var ini = cashLunes(new Date(Date.UTC(C.y, C.m, 1))), cal = '<div class="cf-dias">' +
+    ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(function (x) { return '<div>' + x + '</div>'; }).join('') + '<div>Semana</div></div>';
+  var s, i;
+  for (s = 0; s < 6; s++) {
+    var f0 = cashSuma(ini, s * 7); if (s >= 5 && f0.getUTCMonth() !== C.m) break;
+    var totSem = 0, nSem = 0, vSem = 0, celdas = '';
+    for (i = 0; i < 7; i++) {
+      var d = cashSuma(f0, i), qs = porDia[cashClave(d)] || [], pd = qs.filter(function (q) { return !q.cobrada; }), hayV = pd.some(function (q) { return q.fecha < hoy; });
+      var todoCobr = qs.length && !pd.length, fuera = d.getUTCMonth() !== C.m, esHoy = cashClave(d) === cashClave(hoy);
+      pd.forEach(function (q) { totSem += q.monto; nSem++; if (q.fecha < hoy) vSem += q.monto; });
+      celdas += '<button type="button" class="cf-dia' + (fuera ? ' fuera' : '') + (i > 4 ? ' finde' : '') + (esHoy ? ' hoy' : '') + '" data-act="cashdia" data-d="' + cashClave(d) + '" aria-pressed="' + (C.sel === cashClave(d)) +
+        '" aria-label="' + d.getUTCDate() + ' de ' + MESES_ES[d.getUTCMonth()] + (qs.length ? ': ' + qs.length + (qs.length === 1 ? ' cobro' : ' cobros') : '') + '">' +
+        '<span class="cf-n">' + d.getUTCDate() + '</span>' +
+        (qs.length ? '<span class="cf-monto ' + (todoCobr ? 'cobr' : hayV ? 'venc' : '') + '">' + cashCorto(todoCobr ? suma(qs) : suma(pd)) + '</span><span class="pto ' + (hayV ? 'venc' : '') + '"></span><span class="cf-chips">' +
+          qs.slice(0, 2).map(function (q) { return '<span class="cf-chip ' + cashEstado(q, hoy) + '" title="' + esc((q.emb.importer || '') + ' · ' + (q.emb.contract || '')) + '">' + esc(String(q.emb.importer || '—').split(' ')[0]) + '</span>'; }).join('') +
+          (qs.length > 2 ? '<span class="cf-mas">+' + (qs.length - 2) + ' más</span>' : '') + '</span>' : '') + '</button>';
+    }
+    cal += '<div class="cf-sem' + (cashClave(f0) === cashClave(l0) ? ' actual' : '') + '">' + celdas + '<div class="cf-tot">' + (totSem ? cashCorto(totSem) + '<small>' + nSem + (nSem === 1 ? ' cobro' : ' cobros') + '</small>' + (vSem ? '<small class="v">' + cashCorto(vSem) + ' vencido</small>' : '') : '<small>—</small>') + '</div></div>';
+  }
+
+  var pr = C.sel.split('-'), dsel = new Date(Date.UTC(+pr[0], +pr[1] - 1, +pr[2])), qsel = porDia[C.sel] || [];
+  var det = '<header><h2>' + DIAS_SEM[dsel.getUTCDay()].charAt(0).toUpperCase() + DIAS_SEM[dsel.getUTCDay()].slice(1) + ' ' + dsel.getUTCDate() + ' de ' + MESES_ES[dsel.getUTCMonth()].toLowerCase() + '</h2><p>' +
+    (qsel.length ? qsel.length + (qsel.length === 1 ? ' cobro' : ' cobros') + (cashClave(dsel) === cashClave(hoy) ? ' · hoy' : dsel < hoy ? ' · ya pasó' : ' · en ' + Math.round((dsel - hoy) / 86400000) + ' días') : 'Sin cobros este día') + '</p>' +
+    (qsel.length ? '<b>' + cashUsd(suma(qsel)) + '</b>' : '') + '</header>';
+  if (!qsel.length) det += '<div class="cf-vacio">No hay vencimientos este día.<br>Tocá otro día del calendario.</div>';
+  qsel.forEach(function (q) {
+    var e = cashEstado(q, hoy);
+    det += '<div class="cf-item"><div class="cf-fila1"><b>' + esc(q.emb.importer || '—') + '</b><strong>' + cashUsd(q.monto) + '</strong></div>' +
+      '<div class="cf-sub">' + esc((q.emb.contract || 'sin contrato') + (q.emb.bl ? ' · BL ' + q.emb.bl : (q.emb.vessel ? ' · ' + q.emb.vessel : '')) + (q.emb.tns ? ' · ' + fmtNum(q.emb.tns) + ' tn' : '') + (q.de > 1 ? ' · cuota ' + q.parte + ' de ' + q.de : '')) + '</div>' +
+      '<div class="cf-regla"><span class="cf-tag">' + esc(q.regla) + '</span><span class="cf-tag">' + esc(q.baseTxt) + '</span>' +
+      '<span class="cf-tag ' + (e === 'cobr' ? '' : e) + '">' + (e === 'cobr' ? 'Cobrado' : e === 'venc' ? 'Vencido hace ' + Math.round((hoy - q.fecha) / 86400000) + ' d' : 'A cobrar') + '</span>' +
+      (q.supuesto ? '<span class="cf-tag sup" title="El texto del contrato no dice a partir de qué fecha: «' + esc(q.texto) + '». Revisá que sea correcto.">Supuesto</span>' : '') + '</div>' +
+      (q.cobrada ? '' : '<button type="button" class="cf-ver" data-act="cashabrir" data-k="' + esc(q.emb.contract || '') + '">Ver la carga</button>') + '</div>';
+  });
+  if (qsel.length) det += '<div class="cf-item"><div class="cf-sub">Si cambiás el ETD o el ETA de la carga en la tabla, este vencimiento se mueve solo.</div></div>';
+
+  var sf = '<div class="cf-sinfecha"><button type="button" data-act="cashsf" aria-expanded="' + !!C.sfAbierto + '"><span>Sin fecha de cobro</span><span class="n">' + datos.sinFecha.length +
+    '</span><span style="margin-left:auto;color:var(--tinta3)">' + (C.sfAbierto ? '▴' : '▾') + '</span></button>' +
+    (C.sfAbierto ? '<ul>' + (datos.sinFecha.length ? datos.sinFecha.slice(0, 80).map(function (x) {
+      return '<li><b>' + esc(x.nombre) + '</b><span>' + esc(x.motivo) + '</span></li>';
+    }).join('') + (datos.sinFecha.length > 80 ? '<li><span>… y ' + (datos.sinFecha.length - 80) + ' más</span></li>' : '') : '<li><span>Todas las cargas tienen fecha de cobro.</span></li>') + '</ul>' : '') + '</div>';
+
+  return h + '<div class="cf-cuerpo"><div><div class="cf-cal">' + cal + '</div>' + sf + '</div><aside class="cf-det" aria-live="polite">' + det + '</aside></div>';
+}
 
 function vistaContratos() {
   var lista = contratosFiltrados();
@@ -15685,6 +15945,31 @@ document.addEventListener('click', function (ev) {
   }
 
   if (act === 'tab') return irAVista(el.getAttribute('data-v'));
+  if (act === 'cashmes') {
+    if (!S.cash) S.cash = cashEstadoInicial();
+    S.cash.m += parseInt(el.getAttribute('data-d'), 10);
+    if (S.cash.m < 0) { S.cash.m = 11; S.cash.y--; } else if (S.cash.m > 11) { S.cash.m = 0; S.cash.y++; }
+    return pintar();
+  }
+  if (act === 'cashhoy') { var abSf = S.cash && S.cash.sfAbierto; S.cash = cashEstadoInicial(); S.cash.sfAbierto = !!abSf; return pintar(); }
+  if (act === 'cashdia') {
+    if (!S.cash) S.cash = cashEstadoInicial();
+    S.cash.sel = el.getAttribute('data-d');
+    return pintar();
+  }
+  if (act === 'cashvenc') {
+    if (!S.cash) S.cash = cashEstadoInicial();
+    var hoyV = cashDia(ahoraComoUTC()), vv = cashCalcular().cuotas.filter(function (q) { return !q.cobrada && q.fecha < hoyV; }).sort(function (a, b) { return b.fecha - a.fecha; })[0];
+    if (vv) { S.cash.sel = cashClave(vv.fecha); S.cash.y = vv.fecha.getUTCFullYear(); S.cash.m = vv.fecha.getUTCMonth(); }
+    return pintar();
+  }
+  if (act === 'cashsf') { if (!S.cash) S.cash = cashEstadoInicial(); S.cash.sfAbierto = !S.cash.sfAbierto; return pintar(); }
+  if (act === 'cashabrir') {
+    var cK = el.getAttribute('data-k');
+    irAVista('carga');
+    S.busca = cK; S.verFact = false;
+    return pintar();
+  }
   if (act === 'progscope') {
     var vP = progEstado(), qP = el.getAttribute('data-v'), kP = parseInt(el.getAttribute('data-k'), 10);
     vP.vista = qP;
@@ -16915,7 +17200,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.03-p';
+var APP_VERSION = '2026.11.04-q';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
