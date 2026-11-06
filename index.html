@@ -5197,7 +5197,7 @@ var AVISO_FACTURAR = 'pia@latinutsa.com';
 var CAMPOS_MUDANZA = ['exporter', 'importer', 'contract', 'product', 'tipo',
   'price', 'tns', 'etd', 'anio', 'eta', 'port', 'vessel', 'shippingLine',
   'lots', 'containers', 'bl', 'booking', 'invoice', 'docs', 'pics', 'tr',
-  'guia', 'commission', 'status', 'incoterm', 'mailsCC', 'pagoEstimado', 'nota'];
+  'guia', 'commission', 'invCommission', 'status', 'incoterm', 'mailsCC', 'pagoEstimado', 'nota'];
 
 // Cómo reconocer una carga que no tiene BL (las terrestres): lo que la distingue de otra de las mismas toneladas.
 function datosCargaSinBl(emb) {
@@ -5271,12 +5271,12 @@ async function ubicarFilaRapido(tab, mapa, esp, fila, salida) {
 // El origen de una mudanza: si la fila está donde la app cree (y nada la tocó), se usa lo ya leído; si no, se lee la hoja.
 async function origenRapido(emb) {
   if (!emb._sucio && emb._celdas && await ubicarFilaRapido(emb._tab, fuenteDe(emb).mapa, emb, emb._fila)) {
-    return { tab: emb._tab, sheetId: emb._sheetId, mapa: fuenteDe(emb).mapa, fila: emb._fila, celdas: emb._celdas, colores: emb._colores, filaVerificada: true };
+    return { tab: emb._tab, sheetId: emb._sheetId, mapa: fuenteDe(emb).mapa, encabezados: fuenteDe(emb).encabezados, fila: emb._fila, celdas: emb._celdas, colores: emb._colores, filaVerificada: true };
   }
   var h = await leerHoja(S.cfg.sheetId, emb._tab);
   var mp = detectar(h.encabezados, CAMPOS).mapa;
   var fresca = ubicarFila(h, mp, emb, emb._fila);
-  return { tab: emb._tab, sheetId: h.sheetId, mapa: mp, fila: fresca.fila, celdas: fresca.celdas, colores: fresca.colores };
+  return { tab: emb._tab, sheetId: h.sheetId, mapa: mp, encabezados: h.encabezados, fila: fresca.fila, celdas: fresca.celdas, colores: fresca.colores };
 }
 // De arriba para abajo no se corren las filas de las que faltan: se procesan de la última a la primera.
 function porFilaDesc(embs) {
@@ -5326,6 +5326,15 @@ async function moverFila(origen, destinoTab, ctx) {
       inheritFromBefore: true
     }
   }];
+  // La fila nueva hereda el formato de la de arriba (fechas, números…), pero NO su color: si la de arriba estaba pintada
+  // (un semáforo, un resaltado), la carga que llega no tiene por qué verse así. Se parte de blanco y después se pone el color propio.
+  if (hd.encabezados && hd.encabezados.length) {
+    reqs.push({ repeatCell: {
+      range: { sheetId: hd.sheetId, startRowIndex: fila - 1, endRowIndex: fila, startColumnIndex: 0, endColumnIndex: hd.encabezados.length },
+      cell: { userEnteredFormat: { backgroundColor: BLANCO } },
+      fields: 'userEnteredFormat.backgroundColor'
+    } });
+  }
 
   // Campo por campo, porque los encabezados no se llaman igual en las dos
   // pestañas ("Exporter" / "Exportador", "Port" / "Destino").
@@ -5351,6 +5360,24 @@ async function moverFila(origen, destinoTab, ctx) {
       fields: 'userEnteredFormat.backgroundColor'
     } });
   });
+
+  // Columnas que el catálogo no conoce pero se llaman igual en las dos pestañas («Año», por ejemplo): se copian por su encabezado.
+  if (origen.encabezados) {
+    var usadasD = {};
+    Object.keys(mapaD).forEach(function (k) { usadasD[mapaD[k]] = true; });
+    var usadasO = {};
+    Object.keys(origen.mapa).forEach(function (k) { usadasO[origen.mapa[k]] = true; });
+    origen.encabezados.forEach(function (hO, iO2) {
+      if (!hO || !clave(hO) || usadasO[iO2]) return;
+      var v2 = origen.celdas[iO2];
+      if (v2 === null || v2 === undefined || v2 === '' || (v2 && v2.invalida)) return;
+      var iD2 = -1;
+      hd.encabezados.forEach(function (hD, j) { if (iD2 < 0 && !usadasD[j] && clave(hD) && clave(hD) === clave(hO)) iD2 = j; });
+      if (iD2 < 0) return;
+      usadasD[iD2] = true;
+      reqs.push({ updateCells: { range: rangoCelda(iD2), rows: [{ values: [{ userEnteredValue: aValorSheets(v2) }] }], fields: 'userEnteredValue' } });
+    });
+  }
 
   // El Total, como fórmula.
   if (mapaD.total !== undefined && mapaD.price !== undefined && mapaD.tns !== undefined) {
@@ -17336,7 +17363,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.05-s';
+var APP_VERSION = '2026.11.06-t';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
