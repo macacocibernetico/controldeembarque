@@ -2686,6 +2686,51 @@ body.rango-arrastrando, body.rango-arrastrando *{user-select:none !important;cur
   .skin-soft .prog-grupo{padding:4px 6px 8px;border-radius:24px}
   .skin-soft .prog-fila{padding:12px 10px;gap:4px 8px;grid-template-columns:minmax(0,1fr) auto 36px}
   .skin-soft .ctr-filtros{padding:16px;border-radius:24px}}
+.skin-soft .cf-panel-sw{margin:0 0 20px}
+.skin-soft .cf-panel-sw button{min-height:44px;padding:0 22px;font-size:14.5px}
+.skin-soft .cf-kpis-d{grid-template-columns:1.4fr 1fr 1fr;display:grid;gap:20px;margin-bottom:20px}
+.skin-soft .cf-kpi.grande b{font-size:40px;color:#b4233c}
+.skin-soft .cf-stats{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;margin-bottom:20px}
+.skin-soft .cf-card{background:var(--soft-vid);border:1px solid var(--soft-borde);border-radius:28px;box-shadow:var(--soft-sh);padding:24px 26px}
+.skin-soft .cf-card h3{margin:0 0 18px;font-size:17px;font-weight:800;letter-spacing:-.02em}
+.skin-soft .cf-aging{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:end}
+.skin-soft .cf-ag{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.skin-soft .cf-ag-barra{width:100%;height:96px;border-radius:16px;background:rgba(17,24,39,.05);display:flex;align-items:flex-end;overflow:hidden;margin-bottom:8px}
+.skin-soft .cf-ag-barra i{display:block;width:100%;border-radius:14px}
+.skin-soft .cf-ag-barra .ag0{background:#ffc9a8}.skin-soft .cf-ag-barra .ag1{background:#ff9fae}.skin-soft .cf-ag-barra .ag2{background:#ee6a82}.skin-soft .cf-ag-barra .ag3{background:#b4233c}
+.skin-soft .cf-ag b{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.skin-soft .cf-ag span{font-size:13px;font-weight:600;color:#33415c}
+.skin-soft .cf-ag small{font-size:12px;color:#55657e}
+.skin-soft .cf-proy{display:flex;flex-direction:column;gap:12px}
+.skin-soft .cf-proy > div{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 16px;border-radius:18px;background:rgba(255,255,255,.7)}
+.skin-soft .cf-proy span{font-size:13.5px;font-weight:600;color:#33415c}.skin-soft .cf-proy b{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+.skin-soft .cf-proy small{grid-column:1 / -1;font-size:12px;color:#55657e}
+.skin-soft .cf-clientes{display:flex;flex-direction:column;gap:12px}
+.skin-soft .cf-clientes h3{margin-bottom:6px}
+.skin-soft .cf-msg{padding:12px 16px;border-radius:16px;font-size:14px;font-weight:500;line-height:1.5}
+.skin-soft .cf-msg.ok{background:#dcf5ea;color:#0f6b4b}.skin-soft .cf-msg.mal{background:#ffe4e8;color:#b4233c}
+.skin-soft .cf-msg a{font-weight:700;color:inherit;text-decoration:underline}
+.skin-soft .cf-cli{border-radius:22px;background:rgba(255,255,255,.72);padding:6px 8px 12px;transition:box-shadow .2s ease,transform .2s ease}
+.skin-soft .cf-cli:hover{box-shadow:0 14px 30px -18px rgba(36,56,100,.35)}
+.skin-soft .cf-cli-cab{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center}
+.skin-soft .cf-cli-nom{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-height:56px;padding:10px 14px;border:0;background:transparent;text-align:left;cursor:pointer;border-radius:16px;min-width:0}
+.skin-soft .cf-cli-nom:hover{background:rgba(227,232,255,.5)}
+.skin-soft .cf-cli-nom{color:#111827}
+.skin-soft .cf-cli-nom b{font-size:16px;font-weight:800;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.skin-soft .cf-cli-nom span{font-size:13px;color:#55657e;font-weight:500}
+.skin-soft .cf-cli-monto{display:flex;flex-direction:column;align-items:flex-end}.skin-soft .cf-cli-monto b{font-size:18px;font-weight:800;color:#b4233c;font-variant-numeric:tabular-nums}
+.skin-soft .cf-cli-monto small{font-size:12px;color:#55657e}
+.skin-soft .cf-cli-acc{display:flex;gap:10px;align-items:center;padding-right:6px}
+.skin-soft .cf-idi{margin:0;padding:4px}.skin-soft .cf-idi button{min-height:36px;padding:0 12px}
+.skin-soft .cf-reclamo{min-height:44px;padding:0 20px;border:0;border-radius:999px;background:#4457f0;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 10px 22px -10px #4457f0;transition:transform .16s ease}
+.skin-soft .cf-reclamo:hover{transform:translateY(-1px)}.skin-soft .cf-reclamo:disabled{opacity:.6;cursor:default;transform:none}
+.skin-soft .cf-cli-pie{padding:0 14px;font-size:12.5px;color:#55657e;font-weight:500}.skin-soft .cf-cli-pie .sinmail{color:#92520c;font-weight:700}
+.skin-soft .cf-cli-det{margin:10px 8px 0;display:flex;flex-direction:column;gap:6px}
+.skin-soft .cf-cli-fila{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:14px;align-items:center;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.8);font-size:13.5px}
+.skin-soft .cf-cli-fila .b{color:#55657e;font-variant-numeric:tabular-nums}.skin-soft .cf-cli-fila .d{font-variant-numeric:tabular-nums;min-width:92px;text-align:right}
+@media(max-width:1100px){.skin-soft .cf-stats,.skin-soft .cf-kpis-d{grid-template-columns:1fr}}
+@media(max-width:900px){.skin-soft .cf-idi button{min-height:44px}.skin-soft .cf-cli-cab{grid-template-columns:1fr auto}.skin-soft .cf-cli-acc{grid-column:1 / -1;justify-content:space-between}
+  .skin-soft .cf-cli-fila{grid-template-columns:1fr auto;row-gap:4px}.skin-soft .cf-aging{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -12268,9 +12313,186 @@ function cashEstadoInicial() {
   var h = ahoraComoUTC();
   return { y: h.getUTCFullYear(), m: h.getUTCMonth(), sel: cashClave(cashDia(h)), sfAbierto: false };
 }
+/* ===========================================================================
+   Cash Flow · Deudores y reclamos: quién debe (cobros vencidos que todavía no pasaron a «A facturar»), cuánto, desde cuándo,
+   estadísticas, y un borrador de mail de reclamo por cliente en el Gmail de quien aprieta el botón.
+   =========================================================================== */
+var IDIOMAS_ES = ['AR', 'CL', 'UY', 'PY', 'BO', 'PE', 'CO', 'EC', 'VE', 'MX', 'ES', 'CR', 'PA', 'GT', 'HN', 'NI', 'SV', 'DO', 'CU'];
+var CASH_TRAMOS = [['0–7 días', 0, 7], ['8–30 días', 8, 30], ['31–60 días', 31, 60], ['Más de 60 días', 61, 99999]];
+function cashIdiomaDe(nombre) {
+  var cod = paisDeEmpresa(nombre);
+  return cod && IDIOMAS_ES.indexOf(cod) >= 0 ? 'es' : 'en';
+}
+function cashFechaLarga(d) { return ('0' + d.getUTCDate()).slice(-2) + '/' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '/' + d.getUTCFullYear(); }
+function cashDiasAtraso(q, hoy) { return Math.max(0, Math.round((hoy - q.fecha) / 86400000)); }
+
+// Todo lo de la pestaña «Deudores»: clientes con deuda vencida, tramos de antigüedad y estadísticas.
+function cashDeudores(cuotas, hoy) {
+  var venc = cuotas.filter(function (q) { return !q.cobrada && q.fecha < hoy; });
+  var por = {};
+  venc.forEach(function (q) {
+    var nom = String(q.emb.importer || '—').trim() || '—', k = clave(nom);
+    var c = por[k] = por[k] || { key: k, nombre: nom, items: [], total: 0, aVencer: 0 };
+    c.items.push(q); c.total += q.monto;
+  });
+  cuotas.filter(function (q) { return !q.cobrada && q.fecha >= hoy; }).forEach(function (q) {
+    var k = clave(String(q.emb.importer || '—').trim() || '—');
+    if (por[k]) por[k].aVencer += q.monto;
+  });
+  var clientes = Object.keys(por).map(function (k) {
+    var c = por[k];
+    c.items.sort(function (a, b) { return a.fecha - b.fecha; });
+    c.masViejo = cashDiasAtraso(c.items[0], hoy);
+    c.nContratos = Object.keys(c.items.reduce(function (o, q) { o[String(q.emb.contract || '')] = 1; return o; }, {})).length;
+    return c;
+  }).sort(function (a, b) { return b.total - a.total; });
+  var tramos = CASH_TRAMOS.map(function (t) {
+    var its = venc.filter(function (q) { var d = cashDiasAtraso(q, hoy); return d >= t[1] && d <= t[2]; });
+    return { rotulo: t[0], monto: its.reduce(function (a, q) { return a + q.monto; }, 0), n: its.length };
+  });
+  var totalVenc = venc.reduce(function (a, q) { return a + q.monto; }, 0);
+  var pond = totalVenc ? venc.reduce(function (a, q) { return a + q.monto * cashDiasAtraso(q, hoy); }, 0) / totalVenc : 0;
+  var mesA = hoy.getUTCFullYear() * 12 + hoy.getUTCMonth();
+  var delMes = cuotas.filter(function (q) { return q.fecha.getUTCFullYear() * 12 + q.fecha.getUTCMonth() === mesA; });
+  var cobMes = delMes.filter(function (q) { return q.cobrada; }).reduce(function (a, q) { return a + q.monto; }, 0);
+  var pendMes = delMes.filter(function (q) { return !q.cobrada; }).reduce(function (a, q) { return a + q.monto; }, 0);
+  var proy = [[30, 'Próximos 30 días'], [60, '31 a 60 días'], [90, '61 a 90 días']].map(function (x, i) {
+    var desde = i === 0 ? 0 : [0, 30, 60][i] + 1, hasta = x[0];
+    var its = cuotas.filter(function (q) { var d = Math.round((q.fecha - hoy) / 86400000); return !q.cobrada && d >= desde && d <= hasta; });
+    return { rotulo: x[1], monto: its.reduce(function (a, q) { return a + q.monto; }, 0), n: its.length };
+  });
+  return { clientes: clientes, tramos: tramos, totalVenc: totalVenc, nFact: venc.length, atrasoPond: pond,
+    atrasoMax: venc.length ? Math.max.apply(null, venc.map(function (q) { return cashDiasAtraso(q, hoy); })) : 0,
+    cobMes: cobMes, pendMes: pendMes, pctMes: cobMes + pendMes ? cobMes / (cobMes + pendMes) : null, proy: proy };
+}
+
+// A quién va el reclamo: los mismos mails del advice (la columna «Mails CC» de las cargas o, si no hay, los de la base de empresas).
+function cashDestinoReclamo(cli) {
+  var vistos = {}, para = [];
+  cli.items.forEach(function (q) {
+    parsearMails(destinoAdvice(q.emb).para).mails.forEach(function (m) { if (!vistos[m]) { vistos[m] = 1; para.push(m); } });
+  });
+  return para;
+}
+function cashMontoTxt(n, idioma) { return 'USD ' + Math.round(n).toLocaleString(idioma === 'es' ? 'es-AR' : 'en-US'); }
+
+// El texto del reclamo (asunto, texto plano y HTML) para un cliente, con todas sus facturas vencidas.
+function cashTextosReclamo(cli, idioma, hoy) {
+  var es = idioma === 'es';
+  var filas = cli.items.map(function (q) {
+    var ref = q.emb.bl ? 'BL ' + q.emb.bl : (q.emb.vessel ? String(q.emb.vessel) : '');
+    return { contrato: String(q.emb.contract || ''), ref: ref, factura: String(q.emb.invoice || ''), monto: cashMontoTxt(q.monto, idioma),
+      vence: cashFechaLarga(q.fecha), dias: cashDiasAtraso(q, hoy) };
+  });
+  var cab = es ? ['Contrato', 'Referencia', 'Factura', 'Monto', 'Vencimiento', 'Días de atraso'] : ['Contract', 'Reference', 'Invoice', 'Amount', 'Due date', 'Days overdue'];
+  var total = cashMontoTxt(cli.total, idioma);
+  var saludo = es ? 'Estimados,' : 'Dear all,';
+  var intro = es
+    ? 'Revisando nuestra cuenta corriente, vemos que figuran los siguientes pagos vencidos de ' + cli.nombre + ':'
+    : 'Reviewing our account, we see that the following payments from ' + cli.nombre + ' are overdue:';
+  var tot = es ? 'Total vencido: ' + total : 'Total overdue: ' + total;
+  var pedido = es
+    ? 'Les pedimos que nos confirmen la fecha de pago o, si ya fue realizado, nos envíen el comprobante para poder aplicarlo. Quedamos atentos.'
+    : 'Kindly confirm the payment date or, if it has already been made, send us the proof of payment so we can apply it. We remain at your disposal.';
+  var cierre = es ? 'Saludos cordiales,' : 'Best regards,';
+  var firma = S.usuario && S.usuario.nombre ? S.usuario.nombre : '';
+  var plano = [saludo, '', intro, '', cab.join(' | ')].concat(filas.map(function (f) {
+    return [f.contrato, f.ref, f.factura, f.monto, f.vence, f.dias].join(' | ');
+  })).concat(['', tot, '', pedido, '', cierre, firma]).join('\n');
+  var th = 'style="padding:6px 10px;border:1px solid #d1d5db;background:#f3f4f6;text-align:left"', td = 'style="padding:6px 10px;border:1px solid #d1d5db"';
+  var tabla = '<table style="border-collapse:collapse;font-size:13px"><tr>' + cab.map(function (c) { return '<th ' + th + '>' + esc(c) + '</th>'; }).join('') + '</tr>' +
+    filas.map(function (f) {
+      return '<tr>' + [f.contrato, f.ref, f.factura, f.monto, f.vence, String(f.dias)].map(function (x) { return '<td ' + td + '>' + esc(x) + '</td>'; }).join('') + '</tr>';
+    }).join('') + '</table>';
+  var html = esc(saludo) + '<br><br>' + esc(intro) + '<br><br>' + tabla + '<br><b>' + esc(tot) + '</b><br><br>' + esc(pedido) + '<br><br>' + esc(cierre) + (firma ? '<br>' + esc(firma) : '');
+  var subject = es ? 'Pagos vencidos – ' + cli.nombre + ' – ' + total : 'Overdue payments – ' + cli.nombre + ' – ' + total;
+  return { subject: subject, plano: plano, html: html };
+}
+
+// Los reclamos que ya se generaron desde este navegador (para mostrar «último reclamo»).
+function cashReclamosLeer() { try { return JSON.parse(localStorage.getItem('embarques:reclamos') || '{}') || {}; } catch (e) { return {}; } }
+function cashReclamosGuardar(k) {
+  try { var o = cashReclamosLeer(); o[k] = Date.now(); localStorage.setItem('embarques:reclamos', JSON.stringify(o)); } catch (e) {}
+}
+
+async function cashGenerarReclamo(key) {
+  if (!S.cash) S.cash = cashEstadoInicial();
+  var C = S.cash, hoy = cashDia(ahoraComoUTC()), cli = cashDeudores(cashCalcular().cuotas, hoy).clientes.filter(function (c) { return c.key === key; })[0];
+  if (!cli) return;
+  var idioma = (C.idiomas && C.idiomas[key]) || cashIdiomaDe(cli.nombre);
+  C.generando = key; C.msg = null; pintar();
+  try {
+    var para = cashDestinoReclamo(cli), t = cashTextosReclamo(cli, idioma, hoy);
+    var cc = ccAdvice(cli.nombre, para.join(', ')).map(function (x) { return x.mail; });
+    var firma = await firmaDelUsuario();
+    // Gmail no crea un borrador sin destinatario: si el cliente no tiene mail cargado, va el tuyo provisoriamente (se reemplaza en Gmail).
+    var paraBorrador = para.length ? para.join(', ') : String((S.usuario && S.usuario.email) || '');
+    var mime = armarMime(paraBorrador, cc.join(', '), t.subject, t.plano, t.html + (firma ? '<br><br>' + firma : ''));
+    await api('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: { raw: b64url(mime) } })
+    });
+    cashReclamosGuardar(key);
+    C.msg = { ok: true, key: key, texto: 'Borrador de reclamo creado en tu Gmail para ' + cli.nombre + ' (' + cli.items.length + (cli.items.length === 1 ? ' pago' : ' pagos') + ', ' + cashMontoTxt(cli.total, 'es') + ').' +
+      (para.length ? ' Para: ' + para.join(', ') + '.' : ' Ojo: no tiene mail cargado; puse tu mail como destinatario provisorio, reemplazalo en Gmail antes de enviar.') };
+    toast('Borrador de reclamo creado en tu Gmail', 'ok');
+  } catch (e) {
+    C.msg = { ok: false, key: key, texto: 'No se pudo crear el borrador: ' + (e && e.message ? e.message : e) };
+    toast('No se pudo crear el borrador', 'error');
+  } finally { C.generando = null; pintar(); }
+}
+
+function cashSwitchHtml(C) {
+  return '<div class="segmento sub cf-panel-sw" role="group" aria-label="Qué ver">' +
+    '<button type="button" data-act="cashpanel" data-v="cal" aria-pressed="' + (C.panel !== 'deuda') + '">Calendario</button>' +
+    '<button type="button" data-act="cashpanel" data-v="deuda" aria-pressed="' + (C.panel === 'deuda') + '">Deudores y reclamos</button></div>';
+}
+function cashDeudaHtml(cuotas, hoy) {
+  var C = S.cash, D = cashDeudores(cuotas, hoy), rec = cashReclamosLeer();
+  var maxT = Math.max.apply(null, D.tramos.map(function (t) { return t.monto; }).concat([1]));
+  var h = '<div class="cf-kpis cf-kpis-d">' +
+    '<div class="cf-kpi venc grande"><span>Deuda vencida</span><b>' + cashUsd(D.totalVenc) + '</b><small>' + D.clientes.length + (D.clientes.length === 1 ? ' cliente' : ' clientes') + ' · ' + D.nFact + (D.nFact === 1 ? ' pago' : ' pagos') + '</small></div>' +
+    '<div class="cf-kpi"><span>Atraso promedio</span><b>' + Math.round(D.atrasoPond) + ' días</b><small>ponderado por monto · máximo ' + D.atrasoMax + ' días</small></div>' +
+    '<div class="cf-kpi"><span>Cobrado este mes</span><b>' + (D.pctMes === null ? '—' : Math.round(D.pctMes * 100) + '%') + '</b><small>' + cashUsd(D.cobMes) + ' de ' + cashUsd(D.cobMes + D.pendMes) + ' que vencían</small></div></div>';
+
+  h += '<div class="cf-stats"><section class="cf-card" aria-label="Deuda por antigüedad"><h3>Deuda por antigüedad</h3><div class="cf-aging">' +
+    D.tramos.map(function (t, i) {
+      return '<div class="cf-ag"><div class="cf-ag-barra"><i class="ag' + i + '" style="height:' + (t.monto ? Math.max(6, Math.round(100 * t.monto / maxT)) : 3) + '%"></i></div>' +
+        '<b>' + cashUsd(t.monto) + '</b><span>' + esc(t.rotulo) + '</span><small>' + t.n + (t.n === 1 ? ' pago' : ' pagos') + '</small></div>';
+    }).join('') + '</div></section>' +
+    '<section class="cf-card" aria-label="Proyección de cobro"><h3>Cuánto debería entrar</h3><div class="cf-proy">' +
+    D.proy.map(function (x) { return '<div><span>' + esc(x.rotulo) + '</span><b>' + cashUsd(x.monto) + '</b><small>' + x.n + (x.n === 1 ? ' cobro' : ' cobros') + '</small></div>'; }).join('') + '</div></section></div>';
+
+  h += '<section class="cf-card cf-clientes" aria-label="Clientes que deben"><h3>Clientes que deben</h3>';
+  if (C.msg) h += '<div class="cf-msg ' + (C.msg.ok ? 'ok' : 'mal') + '" role="status">' + esc(C.msg.texto) + (C.msg.ok ? ' <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" rel="noopener">Abrir borradores</a>' : '') + '</div>';
+  if (!D.clientes.length) h += '<div class="cf-vacio">Ningún cliente tiene pagos vencidos.</div>';
+  D.clientes.forEach(function (c) {
+    var abierto = !!(C.abiertos && C.abiertos[c.key]), idioma = (C.idiomas && C.idiomas[c.key]) || cashIdiomaDe(c.nombre);
+    var para = cashDestinoReclamo(c), ult = rec[c.key];
+    h += '<article class="cf-cli' + (abierto ? ' abierto' : '') + '"><div class="cf-cli-cab">' +
+      '<button type="button" class="cf-cli-nom" data-act="cashexp" data-k="' + esc(c.key) + '" aria-expanded="' + abierto + '"><b>' + esc(c.nombre) + '</b>' +
+        '<span>' + c.items.length + (c.items.length === 1 ? ' pago' : ' pagos') + ' · ' + c.nContratos + (c.nContratos === 1 ? ' contrato' : ' contratos') + ' · más viejo: ' + c.masViejo + ' días</span></button>' +
+      '<div class="cf-cli-monto"><b>' + cashUsd(c.total) + '</b>' + (c.aVencer ? '<small>+ ' + cashUsd(c.aVencer) + ' a vencer</small>' : '') + '</div>' +
+      '<div class="cf-cli-acc"><div class="segmento sub cf-idi" role="group" aria-label="Idioma del reclamo">' +
+        '<button type="button" data-act="cashidioma" data-k="' + esc(c.key) + '" data-v="es" aria-pressed="' + (idioma === 'es') + '">ES</button>' +
+        '<button type="button" data-act="cashidioma" data-k="' + esc(c.key) + '" data-v="en" aria-pressed="' + (idioma === 'en') + '">EN</button></div>' +
+      '<button type="button" class="cf-reclamo" data-act="cashreclamo" data-k="' + esc(c.key) + '"' + (C.generando ? ' disabled' : '') + '>' + (C.generando === c.key ? 'Creando…' : 'Generar reclamo') + '</button></div></div>' +
+      '<div class="cf-cli-pie">' + (para.length ? 'Para: ' + esc(para.slice(0, 3).join(', ')) + (para.length > 3 ? ' (+' + (para.length - 3) + ')' : '') : '<span class="sinmail">Sin mail cargado: completá el destinatario en Gmail</span>') +
+        (ult ? ' · último reclamo: ' + cashFechaLarga(cashDia(new Date(ult))) : '') + '</div>';
+    if (abierto) {
+      h += '<div class="cf-cli-det" role="table" aria-label="Pagos vencidos de ' + esc(c.nombre) + '">' + c.items.map(function (q) {
+        return '<div class="cf-cli-fila" role="row"><span class="a"><b>' + esc(q.emb.contract || 'sin contrato') + '</b>' + esc(q.emb.bl ? ' · BL ' + q.emb.bl : (q.emb.vessel ? ' · ' + q.emb.vessel : '')) + (q.emb.invoice ? ' · Fact. ' + esc(q.emb.invoice) : '') + '</span>' +
+          '<span class="b">' + esc(cashFechaLarga(q.fecha)) + '</span><span class="c cf-tag venc">' + cashDiasAtraso(q, hoy) + ' días</span><b class="d">' + cashUsd(q.monto) + '</b></div>';
+      }).join('') + '</div>';
+    }
+    h += '</article>';
+  });
+  return h + '</section>';
+}
 function vistaCash() {
   if (!S.cash) S.cash = cashEstadoInicial();
   var C = S.cash, hoy = cashDia(ahoraComoUTC()), datos = cashCalcular(), cuotas = datos.cuotas;
+  if (C.panel === 'deuda') return cashSwitchHtml(C) + cashDeudaHtml(cuotas, hoy);
   var porDia = {};
   cuotas.forEach(function (q) { (porDia[cashClave(q.fecha)] = porDia[cashClave(q.fecha)] || []).push(q); });
   var suma = function (a) { return a.reduce(function (t, q) { return t + q.monto; }, 0); };
@@ -12281,7 +12503,7 @@ function vistaCash() {
   var mes = pend.filter(function (q) { return q.fecha.getUTCMonth() === hoy.getUTCMonth() && q.fecha.getUTCFullYear() === hoy.getUTCFullYear(); });
   var prox = sem.slice().sort(function (a, b) { return a.fecha - b.fecha; })[0];
 
-  var h = '<div class="cf-kpis">' +
+  var h = cashSwitchHtml(C) + '<div class="cf-kpis">' +
     '<div class="cf-kpi sem"><span>Esta semana · ' + cashFechaCorta(l0) + ' al ' + cashFechaCorta(l1) + '</span><b>' + cashUsd(suma(sem)) + '</b><small>' + sem.length +
       (sem.length === 1 ? ' cobro' : ' cobros') + (prox ? ' · el próximo: ' + DIAS_SEM[prox.fecha.getUTCDay()] + ' ' + cashFechaCorta(prox.fecha) : '') + '</small></div>' +
     '<div class="cf-kpi"><span>Este mes</span><b>' + cashUsd(suma(mes)) + '</b><small>' + mes.length + (mes.length === 1 ? ' cobro pendiente' : ' cobros pendientes') + '</small></div>' +
@@ -16104,6 +16326,18 @@ document.addEventListener('click', function (ev) {
   }
 
   if (act === 'tab') return irAVista(el.getAttribute('data-v'));
+  if (act === 'cashpanel') { if (!S.cash) S.cash = cashEstadoInicial(); S.cash.panel = el.getAttribute('data-v') === 'deuda' ? 'deuda' : 'cal'; S.cash.msg = null; return pintar(); }
+  if (act === 'cashexp') {
+    if (!S.cash) S.cash = cashEstadoInicial();
+    var kE = el.getAttribute('data-k'); S.cash.abiertos = S.cash.abiertos || {}; S.cash.abiertos[kE] = !S.cash.abiertos[kE];
+    return pintar();
+  }
+  if (act === 'cashidioma') {
+    if (!S.cash) S.cash = cashEstadoInicial();
+    S.cash.idiomas = S.cash.idiomas || {}; S.cash.idiomas[el.getAttribute('data-k')] = el.getAttribute('data-v') === 'es' ? 'es' : 'en';
+    return pintar();
+  }
+  if (act === 'cashreclamo') { return cashGenerarReclamo(el.getAttribute('data-k')); }
   if (act === 'cashmes') {
     if (!S.cash) S.cash = cashEstadoInicial();
     S.cash.m += parseInt(el.getAttribute('data-d'), 10);
@@ -17363,7 +17597,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.06-t';
+var APP_VERSION = '2026.11.06-u';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
