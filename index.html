@@ -2731,6 +2731,41 @@ body.rango-arrastrando, body.rango-arrastrando *{user-select:none !important;cur
 @media(max-width:1100px){.skin-soft .cf-stats,.skin-soft .cf-kpis-d{grid-template-columns:1fr}}
 @media(max-width:900px){.skin-soft .cf-idi button{min-height:44px}.skin-soft .cf-cli-cab{grid-template-columns:1fr auto}.skin-soft .cf-cli-acc{grid-column:1 / -1;justify-content:space-between}
   .skin-soft .cf-cli-fila{grid-template-columns:1fr auto;row-gap:4px}.skin-soft .cf-aging{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.combo-pais input{padding-right:38px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6.5l4 4 4-4' stroke='%2355657e' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:15px;text-transform:uppercase}
+.combo-pais input::placeholder{text-transform:none}
+/* Se abre hacia ARRIBA (el País es el último campo y hacia abajo taparía «Guardar») y es cortita, con scroll. */
+.combo-pais .combo-slot{top:auto;bottom:100%}
+.combo-pais .combo-lista{top:auto;bottom:0;margin:0 0 6px;max-height:236px;overflow-y:auto}
+/* Pago del cliente (cargas): etiquetas, botón, pasos del panel y modal */
+.pc-pill{display:inline-flex;align-items:baseline;gap:8px;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap;background:#e3e8ff;color:#2b3bd1}
+.pc-pill small{font-weight:600;opacity:.8}
+.pc-pill.e2{background:#fff1d6;color:#92520c}
+.pc-pill.e3{background:#dcf5ea;color:#0f6b4b}
+.pc-btn{min-height:44px;padding:0 16px;border:1px solid #c7d0ff;border-radius:999px;background:#fff;color:#2b3bd1;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}
+.pc-btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px -10px rgba(68,87,240,.6)}
+.pc-listo{font-size:12.5px;font-weight:700;color:#0f6b4b}
+.pc-pasos{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px}
+.pc-modal .mcm-acc button{min-height:44px}
+.pc-pasos li{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--sup2);color:var(--tinta3)}
+.pc-pasos li.ok{background:#dcf5ea;color:#0f6b4b}.pc-pasos li.sig{background:#e3e8ff;color:#2b3bd1}
+.pc-pasos .pc-n{width:28px;height:28px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:rgba(255,255,255,.8)}
+.pc-pasos b{display:block;font-size:14px}.pc-pasos small{display:block;font-size:12.5px;opacity:.85}
+.pc-acc{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.pc-quitar{min-height:44px;padding:0 12px;border:0;background:transparent;color:var(--tinta3);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+.pc-modal input[type=date],.pc-modal input[type=text]{height:48px;border-radius:12px}
+.cf-kpi.esp b{color:#2b3bd1}
+.skin-soft .cf-kpis-d{grid-template-columns:1.4fr 1fr 1fr 1fr}
+.skin-soft .cf-kpi.esp{background:#eef0ff;border:1px solid #d4daff}
+.skin-soft .cf-kpi.esp span{color:#2b3bd1}
+.skin-soft .cf-monto.esp{background:#e3e8ff;color:#2b3bd1}
+.skin-soft .cf-tag.esp{background:#e3e8ff;color:#2b3bd1}
+.skin-soft .cf-espera h3 small{font-size:13px;font-weight:600;color:#55657e;margin-left:8px}
+.skin-soft .cf-esp-fila{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:12px 16px;border-radius:18px;background:rgba(255,255,255,.72);margin-bottom:8px}
+.skin-soft .cf-esp-fila .a,.skin-soft .cf-esp-fila .b{display:flex;flex-direction:column;min-width:0}
+.skin-soft .cf-esp-fila .a b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skin-soft .cf-esp-fila span{font-size:12.5px;color:#55657e}.skin-soft .cf-esp-fila .c span{color:inherit}
+@media(max-width:1100px){.skin-soft .cf-kpis-d{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.skin-soft .cf-kpis-d{grid-template-columns:1fr}.skin-soft .cf-esp-fila{grid-template-columns:1fr auto;row-gap:8px}}
 </style>
 </head>
 <body>
@@ -2970,6 +3005,10 @@ var CAMPOS = {
   tr_nota:      {label:'T.R. (texto)',  tipo:'texto',   alias:[]},
   tracking:     {label:'Tracking',     tipo:'texto',   alias:['tracking n°','tracking','tracking no']},
   pagoEstimado: {label:'Pago estimado',tipo:'fecha',   alias:['pago estimado','estimated payment']},
+  pagoCliente:  {label:'Cliente pagó el',tipo:'fecha', alias:['cliente pago el','cliente pagó el','cliente pago','cliente pagó']},
+  pagoAcreditado:{label:'Pago acreditado el',tipo:'fecha', alias:['pago acreditado el','pago acreditado']},
+  liberacion:   {label:'Liberación pedida el',tipo:'fecha', alias:['liberacion pedida el','liberación pedida el','liberacion pedida','liberación pedida']},
+  notaPago:     {label:'Nota de pago',  tipo:'texto',   alias:['nota de pago','nota pago']},
   commission:   {label:'Comisión',     tipo:'numero',  alias:['commission','comision']},
   invCommission:{label:'Fact. comisión',tipo:'texto',  alias:['inv commission','fc comision','factura comision']},
   status:       {label:'Estado',       tipo:'texto',   alias:['status','estado']},
@@ -4897,6 +4936,17 @@ function paisesDe(src) {
   });
   return out.sort();
 }
+// Países de América del Sur (en mayúscula, como se cargan en la planilla) para el desplegable del País de las terrestres.
+var PAISES_SUDAMERICA = ['ARGENTINA', 'BOLIVIA', 'BRASIL', 'CHILE', 'COLOMBIA', 'ECUADOR', 'GUAYANA FRANCESA', 'GUYANA', 'PARAGUAY', 'PERÚ', 'SURINAM', 'URUGUAY', 'VENEZUELA'];
+// Los de Sudamérica más cualquier otro que ya esté en la columna País (por ejemplo, uno de fuera de la región), sin repetir.
+function paisesTerrestre(src) {
+  var vistos = {}, out = [];
+  PAISES_SUDAMERICA.concat(paisesDe(src || {})).forEach(function (x) {
+    var k = clave(x);
+    if (x && !vistos[k]) { vistos[k] = 1; out.push(String(x).toUpperCase()); }
+  });
+  return out.sort(function (a, b) { return a.localeCompare(b, 'es'); });
+}
 function altaEmbAnioRefrescar() {
   var el = typeof document !== 'undefined' && document.getElementById('e-anio');
   if (el && S.altaEmb) { var n = anioDeAlta({ etd: S.altaEmb.etd, eta: S.altaEmb.eta }); el.placeholder = n ? String(n) : 'Año del ETD'; }
@@ -5180,9 +5230,7 @@ function formAltaEmb() {
       '<span id="e-anio-ayuda" class="ayuda">Si lo dejás vacío, se pone el año del ETD.</span></div>';
   }
   if (ex.pais !== undefined) {
-    campos += '<div class="campo"><label for="e-pais">País</label>' +
-      '<input id="e-pais" data-aemb="pais" type="text" list="e-pais-lista" autocomplete="off" value="' + esc(a.pais || '') + '">' +
-      '<datalist id="e-pais-lista">' + paisesDe(src).map(function (x) { return '<option value="' + esc(x) + '">'; }).join('') + '</datalist></div>';
+    campos += comboGen('e-pais', 'pais', 'País', paisesTerrestre(src), a.pais || '', true, 'emb', true, 'Elegí un país o escribí para buscar');
   }
 
   var pestanas = S.fuentes.map(function (f) {
@@ -9277,10 +9325,10 @@ function vistaApp() {
       barraDeshacer() +
       barraCtrMovido() +
       tituloVista() +
-      segmentado + cuerpo + diagnostico() +
+      (S.vista === 'carga' && !S.verFact ? bannerColumnasPagoHtml() : '') + segmentado + cuerpo + diagnostico() +
     '</main></div>' + tabBarInferior() + panel + barraAdvice(todosEvs) +
     ((S.modo === 'planilla' || S.modo === 'tabla') && S.vista === 'carga' ? menuColumna() : '') +
-    modalMoverCtr() + modalLoteFact() + modalLoteDev() + modalElim() + modalElimCtr() + pendFlotaHtml() + avisoVersionHtml() + busquedaHtml() + comPopHtml() + comCtxHtml();
+    modalMoverCtr() + modalLoteFact() + modalLoteDev() + modalElim() + modalElimCtr() + modalPagoHtml() + pendFlotaHtml() + avisoVersionHtml() + busquedaHtml() + comPopHtml() + comCtxHtml();
 }
 
 // Marítimo y terrestre separados, pero con la opción de ver todo junto. Es lo
@@ -10647,6 +10695,7 @@ function filaEmbarque(x, opts) {
         (!emb._aFacturar && emb._posiblePagada
           ? '<span class="pill nar" title="En «' + esc((S.fuentesFact || [{ tab: 'A facturar' }])[0].tab) + '» hay una carga de este contrato con las mismas toneladas' +
             (emb._posiblePagada.tns ? ' (' + fmtNum(emb._posiblePagada.tns) + ' tn)' : '') + '. Puede ser otra: la podés pasar igual."><span class="pt"></span>Posible duplicado</span>' : '') +
+        pillPagoHtml(emb) + (opts.acciones !== false ? btnPagoCliente(emb) : '') +
         (opts.acciones !== false ? btnSinDocsCarga(emb) : '') +
         ((S.fuentesFact || []).length && !emb._aFacturar && opts.acciones !== false
           ? '<button class="ir-fact" data-act="abrirpasar" data-f="' + esc(emb._id) + '" ' +
@@ -12298,7 +12347,7 @@ function cashCalcular() {
       var base = c.base === 'ETA' ? emb.eta : emb.etd;
       if (!esFecha(base)) { faltaBase = faltaBase || 'Falta el ' + c.base + ' (la regla es ' + cashEtiquetaRegla(c) + ')'; return; }
       cuotas.push({ emb: emb, fecha: cashDia(cashSuma(base, c.dias)), parte: i + 1, de: r.regla.cuotas.length, pct: c.pct,
-        monto: Math.round(total * c.pct) / 100, regla: cashEtiquetaRegla(c), baseTxt: c.base + ' ' + cashFechaCorta(base), supuesto: c.supuesto, texto: r.texto, cobrada: cobrada });
+        monto: Math.round(total * c.pct) / 100, regla: cashEtiquetaRegla(c), baseTxt: c.base + ' ' + cashFechaCorta(base), supuesto: c.supuesto, texto: r.texto, cobrada: cobrada, espera: !cobrada && esFecha(emb.pagoCliente) });
     });
     if (faltaBase && !cobrada) sinFecha.push({ emb: emb, nombre: nombre, motivo: faltaBase });
   };
@@ -12306,7 +12355,9 @@ function cashCalcular() {
   ((S.datosFact && S.datosFact.filas) || []).forEach(function (e) { if (e.contract) hacer(e, true); });
   return { cuotas: cuotas, sinFecha: sinFecha };
 }
-function cashEstado(q, hoy) { return q.cobrada ? 'cobr' : (q.fecha < hoy ? 'venc' : 'ok'); }
+function cashEstado(q, hoy) { return q.cobrada ? 'cobr' : (q.espera ? 'esp' : (q.fecha < hoy ? 'venc' : 'ok')); }
+// Pendiente de cobro de verdad: ni cobrado ni ya pagado por el cliente (esperando que le entre al exportador).
+function cashPend(q) { return !q.cobrada && !q.espera; }
 function cashUsd(n) { return 'US$ ' + Math.round(n).toLocaleString('es-AR'); }
 function cashCorto(n) { return n >= 1000 ? (Math.round(n / 100) / 10).toLocaleString('es-AR') + ' k' : String(Math.round(n)); }
 function cashEstadoInicial() {
@@ -12328,14 +12379,14 @@ function cashDiasAtraso(q, hoy) { return Math.max(0, Math.round((hoy - q.fecha) 
 
 // Todo lo de la pestaña «Deudores»: clientes con deuda vencida, tramos de antigüedad y estadísticas.
 function cashDeudores(cuotas, hoy) {
-  var venc = cuotas.filter(function (q) { return !q.cobrada && q.fecha < hoy; });
+  var venc = cuotas.filter(function (q) { return cashPend(q) && q.fecha < hoy; });
   var por = {};
   venc.forEach(function (q) {
     var nom = String(q.emb.importer || '—').trim() || '—', k = clave(nom);
     var c = por[k] = por[k] || { key: k, nombre: nom, items: [], total: 0, aVencer: 0 };
     c.items.push(q); c.total += q.monto;
   });
-  cuotas.filter(function (q) { return !q.cobrada && q.fecha >= hoy; }).forEach(function (q) {
+  cuotas.filter(function (q) { return cashPend(q) && q.fecha >= hoy; }).forEach(function (q) {
     var k = clave(String(q.emb.importer || '—').trim() || '—');
     if (por[k]) por[k].aVencer += q.monto;
   });
@@ -12354,14 +12405,18 @@ function cashDeudores(cuotas, hoy) {
   var pond = totalVenc ? venc.reduce(function (a, q) { return a + q.monto * cashDiasAtraso(q, hoy); }, 0) / totalVenc : 0;
   var mesA = hoy.getUTCFullYear() * 12 + hoy.getUTCMonth();
   var delMes = cuotas.filter(function (q) { return q.fecha.getUTCFullYear() * 12 + q.fecha.getUTCMonth() === mesA; });
-  var cobMes = delMes.filter(function (q) { return q.cobrada; }).reduce(function (a, q) { return a + q.monto; }, 0);
-  var pendMes = delMes.filter(function (q) { return !q.cobrada; }).reduce(function (a, q) { return a + q.monto; }, 0);
+  var cobMes = delMes.filter(function (q) { return q.cobrada || q.espera; }).reduce(function (a, q) { return a + q.monto; }, 0);
+  var pendMes = delMes.filter(cashPend).reduce(function (a, q) { return a + q.monto; }, 0);
   var proy = [[30, 'Próximos 30 días'], [60, '31 a 60 días'], [90, '61 a 90 días']].map(function (x, i) {
     var desde = i === 0 ? 0 : [0, 30, 60][i] + 1, hasta = x[0];
-    var its = cuotas.filter(function (q) { var d = Math.round((q.fecha - hoy) / 86400000); return !q.cobrada && d >= desde && d <= hasta; });
+    var its = cuotas.filter(function (q) { var d = Math.round((q.fecha - hoy) / 86400000); return cashPend(q) && d >= desde && d <= hasta; });
     return { rotulo: x[1], monto: its.reduce(function (a, q) { return a + q.monto; }, 0), n: its.length };
   });
-  return { clientes: clientes, tramos: tramos, totalVenc: totalVenc, nFact: venc.length, atrasoPond: pond,
+  var espera = ((S.datos && S.datos.filas) || []).filter(function (e) { return etapaPago(e) > 0; }).map(function (e) {
+    return { emb: e, etapa: etapaPago(e), dias: diasEsperandoPago(e, hoy), monto: cashMonto(e) };
+  }).sort(function (a, b) { return b.dias - a.dias; });
+  return { espera: espera, totalEspera: espera.reduce(function (a, x) { return a + x.monto; }, 0),
+    clientes: clientes, tramos: tramos, totalVenc: totalVenc, nFact: venc.length, atrasoPond: pond,
     atrasoMax: venc.length ? Math.max.apply(null, venc.map(function (q) { return cashDiasAtraso(q, hoy); })) : 0,
     cobMes: cobMes, pendMes: pendMes, pctMes: cobMes + pendMes ? cobMes / (cobMes + pendMes) : null, proy: proy };
 }
@@ -12453,7 +12508,19 @@ function cashDeudaHtml(cuotas, hoy) {
   var h = '<div class="cf-kpis cf-kpis-d">' +
     '<div class="cf-kpi venc grande"><span>Deuda vencida</span><b>' + cashUsd(D.totalVenc) + '</b><small>' + D.clientes.length + (D.clientes.length === 1 ? ' cliente' : ' clientes') + ' · ' + D.nFact + (D.nFact === 1 ? ' pago' : ' pagos') + '</small></div>' +
     '<div class="cf-kpi"><span>Atraso promedio</span><b>' + Math.round(D.atrasoPond) + ' días</b><small>ponderado por monto · máximo ' + D.atrasoMax + ' días</small></div>' +
-    '<div class="cf-kpi"><span>Cobrado este mes</span><b>' + (D.pctMes === null ? '—' : Math.round(D.pctMes * 100) + '%') + '</b><small>' + cashUsd(D.cobMes) + ' de ' + cashUsd(D.cobMes + D.pendMes) + ' que vencían</small></div></div>';
+    '<div class="cf-kpi"><span>Cobrado este mes</span><b>' + (D.pctMes === null ? '—' : Math.round(D.pctMes * 100) + '%') + '</b><small>' + cashUsd(D.cobMes) + ' de ' + cashUsd(D.cobMes + D.pendMes) + ' que vencían</small></div>' +
+    '<div class="cf-kpi esp"><span>Pagado, esperando acreditación</span><b>' + cashUsd(D.totalEspera) + '</b><small>' + D.espera.length + (D.espera.length === 1 ? ' carga' : ' cargas') + (D.espera.length ? ' · la más antigua: ' + D.espera[0].dias + ' días' : '') + '</small></div></div>';
+  h = bannerColumnasPagoHtml() + h;
+  if (D.espera.length) {
+    h += '<section class="cf-card cf-espera" aria-label="Esperando acreditación y liberación"><h3>Operaciones pagadas por el cliente <small>' + D.espera.length + (D.espera.length === 1 ? ' carga' : ' cargas') + ' · ' + cashUsd(D.totalEspera) + '</small></h3>' +
+      D.espera.map(function (x) {
+        var e = x.emb, st = x.etapa;
+        return '<div class="cf-esp-fila"><div class="a"><b>' + esc(e.importer || '—') + '</b><span>' + esc((e.contract || 'sin contrato') + (e.bl ? ' · BL ' + e.bl : (e.vessel ? ' · ' + e.vessel : ''))) + '</span></div>' +
+          '<div class="b"><b>' + cashUsd(x.monto) + '</b><span>pagó el ' + esc(cashFechaLarga(e.pagoCliente)) + '</span></div>' +
+          '<div class="c"><span class="pc-pill e' + st + '">' + esc(ETAPAS_PAGO[st - 1].nombre) + '<small>' + x.dias + (x.dias === 1 ? ' día' : ' días') + '</small></span></div>' +
+          '<div class="d">' + (st < 3 && puedeRegistrarPago(e) ? '<button type="button" class="pc-btn" data-act="pcabrir" data-f="' + esc(e._id) + '" data-e="' + (st + 1) + '">' + esc(ETAPAS_PAGO[st].accion) + '</button>' : '<span class="pc-listo">Pasar a A facturar</span>') + '</div></div>';
+      }).join('') + '</section>';
+  }
 
   h += '<div class="cf-stats"><section class="cf-card" aria-label="Deuda por antigüedad"><h3>Deuda por antigüedad</h3><div class="cf-aging">' +
     D.tramos.map(function (t, i) {
@@ -12489,6 +12556,171 @@ function cashDeudaHtml(cuotas, hoy) {
   });
   return h + '</section>';
 }
+/* ===========================================================================
+   Pago del cliente: el cliente ya pagó y estamos esperando que le entre al exportador para pedir la liberación y pasar a facturar.
+   Tres pasos, cada uno con su fecha, en columnas de la propia planilla (las crea la app): «Cliente pagó el» → «Pago acreditado el» →
+   «Liberación pedida el». Al pasar a «A facturar» se cierra solo. Una carga con «Cliente pagó» deja de ser deuda en Cash Flow.
+   =========================================================================== */
+var COLS_PAGO = [['pagoCliente', 'Cliente pagó el'], ['pagoAcreditado', 'Pago acreditado el'], ['liberacion', 'Liberación pedida el'], ['notaPago', 'Nota de pago']];
+var ETAPAS_PAGO = [
+  { campo: 'pagoCliente', nombre: 'Cliente pagó', accion: 'Cliente pagó', siguiente: 'Esperando que le entre al exportador' },
+  { campo: 'pagoAcreditado', nombre: 'Pago acreditado', accion: 'Pago acreditado', siguiente: 'Pedir la liberación' },
+  { campo: 'liberacion', nombre: 'Liberación pedida', accion: 'Liberación pedida', siguiente: 'Pasar a A facturar' }
+];
+function columnasPagoFaltan() {
+  var out = [];
+  (S.fuentes || []).forEach(function (f) {
+    var falta = COLS_PAGO.filter(function (c) { return f.mapa[c[0]] === undefined; });
+    if (falta.length) out.push({ tab: f.tab, faltan: falta.map(function (c) { return c[1]; }) });
+  });
+  return out;
+}
+function puedeRegistrarPago(emb) { return !!emb && !emb._aFacturar && !emb._esFact && fuenteDe(emb).mapa.pagoCliente !== undefined; }
+// En qué paso está: 0 = nada, 1 = el cliente pagó, 2 = pago acreditado, 3 = liberación pedida.
+function etapaPago(emb) {
+  if (!emb || emb._aFacturar || emb._esFact) return 0;
+  if (esFecha(emb.liberacion) && esFecha(emb.pagoCliente)) return 3;
+  if (esFecha(emb.pagoAcreditado) && esFecha(emb.pagoCliente)) return 2;
+  return esFecha(emb.pagoCliente) ? 1 : 0;
+}
+function diasEsperandoPago(emb, hoy) { return esFecha(emb.pagoCliente) ? Math.max(0, Math.round((hoy - cashDia(emb.pagoCliente)) / 86400000)) : 0; }
+
+function pillPagoHtml(emb) {
+  var e = etapaPago(emb);
+  if (!e) return '';
+  var hoy = cashDia(ahoraComoUTC()), dias = diasEsperandoPago(emb, hoy);
+  var txt = e === 1 ? 'Cliente pagó · espera acreditación' : e === 2 ? 'Pago acreditado · pedir liberación' : 'Liberación pedida · pasar a facturar';
+  return '<span class="pc-pill e' + e + '" title="El cliente pagó el ' + esc(cashFechaLarga(emb.pagoCliente)) + (emb.notaPago ? ' · ' + esc(emb.notaPago) : '') + '">' + esc(txt) + '<small>' + dias + (dias === 1 ? ' día' : ' días') + '</small></span>';
+}
+// El botón de la tarjeta: lleva al paso siguiente.
+function btnPagoCliente(emb) {
+  if (!puedeRegistrarPago(emb)) return '';
+  var e = etapaPago(emb);
+  if (e >= 3) return '';
+  return '<button type="button" class="pc-btn" data-act="pcabrir" data-f="' + esc(emb._id) + '" data-e="' + (e + 1) + '" title="Registrar: ' + esc(ETAPAS_PAGO[e].accion) + '">' + esc(ETAPAS_PAGO[e].accion) + '</button>';
+}
+// El bloque del panel de una carga: los tres pasos con su fecha y el botón del siguiente.
+function bloquePagoCliente(emb) {
+  if (emb._aFacturar || emb._esFact) return '';
+  if (fuenteDe(emb).mapa.pagoCliente === undefined) return '';
+  var e = etapaPago(emb), h = '<div class="bloque pc-bloque"><h3 class="gt">Pago del cliente</h3><ol class="pc-pasos">';
+  ETAPAS_PAGO.forEach(function (x, i) {
+    var f = emb[x.campo], hecho = esFecha(f);
+    h += '<li class="' + (hecho ? 'ok' : (i === e ? 'sig' : '')) + '"><span class="pc-n">' + (hecho ? '✓' : (i + 1)) + '</span><div><b>' + esc(x.nombre) + '</b><small>' +
+      (hecho ? esc(cashFechaLarga(f)) : (i === e ? esc(x.siguiente) : 'Pendiente')) + '</small></div></li>';
+  });
+  h += '</ol>' + (emb.notaPago ? '<p class="ayuda pc-nota">Nota: ' + esc(emb.notaPago) + '</p>' : '');
+  h += '<div class="pc-acc">' + (e < 3 ? '<button type="button" class="primario" data-act="pcabrir" data-f="' + esc(emb._id) + '" data-e="' + (e + 1) + '">' + esc(ETAPAS_PAGO[e].accion) + '</button>' : '<p class="ayuda">Listo: ya se pidió la liberación. Pasala a «A facturar» cuando corresponda.</p>') +
+    (e > 0 ? '<button type="button" class="pc-quitar" data-act="pcquitar" data-f="' + esc(emb._id) + '">Quitar el último paso</button>' : '') + '</div></div>';
+  return h;
+}
+function fechaISOHoy() { var d = ahoraComoUTC(); return d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + d.getUTCDate()).slice(-2); }
+function modalPagoHtml() {
+  var M = S.pagoModal, emb = M && filaPorId(M.id);
+  if (!M || !emb) return '';
+  var x = ETAPAS_PAGO[M.etapa - 1];
+  return '<div class="modal-velo" data-act="pccancelar"></div><div class="modal-caja"><div class="modal-cambio pc-modal" role="dialog" aria-modal="true" aria-labelledby="pm-t">' +
+    '<h3 id="pm-t">' + esc(x.accion) + '</h3><p class="ayuda">' + esc((emb.importer || '—') + ' · ' + (emb.contract || 'sin contrato') + (emb.bl ? ' · BL ' + emb.bl : '')) + '</p>' +
+    '<div class="campo"><label for="pm-fecha">Fecha</label><input id="pm-fecha" type="date" value="' + esc(M.fecha) + '"></div>' +
+    (M.etapa === 1 ? '<div class="campo"><label for="pm-nota">Nota o referencia (opcional)</label><input id="pm-nota" type="text" autocomplete="off" placeholder="N° de transferencia, banco…" value="' + esc(M.nota || '') + '"></div>' : '') +
+    (M.error ? '<div class="error" role="alert">' + esc(M.error) + '</div>' : '') +
+    '<div class="mcm-acc"><button type="button" data-act="pccancelar"' + (M.guardando ? ' disabled' : '') + '>Cancelar</button>' +
+    '<button type="button" class="primario" data-act="pcguardar"' + (M.guardando ? ' disabled' : '') + '>' + (M.guardando ? 'Guardando…' : 'Guardar') + '</button></div></div></div>';
+}
+// Escribe (o borra, con fecha vacía) un paso en la planilla.
+async function guardarPago(id, etapa, fechaISO, nota) {
+  var f = filaPorId(id);
+  if (!f) return;
+  var src = fuenteDe(f), campo = ETAPAS_PAGO[etapa - 1].campo, idx = src.mapa[campo];
+  if (idx === undefined) throw new Error('Esa pestaña no tiene la columna «' + COLS_PAGO[etapa - 1][1] + '».');
+  var fecha = fechaISO ? normFecha(fechaISO) : null;
+  if (fechaISO && !esFecha(fecha)) throw new Error('La fecha no es válida.');
+  var valores = {};
+  valores[idx] = fecha || '';
+  if (etapa === 1 && src.mapa.notaPago !== undefined) valores[src.mapa.notaPago] = fecha ? String(nota || '') : '';
+  S.guardando++; pintar();
+  try {
+    await escribirCeldas(S.cfg.sheetId, f._sheetId, f._fila, valores, {});
+    f[campo] = fecha;
+    if (etapa === 1) f.notaPago = fecha ? String(nota || '') : '';
+  } finally { S.guardando--; }
+}
+
+async function confirmarPagoModal() {
+  var M = S.pagoModal;
+  if (!M || M.guardando) return;
+  if (!M.fecha) { M.error = 'Elegí la fecha.'; return pintar(); }
+  M.guardando = true; M.error = ''; pintar();
+  try {
+    await guardarPago(M.id, M.etapa, M.fecha, M.nota);
+    var nom = ETAPAS_PAGO[M.etapa - 1].accion;
+    S.pagoModal = null;
+    toast(nom + ': registrado', 'ok');
+  } catch (e3) { M.guardando = false; M.error = 'No se pudo guardar: ' + e3.message; }
+  pintar();
+}
+async function quitarPasoPago(id) {
+  var f = filaPorId(id);
+  if (!f) return;
+  var e = etapaPago(f);
+  if (!e) return;
+  try { await guardarPago(f._id, e, '', ''); toast('Se quitó el paso «' + ETAPAS_PAGO[e - 1].nombre + '»', 'ok'); }
+  catch (e4) { S.error = 'No se pudo quitar el paso: ' + e4.message; }
+  pintar();
+}
+
+/* --- Las columnas nuevas ------------------------------------------------------ */
+function bannerColumnasPagoHtml() {
+  var falta = columnasPagoFaltan(), P = S.pgCols || {};
+  if (!falta.length || S.pgColsNo) return '';
+  var tabs = falta.map(function (x) { return '«' + esc(x.tab) + '»'; }).join(' y ');
+  var h = '<div class="per-banner pc-banner" role="status"><div class="pb-txt"><b>Para registrar los pagos de los clientes, la planilla necesita 4 columnas nuevas.</b> ' +
+    'Se agregan al final de ' + tabs + ': ' + COLS_PAGO.map(function (c) { return '<i>' + c[1] + '</i>'; }).join(', ') + '. No se toca nada de lo que ya está.</div><div class="pb-acc">';
+  if (P.paso === 'haciendo') h += '<button class="primario" disabled>Creando…</button>';
+  else if (P.paso === 'confirmar') h += '<button class="primario" data-act="pgcolsok">Sí, crear las columnas</button><button data-act="pgcolsvolver">Cancelar</button>';
+  else h += '<button class="primario" data-act="pgcols">Crear las columnas</button><button data-act="pgcolsno">Ahora no</button>';
+  return h + '</div>' + (P.error ? '<p class="per-error" role="alert">' + esc(P.error) + '</p>' : '') + '</div>';
+}
+async function crearColumnasPago() {
+  S.pgCols = { paso: 'haciendo' }; pintar();
+  var hechas = [];
+  try {
+    var falta = columnasPagoFaltan();
+    for (var i = 0; i < falta.length; i++) {
+      var tab = falta[i].tab;
+      var h = await leerHoja(S.cfg.sheetId, tab);
+      var mapa = detectar(h.encabezados, CAMPOS).mapa;
+      var nuevos = COLS_PAGO.filter(function (c) { return mapa[c[0]] === undefined; });
+      if (!nuevos.length) continue;
+      var meta = await api(BASE + S.cfg.sheetId + '?fields=' + encodeURIComponent('sheets(properties(sheetId,title,gridProperties))'));
+      var hoja = (meta.sheets || []).filter(function (x) { return x.properties.title === tab; })[0];
+      if (!hoja) throw new Error('No encuentro la pestaña «' + tab + '».');
+      var ult = -1;
+      h.encabezados.forEach(function (x, j) { if (x !== null && x !== undefined && String(x).trim() !== '') ult = j; });
+      var pos = ult + 1, fe = h.filaEncabezado, sid = hoja.properties.sheetId, reqs = [];
+      var ancho = hoja.properties.gridProperties ? hoja.properties.gridProperties.columnCount : null;
+      if (ancho !== null && pos + nuevos.length > ancho) reqs.push({ appendDimension: { sheetId: sid, dimension: 'COLUMNS', length: pos + nuevos.length - ancho } });
+      nuevos.forEach(function (c, j) {
+        reqs.push({ updateCells: { range: { sheetId: sid, startRowIndex: fe - 1, endRowIndex: fe, startColumnIndex: pos + j, endColumnIndex: pos + j + 1 },
+          rows: [{ values: [{ userEnteredValue: { stringValue: c[1] } }] }], fields: 'userEnteredValue' } });
+      });
+      if (ult >= 0) {
+        reqs.push({ copyPaste: { source: { sheetId: sid, startRowIndex: fe - 1, endRowIndex: fe, startColumnIndex: ult, endColumnIndex: ult + 1 },
+          destination: { sheetId: sid, startRowIndex: fe - 1, endRowIndex: fe, startColumnIndex: pos, endColumnIndex: pos + nuevos.length },
+          pasteType: 'PASTE_FORMAT', pasteOrientation: 'NORMAL' } });
+      }
+      await api(BASE + S.cfg.sheetId + ':batchUpdate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: reqs }) });
+      hechas.push(tab);
+    }
+    S.pgCols = null;
+    S.avisoOk = hechas.length ? 'Listo: agregué las columnas del pago del cliente en ' + hechas.map(function (x) { return '«' + x + '»'; }).join(' y ') + '.' : null;
+    await cargarTodo();
+  } catch (e) {
+    S.pgCols = { paso: 'confirmar', error: 'No se pudieron crear las columnas: ' + e.message + (hechas.length ? ' (ya se crearon en ' + hechas.join(', ') + ')' : '') };
+    pintar();
+  }
+}
+
 function vistaCash() {
   if (!S.cash) S.cash = cashEstadoInicial();
   var C = S.cash, hoy = cashDia(ahoraComoUTC()), datos = cashCalcular(), cuotas = datos.cuotas;
@@ -12496,7 +12728,7 @@ function vistaCash() {
   var porDia = {};
   cuotas.forEach(function (q) { (porDia[cashClave(q.fecha)] = porDia[cashClave(q.fecha)] || []).push(q); });
   var suma = function (a) { return a.reduce(function (t, q) { return t + q.monto; }, 0); };
-  var pend = cuotas.filter(function (q) { return !q.cobrada; });
+  var pend = cuotas.filter(cashPend);
   var l0 = cashLunes(hoy), l1 = cashSuma(l0, 6);
   var sem = pend.filter(function (q) { return q.fecha >= hoy && q.fecha <= l1; });
   var venc = pend.filter(function (q) { return q.fecha < hoy; });
@@ -12525,13 +12757,13 @@ function vistaCash() {
     var f0 = cashSuma(ini, s * 7); if (s >= 5 && f0.getUTCMonth() !== C.m) break;
     var totSem = 0, nSem = 0, vSem = 0, celdas = '';
     for (i = 0; i < 7; i++) {
-      var d = cashSuma(f0, i), qs = porDia[cashClave(d)] || [], pd = qs.filter(function (q) { return !q.cobrada; }), hayV = pd.some(function (q) { return q.fecha < hoy; });
+      var d = cashSuma(f0, i), qs = porDia[cashClave(d)] || [], pd = qs.filter(cashPend), hayV = pd.some(function (q) { return q.fecha < hoy; });
       var todoCobr = qs.length && !pd.length, fuera = d.getUTCMonth() !== C.m, esHoy = cashClave(d) === cashClave(hoy);
       pd.forEach(function (q) { totSem += q.monto; nSem++; if (q.fecha < hoy) vSem += q.monto; });
       celdas += '<button type="button" class="cf-dia' + (fuera ? ' fuera' : '') + (i > 4 ? ' finde' : '') + (esHoy ? ' hoy' : '') + '" data-act="cashdia" data-d="' + cashClave(d) + '" aria-pressed="' + (C.sel === cashClave(d)) +
         '" aria-label="' + d.getUTCDate() + ' de ' + MESES_ES[d.getUTCMonth()] + (qs.length ? ': ' + qs.length + (qs.length === 1 ? ' cobro' : ' cobros') : '') + '">' +
         '<span class="cf-n">' + d.getUTCDate() + '</span>' +
-        (qs.length ? '<span class="cf-monto ' + (todoCobr ? 'cobr' : hayV ? 'venc' : '') + '">' + cashCorto(todoCobr ? suma(qs) : suma(pd)) + '</span><span class="pto ' + (hayV ? 'venc' : '') + '"></span><span class="cf-chips">' +
+        (qs.length ? '<span class="cf-monto ' + (todoCobr ? (qs.some(function (q) { return q.espera; }) ? 'esp' : 'cobr') : hayV ? 'venc' : '') + '">' + cashCorto(todoCobr ? suma(qs) : suma(pd)) + '</span><span class="pto ' + (hayV ? 'venc' : '') + '"></span><span class="cf-chips">' +
           qs.slice(0, 2).map(function (q) { return '<span class="cf-chip ' + cashEstado(q, hoy) + '" title="' + esc((q.emb.importer || '') + ' · ' + (q.emb.contract || '')) + '">' + esc(String(q.emb.importer || '—').split(' ')[0]) + '</span>'; }).join('') +
           (qs.length > 2 ? '<span class="cf-mas">+' + (qs.length - 2) + ' más</span>' : '') + '</span>' : '') + '</button>';
     }
@@ -12548,7 +12780,7 @@ function vistaCash() {
     det += '<div class="cf-item"><div class="cf-fila1"><b>' + esc(q.emb.importer || '—') + '</b><strong>' + cashUsd(q.monto) + '</strong></div>' +
       '<div class="cf-sub">' + esc((q.emb.contract || 'sin contrato') + (q.emb.bl ? ' · BL ' + q.emb.bl : (q.emb.vessel ? ' · ' + q.emb.vessel : '')) + (q.emb.tns ? ' · ' + fmtNum(q.emb.tns) + ' tn' : '') + (q.de > 1 ? ' · cuota ' + q.parte + ' de ' + q.de : '')) + '</div>' +
       '<div class="cf-regla"><span class="cf-tag">' + esc(q.regla) + '</span><span class="cf-tag">' + esc(q.baseTxt) + '</span>' +
-      '<span class="cf-tag ' + (e === 'cobr' ? '' : e) + '">' + (e === 'cobr' ? 'Cobrado' : e === 'venc' ? 'Vencido hace ' + Math.round((hoy - q.fecha) / 86400000) + ' d' : 'A cobrar') + '</span>' +
+      '<span class="cf-tag ' + (e === 'cobr' ? '' : e) + '">' + (e === 'cobr' ? 'Cobrado' : e === 'esp' ? 'Pagó el cliente · en acreditación' : e === 'venc' ? 'Vencido hace ' + Math.round((hoy - q.fecha) / 86400000) + ' d' : 'A cobrar') + '</span>' +
       (q.supuesto ? '<span class="cf-tag sup" title="El texto del contrato no dice a partir de qué fecha: «' + esc(q.texto) + '». Revisá que sea correcto.">Supuesto</span>' : '') + '</div>' +
       (q.cobrada ? '' : '<button type="button" class="cf-ver" data-act="cashabrir" data-k="' + esc(q.emb.contract || '') + '">Ver la carga</button>') + '</div>';
   });
@@ -13020,6 +13252,15 @@ function resaltar(texto, q) {
          esc(texto.slice(i + q.length));
 }
 
+// Los países son pocos: se muestran todos (los que empiezan con lo escrito primero), sin el tope de 9 del resto.
+function opcionesPais(opciones, val) {
+  var q = clave(val), emp = [], con = [];
+  (opciones || []).forEach(function (o) {
+    var pos = q ? clave(o).indexOf(q) : 0;
+    if (pos === 0) emp.push(o); else if (pos > 0) con.push(o);
+  });
+  return emp.concat(con);
+}
 function opcionesCombo(opciones, val) {
   var q = clave(val);
   if (!q) return (opciones || []).slice(0, 9);
@@ -13051,7 +13292,7 @@ function opcionesContrato(opciones, val) {
 function htmlListaCombo(id, campo, opciones, val, ctx, libre) {
   var q = clave(val);
   var esCtr = campo === 'contract';
-  var sug = esCtr ? opcionesContrato(opciones, val) : opcionesCombo(opciones, val);
+  var sug = esCtr ? opcionesContrato(opciones, val) : (campo === 'pais' ? opcionesPais(opciones, val) : opcionesCombo(opciones, val));
 
   if (sug.length) {
     return '<div class="combo-lista">' + sug.map(function (o) {
@@ -13066,7 +13307,7 @@ function htmlListaCombo(id, campo, opciones, val, ctx, libre) {
   }
   if (q) {
     return '<div class="combo-lista"><p class="sin-match">' +
-      (libre
+      (campo === 'pais' ? 'Ese país no está en la lista. Se guarda igual, en mayúscula, como lo escribas.' : libre
         ? 'No coincide con ninguna condición ya usada. Se puede guardar igual, pero ' +
           'las alertas de cobro no van a funcionar hasta mapearla.'
         : 'Ninguno coincide. Si es nuevo, cargalo en la <b>base de datos</b>.') +
@@ -13075,15 +13316,15 @@ function htmlListaCombo(id, campo, opciones, val, ctx, libre) {
   return '';
 }
 
-function comboGen(id, campo, label, opciones, val, ok, ctx, libre) {
+function comboGen(id, campo, label, opciones, val, ok, ctx, libre, ph) {
   var clave2 = ctx + ':' + campo;
   var abierto = S.combo === clave2;
 
-  return '<div class="campo combo-wrap' + (val && !ok && !libre ? ' malo' : '') + '">' +
+  return '<div class="campo combo-wrap' + (campo === 'pais' ? ' combo-pais' : '') + (val && !ok && !libre ? ' malo' : '') + '">' +
     '<label for="' + id + '">' + label +
       (ok && val && !libre ? '<span class="ok-tick">✓</span>' : '') + '</label>' +
     '<input id="' + id + '" data-combo2="' + clave2 + '" autocomplete="off" ' +
-      'placeholder="Escribí para buscar" value="' + esc(val) + '">' +
+      'placeholder="' + esc(ph || 'Escribí para buscar') + '" value="' + esc(val) + '">' +
     '<div class="combo-slot" id="cl-' + id + '">' +
       (abierto ? htmlListaCombo(id, campo, opciones, val, ctx, libre) : '') +
     '</div></div>';
@@ -13126,6 +13367,7 @@ function listaDeCampo(campo) {
     if (campo === 'tipo') return L.tipos || [];
     if (campo === 'product') return productosDe(a.contract) || L.productos || [];
     if (campo === 'contract') return contratosDe(a.exporter, a.importer);
+    if (campo === 'pais') return paisesTerrestre((S.fuentes || []).filter(function (f) { return f.tab === a.tab; })[0]);
   }
   if (campo === 'exportador') return L.exportadores || [];
   if (campo === 'importador') return L.importadores || [];
@@ -13500,6 +13742,7 @@ function filaContrato(r) {
 var COLS_PLANILLA = ['exporter', 'importer', 'contract', 'product', 'tipo', 'price', 'tns',
   'total', 'etd', 'eta', 'port', 'vessel', 'shippingLine', 'lots', 'containers',
   'bl', 'booking', 'invoice', 'docs', 'pics', 'tr', 'tracking', 'pagoEstimado',
+  'pagoCliente', 'pagoAcreditado', 'liberacion', 'notaPago',
   'commission', 'guia', 'incoterm', 'status'];
 
 function poolColumnas(modo) {
@@ -13525,7 +13768,7 @@ var ANCHO_DEF = {
   exporter: 190, importer: 200, contract: 170, product: 200, tipo: 90, price: 90, tns: 90,
   total: 110, etd: 100, eta: 100, port: 150, vessel: 160, shippingLine: 150, lots: 90,
   containers: 150, bl: 150, booking: 140, invoice: 130, docs: 130, pics: 130, tr: 130,
-  tracking: 160, pagoEstimado: 130, commission: 100, guia: 120, incoterm: 100, status: 130, _etapa: 130
+  tracking: 160, pagoEstimado: 130, pagoCliente: 130, pagoAcreditado: 140, liberacion: 150, notaPago: 180, commission: 100, guia: 120, incoterm: 100, status: 130, _etapa: 130
 };
 var ANCHO_MIN = 48, ANCHO_MAX = 900, ANCHO_NRO_BASE = 84, ANCHO_SEL = 34;
 function anchoNro() { return S.verFact ? 104 : ANCHO_NRO_BASE; }
@@ -15294,6 +15537,7 @@ function vistaPanel(x) {
   }
   h += '</div>';
 
+  h += bloquePagoCliente(emb);
   h += bloqueAdvice(emb, ev);
 
   // Comentarios: lo que el equipo se dice sobre este embarque, por celda.
@@ -16179,10 +16423,26 @@ document.addEventListener('focusin', function (e) {
     var campo2 = cb2.split(':')[1], ctx2 = cb2.split(':')[0];
     S.combo = cb2;
     return refrescarCombo(e.target.id, campo2, listaDeCampo(campo2),
-                          e.target.value, ctx2, campo2 === 'formaPago');
+                          e.target.value, ctx2, campo2 === 'formaPago' || campo2 === 'pais');
   }
   var cb = e.target.getAttribute && e.target.getAttribute('data-combo');
   if (cb && S.combo !== cb) { S.combo = cb; pintar(); }
+});
+
+// El desplegable de países se cierra al salir del campo (si no, queda tapando el botón «Guardar» que está justo abajo).
+document.addEventListener('focusout', function (e) {
+  var cb2 = e.target.getAttribute && e.target.getAttribute('data-combo2');
+  if (!cb2 || cb2.split(':')[1] !== 'pais') return;
+  setTimeout(function () {
+    if (S.combo !== cb2) return;
+    var ae = document.activeElement;
+    if (ae && ae.closest && ae.closest('.combo-pais')) return;                        // el foco sigue en el campo o en su lista
+    var lista = document.querySelector('.combo-pais .combo-lista');
+    if (lista && lista.matches(':hover')) return;                                      // está por tocar una opción
+    S.combo = null;
+    var slot = document.getElementById('cl-e-pais');
+    if (slot) slot.innerHTML = '';
+  }, 160);
 });
 
 // El clic empezó DENTRO del editor (por ejemplo, arrastrando para seleccionar texto y soltando afuera): no es un «clic afuera».
@@ -16326,6 +16586,20 @@ document.addEventListener('click', function (ev) {
   }
 
   if (act === 'tab') return irAVista(el.getAttribute('data-v'));
+  if (act === 'pcabrir') {
+    var idPc = el.getAttribute('data-f'), ePc = parseInt(el.getAttribute('data-e'), 10) || 1;
+    S.pagoModal = { id: idPc, etapa: ePc, fecha: fechaISOHoy(), nota: '', error: '', guardando: false };
+    pintar();
+    var inF = document.getElementById('pm-fecha'); if (inF) inF.focus();
+    return;
+  }
+  if (act === 'pccancelar') { if (S.pagoModal && !S.pagoModal.guardando) { S.pagoModal = null; pintar(); } return; }
+  if (act === 'pcguardar') return confirmarPagoModal();
+  if (act === 'pcquitar') return quitarPasoPago(el.getAttribute('data-f'));
+  if (act === 'pgcols') { S.pgCols = { paso: 'confirmar' }; return pintar(); }
+  if (act === 'pgcolsvolver') { S.pgCols = null; return pintar(); }
+  if (act === 'pgcolsok') return crearColumnasPago();
+  if (act === 'pgcolsno') { S.pgColsNo = true; return pintar(); }
   if (act === 'cashpanel') { if (!S.cash) S.cash = cashEstadoInicial(); S.cash.panel = el.getAttribute('data-v') === 'deuda' ? 'deuda' : 'cal'; S.cash.msg = null; return pintar(); }
   if (act === 'cashexp') {
     if (!S.cash) S.cash = cashEstadoInicial();
@@ -17095,6 +17369,8 @@ document.addEventListener('input', function (e) {
       }
     }, 160);
   }
+  if (e.target.id === 'pm-fecha' && S.pagoModal) { S.pagoModal.fecha = e.target.value; return; }
+  if (e.target.id === 'pm-nota' && S.pagoModal) { S.pagoModal.nota = e.target.value; return; }
   if (e.target.id === 'nuevo-com') S.borrador = e.target.value;   // sin redibujar
   if (e.target.id === 'pegarcfg') { S.pegado = e.target.value; return; }
   if (e.target.getAttribute && e.target.getAttribute('data-advto')) { S.adviceTo = e.target.value; return; }
@@ -17166,7 +17442,7 @@ document.addEventListener('input', function (e) {
     S.combo = cb2;
     // Solo el desplegable, no la pantalla entera.
     return refrescarCombo(e.target.id, campo2, listaDeCampo(campo2),
-                          e.target.value, ctx2, campo2 === 'formaPago');
+                          e.target.value, ctx2, campo2 === 'formaPago' || campo2 === 'pais');
   }
   var cb = e.target.getAttribute && e.target.getAttribute('data-combo');
   if (cb) {
@@ -17597,7 +17873,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.06-u';
+var APP_VERSION = '2026.11.11-v';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
