@@ -4559,6 +4559,33 @@ async function filaTotalDe(pestana) {
   return null;
 }
 
+// Donde va una carga nueva en una pestaña con fila TOTAL. Si entre la última carga y el TOTAL quedaron filas vacías
+// (la planilla las deja de colchón), la carga entra en la PRIMERA de esas filas: antes se insertaba pegada al TOTAL y
+// quedaban filas vacías en el medio, arriba de la carga. Una fila con una fórmula no cuenta como vacía (se lee en modo
+// FÓRMULA), así que nunca se pisa algo. Devuelve la fila donde escribir y si hay que insertarla o ya existe.
+async function lugarParaCarga(pestana, filaTotal) {
+  if (!filaTotal || filaTotal < 3) return { fila: filaTotal, insertar: true };
+  try {
+    var ini = Math.max(1, filaTotal - 40);
+    var rango = "'" + pestana.replace(/'/g, "''") + "'!A" + ini + ':' + letraCol(MAX_COLS - 1) + (filaTotal - 1);
+    var d = await api(BASE + S.cfg.sheetId + '/values/' + encodeURIComponent(rango) + '?valueRenderOption=FORMULA');
+    var vals = (d && d.values) || [];
+    var vacia = function (k) {                       // k = posición dentro del rango (0 = fila `ini`)
+      var row = vals[k] || [];
+      return !row.some(function (x) { return x !== '' && x !== null && x !== undefined; });
+    };
+    var total = filaTotal - ini;                      // cuántas filas hay arriba del TOTAL dentro del rango
+    var k = total - 1;
+    while (k >= 0 && vacia(k)) k--;                   // sube mientras sean vacías
+    // Si todo el tramo leído está vacío no se sabe dónde termina el hueco: se inserta como siempre.
+    if (k < 0) return { fila: filaTotal, insertar: true };
+    var primera = ini + k + 1;                        // primera fila vacía después de la última carga
+    return primera < filaTotal ? { fila: primera, insertar: false } : { fila: filaTotal, insertar: true };
+  } catch (e) {
+    return { fila: filaTotal, insertar: true };       // ante la duda, lo de siempre
+  }
+}
+
 // Qué contrato quedó justo arriba del TOTAL, para saber por dónde numerar.
 async function ultimoContrato() {
   var pestana = S.cfg.tabAlta;
@@ -5436,7 +5463,9 @@ async function moverFila(origen, destinoTab, ctx) {
   var mapaD = detectar(hd.encabezados, CAMPOS).mapa;
 
   var filaTotal = await filaTotalDe(destinoTab);
-  var fila = filaTotal || (hd.filas.length
+  var lugar = await lugarParaCarga(destinoTab, filaTotal);
+  var insertada = lugar.insertar;                      // false = se usa una fila vacía que ya estaba arriba del TOTAL
+  var fila = filaTotal ? lugar.fila : (hd.filas.length
     ? Math.max.apply(null, hd.filas.map(function (f) { return f.fila; })) + 1
     : (hd.filaEncabezado || 1) + 1);
 
@@ -5445,12 +5474,12 @@ async function moverFila(origen, destinoTab, ctx) {
     return { sheetId: hd.sheetId, startRowIndex: fila - 1, endRowIndex: fila,
              startColumnIndex: col, endColumnIndex: col + 1 };
   };
-  var reqs = [{
+  var reqs = insertada ? [{
     insertDimension: {
       range: { sheetId: hd.sheetId, dimension: 'ROWS', startIndex: fila - 1, endIndex: fila },
       inheritFromBefore: true
     }
-  }];
+  }] : [];
   // La fila nueva hereda el formato de la de arriba (fechas, números…), pero NO su color: si la de arriba estaba pintada
   // (un semáforo, un resaltado), la carga que llega no tiene por qué verse así. Se parte de blanco y después se pone el color propio.
   if (hd.encabezados && hd.encabezados.length) {
@@ -5529,7 +5558,7 @@ async function moverFila(origen, destinoTab, ctx) {
   var enDestino = leidas[0] || [], debajo = leidas[1] || [];
   var dv = function (campo) { var i = mapaD[campo]; return i === undefined || enDestino[i] == null ? '' : enDestino[i]; };
   var problemas = [];
-  if (filaTotal && String(debajo[0] || '').trim().toUpperCase().indexOf('TOTAL') !== 0) {
+  if (filaTotal && insertada && String(debajo[0] || '').trim().toUpperCase().indexOf('TOTAL') !== 0) {
     problemas.push('el TOTAL no quedó justo debajo');
   }
   if (ident.contract && clave(dv('contract')) !== clave(ident.contract)) problemas.push('el contrato no coincide');
@@ -5538,7 +5567,7 @@ async function moverFila(origen, destinoTab, ctx) {
   if (ident.tns !== null && Math.abs((normNum(dv('tns')) || 0) - ident.tns) > 0.0001) problemas.push('las toneladas no coinciden');
   if (problemas.length) {
     // No se tocó el origen. Si el hueco quedó vacío, se lo saca para no dejar una fila en blanco.
-    var vacio = !enDestino.some(function (x) { return x !== '' && x != null; });
+    var vacio = insertada && !enDestino.some(function (x) { return x !== '' && x != null; });
     var limpio = false;
     if (vacio) {
       try {
@@ -17979,7 +18008,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.12-w';
+var APP_VERSION = '2026.11.12-x';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
