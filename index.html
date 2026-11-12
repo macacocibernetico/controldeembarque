@@ -1626,6 +1626,37 @@ code{font-family:var(--mono);font-size:13px;background:var(--sup3);padding:2px 7
 .ctr-card .pill.via-maritimo,.ctr-card .pill.via-terrestre{background:var(--sup2);color:var(--tinta2)}
 
 .ctr-card{container-type:inline-size;container-name:ctrcard}
+/* Contratos en fichas compactas */
+.lista.ctr-mosaico{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start}
+.fc-ficha{position:relative;display:flex;flex-direction:column;background:var(--sup);border-radius:20px;box-shadow:var(--s1);border:1px solid var(--linea3);overflow:hidden;min-width:0;transition:transform .16s ease,box-shadow .16s ease}
+.fc-ficha.editable{cursor:pointer}
+.fc-ficha.editable:hover{transform:translateY(-2px);box-shadow:0 14px 30px -14px rgba(36,56,100,.35)}
+.fc-ficha:focus-visible{outline:3px solid #4457f0;outline-offset:2px}
+.fc-cab{display:flex;align-items:center;gap:8px;padding:11px 16px;background:#eef1ff}
+.fc-ficha.fc-ok .fc-cab{background:#e1f5ec}.fc-ficha.fc-exc .fc-cab{background:#fde8ec}.fc-ficha.fc-hueco .fc-cab{background:#f1f2f5}
+.fc-via{width:26px;height:26px;border-radius:8px;background:#fff;display:inline-flex;align-items:center;justify-content:center;flex:none;font-size:14px}
+.fc-num{margin:0;font-size:15px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-firma{margin-left:auto;flex:none;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.fc-firma.ok{background:#dcf5ea;color:#0f6b4b}.fc-firma.no{background:#fff1d6;color:#8a4b0b}
+.fc-cuerpo{display:flex;flex-direction:column;gap:11px;padding:14px 16px}
+.fc-par{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fc-dato{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fc-dato small{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#5f6877}
+.fc-dato b{font-size:14px;font-weight:700;line-height:1.25;overflow-wrap:break-word;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.fc-dato b.vacio{color:#8a93a3;font-weight:600;font-style:italic}
+.fc-prod b{font-size:15.5px;font-weight:800}
+.fc-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
+.fc-tag{padding:3px 9px;border-radius:8px;font-size:12px;font-weight:700;background:#eef1f8;color:#33415c;white-space:nowrap}
+.fc-cond{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:10px 12px;border-radius:14px;background:#f3f4f7}
+.fc-cond b{font-size:15px;font-variant-numeric:tabular-nums}
+.fc-pie{display:flex;align-items:center;gap:10px;padding:10px 16px 12px;border-top:1px solid var(--linea3);font-size:12.5px;color:#4b5563;font-weight:600}
+.fc-per{padding:2px 8px;border-radius:999px;background:#e3e8ff;color:#2b3bd1;font-size:11.5px;font-weight:700;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
+.fc-mini{flex:1;min-width:30px;height:5px;border-radius:99px;background:#e5e7eb;overflow:hidden}
+.fc-mini u{display:block;height:100%;background:#4457f0;border-radius:99px}
+.fc-ficha.fc-ok .fc-mini u{background:#0f8f6a}.fc-ficha.fc-exc .fc-mini u{background:#b4233c}
+.fc-saldo{white-space:nowrap}.fc-saldo b{color:var(--tinta);font-weight:800;font-variant-numeric:tabular-nums}
+.fc-acc{padding:0 16px 12px}.fc-acc .btn-estado{width:100%;justify-content:center}
+@media(max-width:900px){.lista.ctr-mosaico{grid-template-columns:1fr;gap:12px}}
 /* Base: una sola columna. Cada zona se separa de la anterior con una línea. */
 .ctr-cuerpo{display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-items:start}
 .ctr-zona{min-width:0}
@@ -2914,6 +2945,7 @@ var S = {
   comVerRes: false,       // los hilos resueltos se ven desplegados
   enviando: false,
   fContrato: '',
+  vistaCtr: (function () { try { return localStorage.getItem('embarques:vistaCtr') === 'fichas' ? 'fichas' : 'tarjetas'; } catch (e) { return 'tarjetas'; } })(),   // tarjetas (la de siempre) | fichas (mosaico compacto)
   topeContratos: 40,
   topeCargas: 0,
   borrador: '',
@@ -12884,6 +12916,10 @@ function vistaContratos() {
               return '<button data-act="fvia" data-v="' + o[0] + '" aria-pressed="' + ((S.fVia || '') === o[0]) + '">' +
                 o[1] + '<span class="cnt">' + o[2] + '</span></button>';
             }).join('') + '</div></div>' +
+        '<div class="cf-grupo"><span class="cf-rot">Ver como</span><div class="segmento sub" role="group" aria-label="Cómo ver los contratos">' +
+          [['tarjetas', 'Tarjetas'], ['fichas', 'Fichas']].map(function (o) {
+            return '<button data-act="vistactr" data-v="' + o[0] + '" aria-pressed="' + (S.vistaCtr === o[0]) + '">' + o[1] + '</button>';
+          }).join('') + '</div></div>' +
       '</div>' +
       // Lo que está filtrado ahora, con la forma de sacarlo
       (activos.length
@@ -12917,7 +12953,8 @@ function vistaContratos() {
   var visibles = lista.slice(0, tope);
   var resto = lista.length - visibles.length;
 
-  return h + '<div class="lista">' + visibles.map(filaContrato).join('') + '</div>' +
+  var fichas = S.vistaCtr === 'fichas';
+  return h + '<div class="lista' + (fichas ? ' ctr-mosaico' : '') + '"' + (fichas ? ' role="list"' : '') + '>' + visibles.map(fichas ? fichaContrato : filaContrato).join('') + '</div>' +
     (resto > 0
       ? '<div class="ver-mas"><button data-act="masctr">Ver ' +
         Math.min(resto, 40) + ' más</button>' +
@@ -13570,11 +13607,12 @@ function partirProducto(txt) {
 function productosDeContrato(r) {
   var ref = S.ctrEditables.get(r.contrato), out = [];
   filasDelContrato(ref).forEach(function (fr) {
-    var i = fr.mapa.producto, j = fr.mapa.tns, k = fr.mapa.tipo;
+    var i = fr.mapa.producto, j = fr.mapa.tns, k = fr.mapa.tipo, pi = fr.mapa.precio;
     var prod = i === undefined || fr.celdas[i] == null ? '' : String(fr.celdas[i]).trim();
     var tns = j === undefined ? null : normNum(fr.celdas[j]);
     var tipo = k === undefined || fr.celdas[k] == null ? '' : tipoCtr(fr.celdas[k]);
-    if (prod) out.push({ prod: prod, tns: tns, tipo: tipo && tipo !== 'otro' ? tipo : (r.tipos && r.tipos.length === 1 && r.tipos[0] !== 'otro' ? r.tipos[0] : '') });
+    var precio = pi === undefined ? null : normNum(fr.celdas[pi]);
+    if (prod) out.push({ prod: prod, tns: tns, precio: precio, tipo: tipo && tipo !== 'otro' ? tipo : (r.tipos && r.tipos.length === 1 && r.tipos[0] !== 'otro' ? r.tipos[0] : '') });
   });
   if (!out.length && r.producto) {
     String(r.producto).split(' + ').forEach(function (x) {
@@ -13732,6 +13770,69 @@ function filaContrato(r) {
       (ref ? botonMoverTarjeta(r) : '') +
       (ref ? '<span class="ed">Editar ›</span>' : '') +
     '</footer>' +
+    '</article>';
+}
+
+// Ficha compacta del contrato (la vista «Fichas»): quién vende, quién compra, qué producto
+// (con tipo y calibre), a qué precio y con qué incoterm. El saldo va chico, al pie.
+function fichaContrato(r) {
+  var tn = function (n) { return (n || 0).toLocaleString('es-AR', { maximumFractionDigits: 1 }); };
+  var ctr = S.contratos.get(r.contrato) || {};
+  var ref = S.ctrEditables.get(r.contrato);
+  var editable = !!ref;
+  var cls = r.contratado === null || r.contratado === undefined ? 'hueco' : r.saldo < -0.5 ? 'exc' : r.saldo <= 0.5 ? 'ok' : 'sol';
+  var num = partirNumero(r.contrato);
+  var numHtml = num ? '<span class="ct-pre">' + esc(num.prefijo) + '</span>' + esc(num.cuerpo) + '<span class="ct-anio">' + esc(num.sep + num.anio) + '</span>' +
+    (num.resto ? '<span class="ct-resto">' + esc(num.resto) + '</span>' : '') : esc(r.contrato);
+  var via = r.via === 'maritimo' ? '🚢' : r.via === 'terrestre' ? '🚚' : '·';
+  var firma = '';
+  if (ctr.tieneFirmas) {
+    firma = ctr.firmaExp && ctr.firmaImp ? '<span class="fc-firma ok">Firmado</span>'
+      : !ctr.firmaExp && !ctr.firmaImp ? '<span class="fc-firma no">Sin firmar</span>'
+      : '<span class="fc-firma no">Falta ' + (ctr.firmaExp ? 'importador' : 'exportador') + '</span>';
+  }
+  var parte = function (rol, nombre, vacio) {
+    return '<span class="fc-dato"><small>' + rol + '</small><b' + (nombre ? '' : ' class="vacio"') + ' title="' + esc(nombre || '') + '">' + esc(nombre || vacio) +
+      (nombre ? bandera(paisDeEmpresa(nombre)) : '') + '</b></span>';
+  };
+  var prods = productosDeContrato(r);
+  var precios = [];
+  prods.forEach(function (x) { if (x.precio && precios.indexOf(x.precio) < 0) precios.push(x.precio); });
+  if (!precios.length && ctr.precio) precios.push(ctr.precio);
+  var variosPrecios = precios.length > 1;
+  var money = function (v) { return 'US$ ' + v.toLocaleString('es-AR', { maximumFractionDigits: 2 }); };
+  var prodHtml = prods.length ? prods.map(function (x) {
+    var pp = partirProducto(x.prod);
+    var nombre = pp.resto || (pp.calibre ? '' : x.prod);
+    var tTxt = x.tipo === 'mani' ? 'Maní' : x.tipo === 'aceite' ? 'Aceite' : x.tipo === 'expeller' ? 'Expeller' : '';
+    if (tTxt && clave(nombre) === clave(tTxt)) tTxt = '';
+    return '<span class="fc-dato fc-prod"><small>Producto</small><b title="' + esc(x.prod) + '">' + esc(nombre || x.prod) + '</b><span class="fc-tags">' +
+      (tTxt ? '<span class="fc-tag">' + tTxt + '</span>' : '') +
+      (pp.calibre ? '<span class="fc-tag">Calibre ' + esc(pp.calibre) + '</span>' : '') +
+      (x.tns && prods.length > 1 ? '<span class="fc-tag">' + tn(x.tns) + ' tn</span>' : '') +
+      (variosPrecios && x.precio ? '<span class="fc-tag">' + money(x.precio) + '</span>' : '') + '</span></span>';
+  }).join('') : '<span class="fc-dato fc-prod"><small>Producto</small><b class="vacio">' + esc(r.producto || 'Sin producto') + '</b></span>';
+  var inc = String(ctr.incoterm || '').trim();
+  var precioTxt = !precios.length ? '<b class="vacio">Sin precio</b>' : variosPrecios ? '<b>Varios (ver arriba)</b>' : '<b>' + money(precios[0]) + ' /tn</b>';
+  var estadoTxt = cls === 'hueco' ? 'sin toneladas' : cls === 'ok' ? 'Completo' : cls === 'exc' ? '+' + tn(-r.saldo) + ' tn' : tn(r.saldo) + ' tn';
+  var pct = r.pct !== null && r.pct !== undefined ? Math.min(100, Math.round(r.pct * 100)) : 0;
+  var per = String(r.periodo || '').trim();
+  return '<article class="fc-ficha fc-' + cls + (editable ? ' editable' : '') + '" role="listitem"' +
+    (editable ? ' data-act="ctrabrir" data-k="' + esc(r.contrato) + '" tabindex="0"' : '') + '>' +
+    '<header class="fc-cab"><span class="fc-via" title="' + esc(r.via ? VIA_TXT[r.via] : 'Vía sin definir') + '">' + via + '</span>' +
+      '<h3 class="fc-num ctr-num" title="' + esc(r.contrato) + '">' + numHtml + '</h3>' + firma + '</header>' +
+    '<div class="fc-cuerpo">' +
+      '<div class="fc-par">' + parte('Exportador', r.exportador, 'Sin exportador') + parte('Importador', r.importador, 'Sin cliente') + '</div>' +
+      prodHtml +
+      '<div class="fc-cond"><span class="fc-dato"><small>Precio</small>' + precioTxt + '</span>' +
+        '<span class="fc-dato"><small>Incoterm</small>' + (inc ? '<b title="' + esc(inc) + '">' + esc(inc) + '</b>' : '<b class="vacio">Sin incoterm</b>') + '</span></div>' +
+    '</div>' +
+    '<footer class="fc-pie">' +
+      (per ? '<span class="fc-per" title="' + esc(per) + '">' + esc(per) + '</span>' : '') +
+      '<span class="fc-mini" title="' + pct + '% entregado"><u style="width:' + pct + '%"></u></span>' +
+      '<span class="fc-saldo"><b>' + estadoTxt + '</b>' + (cls === 'sol' ? ' saldo' : '') + '</span>' +
+    '</footer>' +
+    (ref && esCompletoSinCerrar(r) ? '<div class="fc-acc">' + botonMoverTarjeta(r) + '</div>' : '') +
     '</article>';
 }
 
@@ -17035,6 +17136,11 @@ document.addEventListener('click', function (ev) {
     S.topeContratos = 40; return pintar();
   }
   if (act === 'ftipoctr') { S.fTipoCtr = el.getAttribute('data-t') || ''; S.topeContratos = 40; return pintar(); }
+  if (act === 'vistactr') {
+    S.vistaCtr = el.getAttribute('data-v') === 'fichas' ? 'fichas' : 'tarjetas';
+    try { localStorage.setItem('embarques:vistaCtr', S.vistaCtr); } catch (e) { /* sin almacenamiento: queda para esta sesión */ }
+    return pintar();
+  }
   if (act === 'fvia') { S.fVia = el.getAttribute('data-v') || ''; S.topeContratos = 40; return pintar(); }
   if (act === 'firma') {
     var cF2 = el.getAttribute('data-c');
@@ -17873,7 +17979,7 @@ function restaurarScrollVista(v) {
 }
 
 // Para saber de un vistazo qué archivo se está usando (si no se actualizó el sitio, se nota).
-var APP_VERSION = '2026.11.11-v';
+var APP_VERSION = '2026.11.12-w';
 
 function arrancar() {
   if (window.innerWidth <= 900) S.modo = 'tarjetas';   // la planilla no entra en un celular
